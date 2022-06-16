@@ -14,9 +14,6 @@ const VE3DLocker = artifacts.require('VE3DLocker');
 const VeAssetDepositor = artifacts.require('VeAssetDepositor');
 const ClaimZap = artifacts.require('ClaimZap');
 
-// - get some ve3tokens by locking veAsset into depositor
-// -
-
 let deployer = '0x2093b4281990A568C9D588b8BCE3BFD7a1557Ebd';
 
 //system
@@ -69,6 +66,16 @@ contract.only('Test claim zap', async accounts => {
 
   after("revert", reverter.revert);
 
+  it('deploy ClaimZap contract', async () => {
+
+    // return;
+    //deploy
+    zap = await ClaimZap.new(veAsset.address, veToken.address, ve3Token.address, depositor.address, ve3TokenRewardPool.address, ve3dRewardPool.address, '0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F', ve3dLocker.address);
+    await zap.setApprovals();
+    console.log('zap deployed');
+
+  });
+
   it('swap weth for veAsset', async () => {
 
     //swap for veAsset
@@ -83,52 +90,30 @@ contract.only('Test claim zap', async accounts => {
     assert.isAbove(toBN(veAssetBalance).toNumber(), 0);
   });
 
-  it('deposit veAsset with lock', async () => {
-    let depositAmount = toBN(veAssetBalance).idiv(2);
+  it('deposit veAsset with locking and without exchange', async () => {
+    veAssetBalance = await veAsset.balanceOf(userA);
+    console.log('veAsset balance: ' + veAssetBalance);
+
+    let depositAmount = toBN(web3.utils.toWei("100000.0", 'ether'));
     let remainingAmount = toBN(veAssetBalance).minus(depositAmount);
-    await veAsset.approve(depositor.address, depositAmount);
-    let lockIncentive = toBN(
-        (await depositor.lockIncentive()).toString(),
-    );
-    let callIncentive = toBN(depositAmount)
-        .times(lockIncentive)
-        .idiv(FEE_DENOMINATOR);
+    await veAsset.approve(zap.address, depositAmount);
 
-    await depositor.deposit(depositAmount, false);
+    console.log("ve3TokenBalance before",toBN(await ve3Token.balanceOf(userA)).toString());
+    await veAsset.approve(zap.address, web3.utils.toWei('10000000000.0', 'ether'), {from: userA, gasPrice: 0});
 
-    // not working
-    // assert.equal(
-    //     (await veAsset.balanceOf(userA)).toString(),
-    //     remainingAmount.toFixed(),
-    // );
-    // assert.equal(
-    //     (await veAsset.balanceOf(depositor.address)).toString(),
-    //     depositAmount.toFixed(),
-    // );
-    assert.equal(
-        (await ve3Token.balanceOf(userA)).toString(),
-        toBN(depositAmount).minus(callIncentive).toFixed(),
-    );
-
+    let mask = 32; // LockVeAssetDeposit
+    await zap.claimRewards([], [], [], [], web3.utils.toWei('10000000000.0', 'ether'), 0, 0, mask, {from: userA, gasPrice: 0});
+    console.log("ve3TokenBalance after", toBN(await ve3Token.balanceOf(userA)).toString());
   });
 
-  it("stake ve3Token in BaseRewardPool", async()=>{
-    await ve3Token.approve(ve3TokenRewardPool.address, web3.utils.toWei('1000.0', 'ether'), {from: userA, gasPrice: 0});
+  //
+  // it("stake ve3Token in BaseRewardPool", async()=>{
+  //   await ve3Token.approve(ve3TokenRewardPool.address, web3.utils.toWei('1000.0', 'ether'), {from: userA, gasPrice: 0});
+  //
+  //   await ve3TokenRewardPool.stake(web3.utils.toWei('1000.0', 'ether'), {from: userA, gasPrice: 0});
+  // })
 
-    await ve3TokenRewardPool.stake(web3.utils.toWei('1000.0', 'ether'), {from: userA, gasPrice: 0});
-  })
-
-  it('deploy ClaimZap contract', async () => {
-
-    // return;
-    //deploy
-    zap = await ClaimZap.new(veAsset.address, veToken.address, ve3Token.address, depositor.address, ve3TokenRewardPool.address, ve3dRewardPool.address, '0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F', ve3dLocker.address);
-    await zap.setApprovals();
-    console.log('zap deployed');
-
-  });
-
-  it('checks some more stuff', async () => {
+  it('claim rewards', async () => {
     //tests
     let spell = await IERC20.at('0x090185f2135308bad17527004364ebcc2d37e5f6');
     // await weth.sendTransaction({value: web3.utils.toWei('1.0', 'ether'), from: deployer});

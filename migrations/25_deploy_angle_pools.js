@@ -67,7 +67,7 @@ module.exports = async function (deployer, network, accounts) {
 
   logTransaction(
     await poolManager.addPool(
-      "0x2bD9F7974Bc0E4Cb19B8813F8Be6034F3E772add",
+      "0xEDECB43233549c51CC3268b5dE840239787AD56c",
       "0xEB7547a8a734b6fdDBB8Ce0C314a9E6485100a3C",
       boosterAdd,
       3
@@ -77,7 +77,7 @@ module.exports = async function (deployer, network, accounts) {
 
   logTransaction(
     await poolManager.addPool(
-      "0x26C2251801D2cfb5461751c984Dc3eAA358bdf0f",
+      "0x857E0B2eD0E82D5cDEB015E77ebB873C47F99575",
       "0x3785Ce82be62a342052b9E5431e9D3a839cfB581",
       boosterAdd,
       3

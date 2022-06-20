@@ -18,8 +18,6 @@ interface IRewards {
 
     function addExtraReward(address) external;
 
-    function clearExtraRewards() external;
-
     function addReward(
         address _rewardsToken,
         address _veAssetDeposits,
@@ -34,6 +32,4 @@ interface IRewards {
     function rewardToken() external view returns (address);
 
     function earned(address account) external view returns (uint256);
-
-    function recoverUnuserReward(address _destination) external;
 }

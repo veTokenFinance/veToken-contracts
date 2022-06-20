@@ -114,8 +114,4 @@ contract RewardFactory is Ownable {
         //return new pool's address
         return rAddress;
     }
-
-    function clearExtraRewards(address _rewardsPool) external onlyOwner {
-        IRewards(_rewardsPool).clearExtraRewards();
-    }
 }

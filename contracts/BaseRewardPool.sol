@@ -44,23 +44,20 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 import "./Interfaces/IRewards.sol";
 import "./Interfaces/IDeposit.sol";
 
-contract BaseRewardPool is ReentrancyGuard {
+contract BaseRewardPool {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
-    using EnumerableSet for EnumerableSet.AddressSet;
 
     IERC20 public rewardToken;
     IERC20 public stakingToken;
     uint256 public constant duration = 7 days;
     uint256 constant BLOCKS_PER_DAY = 6450;
     uint256 constant BLOCKS_PER_YEAR = BLOCKS_PER_DAY * 365;
-    uint256 constant EXTRA_REWARD_POOLS = 8;
+    uint256 constant EXTRA_REWARD_POOLS = 3;
 
     address public operator;
     address public rewardManager;
@@ -79,7 +76,7 @@ contract BaseRewardPool is ReentrancyGuard {
     mapping(address => uint256) public rewards;
     mapping(address => uint256) private _balances;
 
-    EnumerableSet.AddressSet internal extraRewards;
+    address[] public extraRewards;
 
     event RewardAdded(uint256 reward);
     event Staked(address indexed user, uint256 amount);
@@ -118,25 +115,22 @@ contract BaseRewardPool is ReentrancyGuard {
     }
 
     function extraRewardsLength() external view returns (uint256) {
-        return extraRewards.length();
+        return extraRewards.length;
     }
 
     function addExtraReward(address _reward) external returns (bool) {
         require(msg.sender == rewardManager, "!authorized");
         require(_reward != address(0), "!reward setting");
-        require(extraRewards.length() < EXTRA_REWARD_POOLS, "!extra reward pools exceed");
+        require(extraRewards.length < EXTRA_REWARD_POOLS, "!extra reward pools exceed");
 
-        extraRewards.add(_reward);
+        extraRewards.push(_reward);
         emit ExtraRewardAdded(_reward);
         return true;
     }
 
     function clearExtraRewards() external {
         require(msg.sender == rewardManager, "!authorized");
-        uint256 length = extraRewards.length();
-        for (uint256 i = 0; i < length; i++) {
-            extraRewards.remove(extraRewards.at(i));
-        }
+        delete extraRewards;
         emit ExtraRewardCleared();
     }
 
@@ -175,12 +169,12 @@ contract BaseRewardPool is ReentrancyGuard {
                 .add(rewards[account]);
     }
 
-    function stake(uint256 _amount) public nonReentrant updateReward(msg.sender) returns (bool) {
+    function stake(uint256 _amount) public updateReward(msg.sender) returns (bool) {
         require(_amount > 0, "RewardPool : Cannot stake 0");
 
         //also stake to linked rewards
-        for (uint256 i = 0; i < extraRewards.length(); i++) {
-            IRewards(extraRewards.at(i)).stake(msg.sender, _amount);
+        for (uint256 i = 0; i < extraRewards.length; i++) {
+            IRewards(extraRewards[i]).stake(msg.sender, _amount);
         }
 
         _totalSupply = _totalSupply.add(_amount);
@@ -192,23 +186,18 @@ contract BaseRewardPool is ReentrancyGuard {
         return true;
     }
 
-    function stakeAll() external nonReentrant returns (bool) {
+    function stakeAll() external returns (bool) {
         uint256 balance = stakingToken.balanceOf(msg.sender);
         stake(balance);
         return true;
     }
 
-    function stakeFor(address _for, uint256 _amount)
-        public
-        nonReentrant
-        updateReward(_for)
-        returns (bool)
-    {
+    function stakeFor(address _for, uint256 _amount) public updateReward(_for) returns (bool) {
         require(_amount > 0, "RewardPool : Cannot stake 0");
-        require(_for != address(0), "Not allowed!");
+
         //also stake to linked rewards
-        for (uint256 i = 0; i < extraRewards.length(); i++) {
-            IRewards(extraRewards.at(i)).stake(_for, _amount);
+        for (uint256 i = 0; i < extraRewards.length; i++) {
+            IRewards(extraRewards[i]).stake(_for, _amount);
         }
 
         //give to _for
@@ -222,17 +211,12 @@ contract BaseRewardPool is ReentrancyGuard {
         return true;
     }
 
-    function withdraw(uint256 amount, bool claim)
-        public
-        nonReentrant
-        updateReward(msg.sender)
-        returns (bool)
-    {
+    function withdraw(uint256 amount, bool claim) public updateReward(msg.sender) returns (bool) {
         require(amount > 0, "RewardPool : Cannot withdraw 0");
 
         //also withdraw from linked rewards
-        for (uint256 i = 0; i < extraRewards.length(); i++) {
-            IRewards(extraRewards.at(i)).withdraw(msg.sender, amount);
+        for (uint256 i = 0; i < extraRewards.length; i++) {
+            IRewards(extraRewards[i]).withdraw(msg.sender, amount);
         }
 
         _totalSupply = _totalSupply.sub(amount);
@@ -254,13 +238,12 @@ contract BaseRewardPool is ReentrancyGuard {
 
     function withdrawAndUnwrap(uint256 amount, bool claim)
         public
-        nonReentrant
         updateReward(msg.sender)
         returns (bool)
     {
         //also withdraw from linked rewards
-        for (uint256 i = 0; i < extraRewards.length(); i++) {
-            IRewards(extraRewards.at(i)).withdraw(msg.sender, amount);
+        for (uint256 i = 0; i < extraRewards.length; i++) {
+            IRewards(extraRewards[i]).withdraw(msg.sender, amount);
         }
 
         _totalSupply = _totalSupply.sub(amount);
@@ -283,7 +266,6 @@ contract BaseRewardPool is ReentrancyGuard {
 
     function getReward(address _account, bool _claimExtras)
         public
-        nonReentrant
         updateReward(_account)
         returns (bool)
     {
@@ -297,8 +279,8 @@ contract BaseRewardPool is ReentrancyGuard {
 
         //also get rewards from linked rewards
         if (_claimExtras) {
-            for (uint256 i = 0; i < extraRewards.length(); i++) {
-                IRewards(extraRewards.at(i)).getReward(_account);
+            for (uint256 i = 0; i < extraRewards.length; i++) {
+                IRewards(extraRewards[i]).getReward(_account);
             }
         }
         return true;
@@ -321,7 +303,8 @@ contract BaseRewardPool is ReentrancyGuard {
         _rewards = _rewards.add(queuedRewards);
 
         if (block.timestamp >= periodFinish) {
-            queuedRewards = notifyRewardAmount(_rewards);
+            notifyRewardAmount(_rewards);
+            queuedRewards = 0;
             return true;
         }
 
@@ -333,18 +316,15 @@ contract BaseRewardPool is ReentrancyGuard {
 
         //uint256 queuedRatio = currentRewards.mul(1000).div(_rewards);
         if (queuedRatio < newRewardRatio) {
-            queuedRewards = notifyRewardAmount(_rewards);
+            notifyRewardAmount(_rewards);
+            queuedRewards = 0;
         } else {
             queuedRewards = _rewards;
         }
         return true;
     }
 
-    function notifyRewardAmount(uint256 reward)
-        internal
-        updateReward(address(0))
-        returns (uint256 _extraAmount)
-    {
+    function notifyRewardAmount(uint256 reward) internal updateReward(address(0)) {
         historicalRewards = historicalRewards.add(reward);
         if (block.timestamp >= periodFinish) {
             rewardRate = reward.div(duration);
@@ -354,29 +334,13 @@ contract BaseRewardPool is ReentrancyGuard {
             reward = reward.add(leftover);
             rewardRate = reward.div(duration);
         }
-
-        uint256 _actualReward = rewardRate.mul(duration);
-        if (reward > _actualReward) {
-            _extraAmount = reward.sub(_actualReward);
-        }
-
-        uint256 balance = rewardToken.balanceOf(address(this));
-        require(rewardRate <= balance.div(duration), "Provided reward too high");
-
         currentRewards = reward;
         lastUpdateTime = block.timestamp;
         periodFinish = block.timestamp.add(duration);
         emit RewardAdded(reward);
     }
 
-    function recoverUnuserReward(address _destination) external updateReward(address(0)) {
-        require(msg.sender == operator, "!authorized");
-        require(address(rewardToken) != address(stakingToken), "Cannot withdraw staking token");
-        require(block.timestamp > periodFinish, "Cannot withdraw active reward");
-
-        uint256 _amount = rewardToken.balanceOf(address(this));
-        if (_amount > 0) {
-            rewardToken.safeTransfer(_destination, _amount);
-        }
+    function getAPY() external view returns (uint256) {
+        return rewardRate.mul(BLOCKS_PER_YEAR).mul(1e18).div(totalSupply());
     }
 }

@@ -169,7 +169,8 @@ contract VirtualBalanceRewardPool is VirtualBalanceWrapper {
         _rewards = _rewards.add(queuedRewards);
 
         if (block.timestamp >= periodFinish) {
-            queuedRewards = notifyRewardAmount(_rewards);
+            notifyRewardAmount(_rewards);
+            queuedRewards = 0;
             return;
         }
 
@@ -179,17 +180,14 @@ contract VirtualBalanceRewardPool is VirtualBalanceWrapper {
         uint256 currentAtNow = rewardRate * elapsedTime;
         uint256 queuedRatio = currentAtNow.mul(1000).div(_rewards);
         if (queuedRatio < newRewardRatio) {
-            queuedRewards = notifyRewardAmount(_rewards);
+            notifyRewardAmount(_rewards);
+            queuedRewards = 0;
         } else {
             queuedRewards = _rewards;
         }
     }
 
-    function notifyRewardAmount(uint256 reward)
-        internal
-        updateReward(address(0))
-        returns (uint256 _extraAmount)
-    {
+    function notifyRewardAmount(uint256 reward) internal updateReward(address(0)) {
         historicalRewards = historicalRewards.add(reward);
         if (block.timestamp >= periodFinish) {
             rewardRate = reward.div(duration);
@@ -199,15 +197,6 @@ contract VirtualBalanceRewardPool is VirtualBalanceWrapper {
             reward = reward.add(leftover);
             rewardRate = reward.div(duration);
         }
-
-        uint256 _actualReward = rewardRate.mul(duration);
-        if (reward > _actualReward) {
-            _extraAmount = reward.sub(_actualReward);
-        }
-
-        uint256 balance = rewardToken.balanceOf(address(this));
-        require(rewardRate <= balance.div(duration), "Provided reward too high");
-
         currentRewards = reward;
         lastUpdateTime = block.timestamp;
         periodFinish = block.timestamp.add(duration);

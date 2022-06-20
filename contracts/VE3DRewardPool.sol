@@ -46,11 +46,12 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 import "./Interfaces/IVeAssetDeposit.sol";
 import "./Interfaces/IRewards.sol";
 
-contract VE3DRewardPool is Ownable {
+contract VE3DRewardPool is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -62,6 +63,9 @@ contract VE3DRewardPool is Ownable {
     address public immutable rewardManager;
 
     uint256 public constant newRewardRatio = 830;
+    uint256 constant EXTRA_REWARD_POOLS = 8;
+    uint256 constant MAX_REWARD_TOKEN = 8;
+
     uint256 private _totalSupply;
     mapping(address => uint256) private _balances;
 
@@ -71,7 +75,7 @@ contract VE3DRewardPool is Ownable {
     EnumerableSet.AddressSet internal rewardTokens;
     EnumerableSet.AddressSet internal operators;
 
-    address[] public extraRewards;
+    EnumerableSet.AddressSet internal extraRewards;
 
     struct RewardTokenInfo {
         address veAssetDeposits;
@@ -88,10 +92,18 @@ contract VE3DRewardPool is Ownable {
         mapping(address => uint256) rewards;
     }
 
+    event RewardTokenAdded(
+        address indexed rewardToken,
+        address indexed veAssetDeposits,
+        address indexed ve3Token,
+        address ve3TokenRewards
+    );
+    event RewardTokenRemoved(address indexed rewardsToken);
     event RewardAdded(uint256 reward);
     event Staked(address indexed user, uint256 amount);
     event Withdrawn(address indexed user, uint256 amount);
     event RewardPaid(address indexed user, uint256 reward);
+    event Recovered(address _token, uint256 _amount);
 
     constructor(address stakingToken_, address rewardManager_) {
         stakingToken = IERC20(stakingToken_);
@@ -105,10 +117,22 @@ contract VE3DRewardPool is Ownable {
         address _ve3TokenRewards,
         address _ve3Token
     ) external onlyOwner {
+        require(address(stakingToken) != _rewardToken, "Incorrect reward token");
+        require(rewardTokens.length() < MAX_REWARD_TOKEN, "!max reward token exceed");
         rewardTokenInfo[_rewardToken].veAssetDeposits = _veAssetDeposits;
         rewardTokenInfo[_rewardToken].ve3TokenRewards = _ve3TokenRewards;
         rewardTokenInfo[_rewardToken].ve3Token = _ve3Token;
         rewardTokens.add(_rewardToken);
+        emit RewardTokenAdded(_rewardToken, _veAssetDeposits, _ve3TokenRewards, _ve3Token);
+    }
+
+    function removeReward(address _rewardToken) external onlyOwner {
+        require(
+            block.timestamp > rewardTokenInfo[_rewardToken].periodFinish,
+            "Cannot remove active reward"
+        );
+        rewardTokens.remove(_rewardToken);
+        emit RewardTokenRemoved(_rewardToken);
     }
 
     function addOperator(address _newOperator) public onlyOwner {
@@ -128,19 +152,23 @@ contract VE3DRewardPool is Ownable {
     }
 
     function extraRewardsLength() external view returns (uint256) {
-        return extraRewards.length;
+        return extraRewards.length();
     }
 
     function addExtraReward(address _reward) external {
         require(msg.sender == rewardManager, "!authorized");
         require(_reward != address(0), "!reward setting");
+        require(extraRewards.length() < EXTRA_REWARD_POOLS, "!extra reward pools exceed");
 
-        extraRewards.push(_reward);
+        extraRewards.add(_reward);
     }
 
     function clearExtraRewards() external {
         require(msg.sender == rewardManager, "!authorized");
-        delete extraRewards;
+        uint256 length = extraRewards.length();
+        for (uint256 i = 0; i < length; i++) {
+            extraRewards.remove(extraRewards.at(i));
+        }
     }
 
     modifier updateReward(address account) {
@@ -206,13 +234,13 @@ contract VE3DRewardPool is Ownable {
         return r.sub(fees);
     }
 
-    function stake(uint256 _amount) public updateReward(msg.sender) {
+    function stake(uint256 _amount) public nonReentrant updateReward(msg.sender) {
         require(_amount > 0, "RewardPool : Cannot stake 0");
 
         //also stake to linked rewards
-        uint256 length = extraRewards.length;
+        uint256 length = extraRewards.length();
         for (uint256 i = 0; i < length; i++) {
-            IRewards(extraRewards[i]).stake(msg.sender, _amount);
+            IRewards(extraRewards.at(i)).stake(msg.sender, _amount);
         }
 
         //add supply
@@ -225,18 +253,19 @@ contract VE3DRewardPool is Ownable {
         emit Staked(msg.sender, _amount);
     }
 
-    function stakeAll() external {
+    function stakeAll() external nonReentrant {
         uint256 balance = stakingToken.balanceOf(msg.sender);
         stake(balance);
     }
 
-    function stakeFor(address _for, uint256 _amount) public updateReward(_for) {
+    function stakeFor(address _for, uint256 _amount) public nonReentrant updateReward(_for) {
         require(_amount > 0, "RewardPool : Cannot stake 0");
+        require(_for != address(0), "Not allowed!");
 
         //also stake to linked rewards
-        uint256 length = extraRewards.length;
+        uint256 length = extraRewards.length();
         for (uint256 i = 0; i < length; i++) {
-            IRewards(extraRewards[i]).stake(_for, _amount);
+            IRewards(extraRewards.at(i)).stake(_for, _amount);
         }
 
         //add supply
@@ -249,13 +278,13 @@ contract VE3DRewardPool is Ownable {
         emit Staked(msg.sender, _amount);
     }
 
-    function withdraw(uint256 _amount, bool claim) public updateReward(msg.sender) {
+    function withdraw(uint256 _amount, bool claim) public nonReentrant updateReward(msg.sender) {
         require(_amount > 0, "RewardPool : Cannot withdraw 0");
 
         //also withdraw from linked rewards
-        uint256 length = extraRewards.length;
+        uint256 length = extraRewards.length();
         for (uint256 i = 0; i < length; i++) {
-            IRewards(extraRewards[i]).withdraw(msg.sender, _amount);
+            IRewards(extraRewards.at(i)).withdraw(msg.sender, _amount);
         }
 
         _totalSupply = _totalSupply.sub(_amount);
@@ -276,7 +305,7 @@ contract VE3DRewardPool is Ownable {
         address _account,
         bool _claimExtras,
         bool _stake
-    ) public updateReward(_account) {
+    ) public nonReentrant updateReward(_account) {
         address _rewardToken;
         for (uint256 i = 0; i < rewardTokens.length(); i++) {
             _rewardToken = rewardTokens.at(i);
@@ -322,9 +351,9 @@ contract VE3DRewardPool is Ownable {
 
         //also get rewards from linked rewards
         if (_claimExtras) {
-            uint256 length = extraRewards.length;
+            uint256 length = extraRewards.length();
             for (uint256 i = 0; i < length; i++) {
-                IRewards(extraRewards[i]).getReward(_account);
+                IRewards(extraRewards.at(i)).getReward(_account);
             }
         }
     }
@@ -335,7 +364,9 @@ contract VE3DRewardPool is Ownable {
 
     function donate(address _rewardToken, uint256 _amount) external {
         IERC20(_rewardToken).safeTransferFrom(msg.sender, address(this), _amount);
-        rewardTokenInfo[_rewardToken].queuedRewards += _amount;
+        rewardTokenInfo[_rewardToken].queuedRewards = rewardTokenInfo[_rewardToken]
+            .queuedRewards
+            .add(_amount);
     }
 
     function queueNewRewards(address _rewardToken, uint256 _rewards) external {
@@ -344,8 +375,10 @@ contract VE3DRewardPool is Ownable {
         _rewards = _rewards.add(rewardTokenInfo[_rewardToken].queuedRewards);
 
         if (block.timestamp >= rewardTokenInfo[_rewardToken].periodFinish) {
-            notifyRewardAmount(_rewardToken, _rewards);
-            rewardTokenInfo[_rewardToken].queuedRewards = 0;
+            rewardTokenInfo[_rewardToken].queuedRewards = notifyRewardAmount(
+                _rewardToken,
+                _rewards
+            );
             return;
         }
 
@@ -357,8 +390,10 @@ contract VE3DRewardPool is Ownable {
         uint256 currentAtNow = rewardTokenInfo[_rewardToken].rewardRate * elapsedTime;
         uint256 queuedRatio = currentAtNow.mul(1000).div(_rewards);
         if (queuedRatio < newRewardRatio) {
-            notifyRewardAmount(_rewardToken, _rewards);
-            rewardTokenInfo[_rewardToken].queuedRewards = 0;
+            rewardTokenInfo[_rewardToken].queuedRewards = notifyRewardAmount(
+                _rewardToken,
+                _rewards
+            );
         } else {
             rewardTokenInfo[_rewardToken].queuedRewards = _rewards;
         }
@@ -367,6 +402,7 @@ contract VE3DRewardPool is Ownable {
     function notifyRewardAmount(address _rewardToken, uint256 reward)
         internal
         updateReward(address(0))
+        returns (uint256 _extraAmount)
     {
         rewardTokenInfo[_rewardToken].historicalRewards += reward;
         if (block.timestamp >= rewardTokenInfo[_rewardToken].periodFinish) {
@@ -377,9 +413,37 @@ contract VE3DRewardPool is Ownable {
             reward = reward.add(leftover);
             rewardTokenInfo[_rewardToken].rewardRate = reward.div(duration);
         }
+        uint256 _actualReward = rewardTokenInfo[_rewardToken].rewardRate.mul(duration);
+        if (reward > _actualReward) {
+            _extraAmount = reward.sub(_actualReward);
+        }
+
+        uint256 balance = IERC20(_rewardToken).balanceOf(address(this));
+        require(
+            rewardTokenInfo[_rewardToken].rewardRate <= balance.div(duration),
+            "Provided reward too high"
+        );
+
         rewardTokenInfo[_rewardToken].currentRewards = reward;
         rewardTokenInfo[_rewardToken].lastUpdateTime = block.timestamp;
         rewardTokenInfo[_rewardToken].periodFinish = block.timestamp.add(duration);
         emit RewardAdded(reward);
+    }
+
+    function recoverUnuserReward(address _rewardToken)
+        external
+        onlyOwner
+        updateReward(address(0))
+    {
+        require(_rewardToken != address(stakingToken), "Cannot withdraw staking token");
+        require(
+            block.timestamp > rewardTokenInfo[_rewardToken].periodFinish,
+            "Cannot withdraw active reward"
+        );
+        uint256 _amount = IERC20(_rewardToken).balanceOf(address(this));
+
+        if (_amount > 0) {
+            IERC20(_rewardToken).safeTransfer(owner(), _amount);
+        }
     }
 }

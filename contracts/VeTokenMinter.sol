@@ -29,20 +29,18 @@ contract VeTokenMinter is Ownable {
         reductionPerCliff = maxSupply.div(totalCliffs);
     }
 
-    function addOperator(address _newOperator) public onlyOwner {
+    ///@dev weight is 10**25 precision
+    function addOperator(address _newOperator, uint256 _newWeight) public onlyOwner {
         operators.add(_newOperator);
+        totalWeight = totalWeight.sub(veAssetWeights[_newOperator]);
+        veAssetWeights[_newOperator] = _newWeight;
+        totalWeight = totalWeight.add(_newWeight);
     }
 
     function removeOperator(address _operator) public onlyOwner {
+        totalWeight = totalWeight.sub(veAssetWeights[_operator]);
+        veAssetWeights[_operator] = 0;
         operators.remove(_operator);
-    }
-
-    ///@dev weight is 10**25 precision
-    function updateveAssetWeight(address veAssetOperator, uint256 newWeight) external onlyOwner {
-        require(operators.contains(veAssetOperator), "not an veAsset operator");
-        totalWeight -= veAssetWeights[veAssetOperator];
-        veAssetWeights[veAssetOperator] = newWeight;
-        totalWeight += newWeight;
     }
 
     function mint(address _to, uint256 _amount) external {

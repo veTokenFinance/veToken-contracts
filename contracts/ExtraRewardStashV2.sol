@@ -197,7 +197,7 @@ contract ExtraRewardStashV2 {
 
                     //send to arbitrator
                     address arb = IDeposit(operator).rewardArbitrator();
-                    if (arb != address(0)) {
+                    if (arb != address(0) && amount > 0) {
                         IERC20(token).safeTransfer(arb, amount);
                     }
                 }

@@ -39,14 +39,17 @@ contract VeAssetDepositor {
         address _staker,
         address _minter,
         address _veAsset,
-        address _escrow,
-        uint256 _maxTime
+        address _escrow
     ) {
         staker = _staker;
         minter = _minter;
         veAsset = _veAsset;
         escrow = _escrow;
         feeManager = msg.sender;
+    }
+
+    function setLockMaxTime(uint256 _maxTime) external {
+        require(msg.sender == feeManager, "!auth");
         maxTime = _maxTime;
     }
 
@@ -103,7 +106,7 @@ contract VeAssetDepositor {
         uint256 unlockInWeeks = (unlockAt / WEEK) * WEEK;
 
         //increase time too if over 2 week buffer
-        if (unlockInWeeks.sub(unlockTime) > 2) {
+        if (unlockInWeeks.sub(unlockTime) > 2 * WEEK) {
             IStaker(staker).increaseTime(unlockAt);
             unlockTime = unlockInWeeks;
         }
@@ -115,8 +118,8 @@ contract VeAssetDepositor {
 
         //mint incentives
         if (incentiveVeAsset > 0) {
-            ITokenMinter(minter).mint(msg.sender, incentiveVeAsset);
             incentiveVeAsset = 0;
+            ITokenMinter(minter).mint(msg.sender, incentiveVeAsset);
         }
     }
 
@@ -159,6 +162,7 @@ contract VeAssetDepositor {
             //mint here
             ITokenMinter(minter).mint(address(this), _amount);
             //stake for msg.sender
+            IERC20(minter).safeApprove(_stakeAddress, 0);
             IERC20(minter).safeApprove(_stakeAddress, _amount);
             IRewards(_stakeAddress).stakeFor(msg.sender, _amount);
         }

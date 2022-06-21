@@ -1,14 +1,5 @@
-const {
-  BN,
-  constants,
-  expectEvent,
-  expectRevert,
-  time,
-} = require("@openzeppelin/test-helpers");
-const {
-  loadContracts,
-  contractAddresseList,
-} = require("./helper/dumpAddresses");
+const { BN, constants, expectEvent, expectRevert, time } = require("@openzeppelin/test-helpers");
+const { loadContracts, contractAddresseList } = require("./helper/dumpAddresses");
 var jsonfile = require("jsonfile");
 var baseContractList = jsonfile.readFileSync("contracts.json");
 const { parseEther, formatEther, parseUnits } = require("@ethersproject/units");
@@ -68,9 +59,7 @@ contract("veToken Staking Reward Test", async (accounts) => {
     // tFactory = await TokenFactory.at(baseContractList.system.tFactory);
     // sFactory = await StashFactory.at(baseContractList.system.sFactory);
     // poolManager = await PoolManager.at(baseContractList.system.poolManager);
-    vetokenRewards = await VE3DRewardPool.at(
-      baseContractList.system.vetokenRewards
-    );
+    vetokenRewards = await VE3DRewardPool.at(baseContractList.system.vetokenRewards);
     // // veasset contracts
     veassetToken = await IERC20.at(contractAddresseList[0]);
     // escrow = await IERC20.at(contractAddresseList[1]);
@@ -97,10 +86,7 @@ contract("veToken Staking Reward Test", async (accounts) => {
     const parsedPoolInfo = JSON.parse(poolInfo);
     const rewardPool = await BaseRewardPool.at(parsedPoolInfo.veAssetRewards);
     const lpTokenBalanceOfUserA = await lpToken.balanceOf(userA);
-    console.log(
-      "userA initial Lp token balance:" +
-        formatEther(lpTokenBalanceOfUserA.toString())
-    );
+    console.log("userA initial Lp token balance:" + formatEther(lpTokenBalanceOfUserA.toString()));
     await lpToken.approve(booster.address, lpTokenBalanceOfUserA);
     await booster.depositAll(0, true, { from: userA });
     console.log("deposit all lp token user A has...");
@@ -111,29 +97,16 @@ contract("veToken Staking Reward Test", async (accounts) => {
 
     await rewardPool
       .balanceOf(userA)
-      .then((a) =>
-        console.log(
-          "user A lp rewardPool initial balance: " + formatEther(a.toString())
-        )
-      );
+      .then((a) => console.log("user A lp rewardPool initial balance: " + formatEther(a.toString())));
 
     const veAssetBalance = await veassetToken.balanceOf(userA);
-    console.log(
-      "user A veAssetToken balance init:" +
-        formatEther(veAssetBalance.toString())
-    );
+    console.log("user A veAssetToken balance init:" + formatEther(veAssetBalance.toString()));
     await ve3Token
       .balanceOf(userA)
-      .then((a) =>
-        console.log(
-          "user A ve3token balance init: " + formatEther(a.toString())
-        )
-      );
+      .then((a) => console.log("user A ve3token balance init: " + formatEther(a.toString())));
     await vetoken
       .balanceOf(userA)
-      .then((a) =>
-        console.log("user A veToken balance init: " + formatEther(a.toString()))
-      );
+      .then((a) => console.log("user A veToken balance init: " + formatEther(a.toString())));
 
     console.log(
       "rewardPool veAssetToken balance before earmarkRewards():" +
@@ -151,10 +124,7 @@ contract("veToken Staking Reward Test", async (accounts) => {
     // get lp token rewards
     await time.increase(86400);
     await time.advanceBlock();
-    console.log(
-      "userB veAssetToken balance:" +
-        (await veassetToken.balanceOf(userB)).toString()
-    );
+    console.log("userB veAssetToken balance:" + (await veassetToken.balanceOf(userB)).toString());
     await booster.earmarkRewards(poolId, { from: userB });
     console.log("get lp token rewards by earmarkRewards() called by user B...");
 
@@ -163,27 +133,17 @@ contract("veToken Staking Reward Test", async (accounts) => {
     const earned = (await rewardPool.earned(userA)).toString();
     console.log("userA rewardPool earning: " + earned);
 
-    console.log(
-      "userA veAssertToken before getReward():" +
-        (await veassetToken.balanceOf(userA)).toString()
-    );
+    console.log("userA veAssertToken before getReward():" + (await veassetToken.balanceOf(userA)).toString());
     await rewardPool.getReward();
 
     // transfer veToken from userA to another userC to mock getting veToken from rewards or from market
-    await vetoken
-      .balanceOf(userA)
-      .then((a) =>
-        console.log("userA veToken balance: " + formatEther(a.toString()))
-      );
+    await vetoken.balanceOf(userA).then((a) => console.log("userA veToken balance: " + formatEther(a.toString())));
 
     const vetokenBalance = await vetoken.balanceOf(userA);
     await vetoken.approve(userC, vetokenBalance, { from: userA });
     await vetoken.transfer(userC, toBN(vetokenBalance).div(2));
     const stakingVetokenAmount = await vetoken.balanceOf(userC);
-    console.log(
-      "userC veToken balance init after getting from userA: " +
-        formatEther(stakingVetokenAmount.toString())
-    );
+    console.log("userC veToken balance init after getting from userA: " + formatEther(stakingVetokenAmount.toString()));
     expect(Number(stakingVetokenAmount.toString())).to.greaterThan(0);
 
     //stake vetoken (ve3D)
@@ -194,42 +154,22 @@ contract("veToken Staking Reward Test", async (accounts) => {
 
     await booster.earmarkRewards(poolId, { from: userB });
 
-    console.log(
-      "userC veToken balance after staking:" +
-        (await vetoken.balanceOf(userC)).toString()
-    );
-    console.log(
-      "userC ve3Token balance after staking:" +
-        (await ve3Token.balanceOf(userC)).toString()
-    );
-    console.log(
-      "userC veAsset Token balance after staking:" +
-        (await veassetToken.balanceOf(userC)).toString()
-    );
+    console.log("userC veToken balance after staking:" + (await vetoken.balanceOf(userC)).toString());
+    console.log("userC ve3Token balance after staking:" + (await ve3Token.balanceOf(userC)).toString());
+    console.log("userC veAsset Token balance after staking:" + (await veassetToken.balanceOf(userC)).toString());
     const userCveTokenAfterStaking = await vetoken.balanceOf(userC);
     expect(Number(userCveTokenAfterStaking.toString())).to.equal(0);
 
     await time.increase(86400);
     await time.advanceBlock();
 
-    const userCEarnedveTokenRewards = await vetokenRewards.earned(
-      veassetToken.address,
-      userC
-    );
-    console.log(
-      "userC veToken rewardPool veAsset earning: " + userCEarnedveTokenRewards
-    );
+    const userCEarnedveTokenRewards = await vetokenRewards.earned(veassetToken.address, userC);
+    console.log("userC veToken rewardPool veAsset earning: " + userCEarnedveTokenRewards);
     expect(Number(userCEarnedveTokenRewards.toString())).to.greaterThan(0);
 
-    console.log(
-      "userC veToken balance before getReward():" +
-        (await vetoken.balanceOf(userC)).toString()
-    );
+    console.log("userC veToken balance before getReward():" + (await vetoken.balanceOf(userC)).toString());
     const userCVe3TokenRewardBefore = await ve3TokenRewardPool.balanceOf(userC);
-    console.log(
-      "ve3TokenRewardPool of userC reward before getReward: " +
-        userCVe3TokenRewardBefore.toString()
-    );
+    console.log("ve3TokenRewardPool of userC reward before getReward: " + userCVe3TokenRewardBefore.toString());
 
     // withdrawAll calls getReward if boolean claim is true.
     // 4.5% from the pickle LP pools 17% profits in the form of ve3Dill(ve3CRV)[ve3Tokens]
@@ -239,27 +179,15 @@ contract("veToken Staking Reward Test", async (accounts) => {
     await vetokenRewards.withdrawAll(true, { from: userC });
     // await vetokenRewards.getReward(userC, true, true);
     const userCVe3TokenRewardAfter = await ve3TokenRewardPool.balanceOf(userC);
-    console.log(
-      "ve3TokenRewardPool of userC reward after getReward: " +
-        userCVe3TokenRewardAfter.toString()
-    );
-    expect(
-      Number((userCVe3TokenRewardAfter - userCVe3TokenRewardBefore).toString())
-    ).to.equal(0);
+    console.log("ve3TokenRewardPool of userC reward after getReward: " + userCVe3TokenRewardAfter.toString());
+    expect(Number((userCVe3TokenRewardAfter - userCVe3TokenRewardBefore).toString())).to.equal(0);
 
     const userCveTokenAfter = await vetoken.balanceOf(userC);
     const userCve3TokenAfter = await ve3Token.balanceOf(userC);
     const userCveAssetTokenAfter = await veassetToken.balanceOf(userC);
-    console.log(
-      "userC veToken balance after getReward:" + userCveTokenAfter.toString()
-    );
-    console.log(
-      "userC ve3Token balance after getReward:" + userCve3TokenAfter.toString()
-    );
-    console.log(
-      "userC veAsset Token balance after getReward:" +
-        userCveAssetTokenAfter.toString()
-    );
+    console.log("userC veToken balance after getReward:" + userCveTokenAfter.toString());
+    console.log("userC ve3Token balance after getReward:" + userCve3TokenAfter.toString());
+    console.log("userC veAsset Token balance after getReward:" + userCveAssetTokenAfter.toString());
     expect(Number(userCveAssetTokenAfter.toString())).to.equal(0);
     expect(Number(userCveTokenAfter.toString())).to.greaterThan(0);
     expect(Number(userCve3TokenAfter.toString())).to.greaterThan(0);

@@ -13,18 +13,10 @@ const VeToken = artifacts.require("VeToken");
 const IERC20 = artifacts.require("IERC20");
 const VirtualBalanceRewardPool = artifacts.require("VirtualBalanceRewardPool");
 
-const {
-  loadContracts,
-  contractAddresseList,
-} = require("./helper/dumpAddresses");
+const { loadContracts, contractAddresseList } = require("./helper/dumpAddresses");
 const feeDisrtroABI = require("./helper/feeDistroABI.json");
 const { toBN, log } = require("./helper/utils");
-const {
-  ether,
-  balance,
-  constants,
-  time,
-} = require("@openzeppelin/test-helpers");
+const { ether, balance, constants, time } = require("@openzeppelin/test-helpers");
 const { parseEther, formatEther, parseUnits } = require("@ethersproject/units");
 var jsonfile = require("jsonfile");
 var baseContractList = jsonfile.readFileSync("contracts.json");
@@ -57,17 +49,13 @@ contract("VeAssetDepositor", async (accounts) => {
   before("setup", async () => {
     await loadContracts();
     // basic contract
-    vetokenMinter = await VeTokenMinter.at(
-      baseContractList.system.vetokenMinter
-    );
+    vetokenMinter = await VeTokenMinter.at(baseContractList.system.vetokenMinter);
     vetoken = await VeToken.at(baseContractList.system.vetoken);
     rFactory = await RewardFactory.at(baseContractList.system.rFactory);
     tFactory = await TokenFactory.at(baseContractList.system.tFactory);
     sFactory = await StashFactory.at(baseContractList.system.sFactory);
     poolManager = await PoolManager.at(baseContractList.system.poolManager);
-    vetokenRewards = await VE3DRewardPool.at(
-      baseContractList.system.vetokenRewards
-    );
+    vetokenRewards = await VE3DRewardPool.at(baseContractList.system.vetokenRewards);
     // veasset contracts
     veassetToken = await IERC20.at(contractAddresseList[0]);
     escrow = await IERC20.at(contractAddresseList[1]);
@@ -87,10 +75,7 @@ contract("VeAssetDepositor", async (accounts) => {
 
   describe("initialLock", async () => {
     it("check voter proxy balance at escrow after intial lock", async () => {
-      assert.isAbove(
-        toBN(await escrow.balanceOf(voterProxy.address)).toNumber(),
-        toBN(wei("900")).toNumber()
-      );
+      assert.isAbove(toBN(await escrow.balanceOf(voterProxy.address)).toNumber(), toBN(wei("900")).toNumber());
     });
   });
 
@@ -111,28 +96,15 @@ contract("VeAssetDepositor", async (accounts) => {
       depositAmount = await veassetToken.balanceOf(USER1);
       depositAmount = toBN(depositAmount).idiv(2);
       await veassetToken.approve(veassetDepositer.address, depositAmount);
-      let lockIncentive = toBN(
-        (await veassetDepositer.lockIncentive()).toString()
-      );
-      callIncentive = toBN(depositAmount)
-        .times(lockIncentive)
-        .idiv(FEE_DENOMINATOR);
+      let lockIncentive = toBN((await veassetDepositer.lockIncentive()).toString());
+      callIncentive = toBN(depositAmount).times(lockIncentive).idiv(FEE_DENOMINATOR);
     });
 
     it("deposit only without lock", async () => {
       await veassetDepositer.deposit(depositAmount, false);
-      assert.equal(
-        (await veassetToken.balanceOf(USER1)).toString(),
-        depositAmount.toFixed()
-      );
-      assert.equal(
-        (await veassetToken.balanceOf(veassetDepositer.address)).toString(),
-        depositAmount.toFixed()
-      );
-      assert.equal(
-        (await ve3Token.balanceOf(USER1)).toString(),
-        toBN(depositAmount).minus(callIncentive).toFixed()
-      );
+      assert.equal((await veassetToken.balanceOf(USER1)).toString(), depositAmount.toFixed());
+      assert.equal((await veassetToken.balanceOf(veassetDepositer.address)).toString(), depositAmount.toFixed());
+      assert.equal((await ve3Token.balanceOf(USER1)).toString(), toBN(depositAmount).minus(callIncentive).toFixed());
     });
 
     it("deposit only with lock", async () => {});

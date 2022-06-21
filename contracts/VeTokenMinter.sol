@@ -31,6 +31,7 @@ contract VeTokenMinter is Ownable {
 
     ///@dev weight is 10**25 precision
     function addOperator(address _newOperator, uint256 _newWeight) public onlyOwner {
+        require(_newWeight > 0 && _newWeight <= 100 * 10**25, "Invalid weight");
         operators.add(_newOperator);
         totalWeight = totalWeight.sub(veAssetWeights[_newOperator]);
         veAssetWeights[_newOperator] = _newWeight;
@@ -68,11 +69,13 @@ contract VeTokenMinter is Ownable {
 
             //mint
             veToken.safeTransfer(_to, _amount);
-            totalSupply += _amount;
+            totalSupply = totalSupply.add(_amount);
         }
     }
 
     function withdraw(address _destination, uint256 _amount) external onlyOwner {
+        totalSupply = totalSupply.add(_amount);
+
         veToken.safeTransfer(_destination, _amount);
 
         emit Withdraw(_destination, _amount);

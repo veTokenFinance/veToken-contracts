@@ -11,6 +11,8 @@ interface IVoteEscrow {
         BALANCER
     }
 
+    function escrowModle() external returns (IVoteEscrow.EscrowModle);
+
     function create_lock(uint256, uint256) external;
 
     function increase_amount(uint256) external;

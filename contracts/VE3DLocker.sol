@@ -153,9 +153,10 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
         address _distributor,
         bool _isVeAsset
     ) external {
+        require(_rewardsToken != address(0) && _distributor != address(0), "Not allowed!");
         require(address(stakingToken) != _rewardsToken, "Incorrect reward token");
         require(_msgSender() == owner() || operators.contains(_msgSender()), "!Auth");
-        require(rewardData[_rewardsToken].lastUpdateTime == 0);
+        require(rewardData[_rewardsToken].lastUpdateTime == 0, "Already added");
         require(_rewardsToken != address(stakingToken));
         require(rewardTokens.length() < MAX_REWARD_TOKEN, "!max reward token exceed");
         rewardTokens.add(_rewardsToken);
@@ -739,45 +740,75 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
         );
     }
 
-    // Claim all pending rewards
-    function getReward(address _account, bool _stake) public nonReentrant updateReward(_account) {
-        for (uint256 i; i < rewardTokens.length(); i++) {
-            address _rewardsToken = rewardTokens.at(i);
-            uint256 reward = rewards[_account][_rewardsToken];
-            if (reward > 0) {
-                rewards[_account][_rewardsToken] = 0;
-                if (rewardData[_rewardsToken].isVeAsset) {
-                    IVeAssetDeposit(rewardData[_rewardsToken].veAssetDeposits).deposit(
-                        reward,
-                        false
-                    );
-                    uint256 _ve3TokenBalance = IERC20(rewardData[_rewardsToken].ve3Token)
-                        .balanceOf(address(this));
-
-                    if (_stake) {
-                        IRewards(rewardData[_rewardsToken].ve3TokenStaking).stakeFor(
-                            _account,
-                            _ve3TokenBalance
-                        );
-                    } else {
-                        IERC20(rewardData[_rewardsToken].ve3Token).safeTransfer(
-                            _account,
-                            _ve3TokenBalance
-                        );
-                    }
-                    reward = _ve3TokenBalance;
-                    _rewardsToken = rewardData[_rewardsToken].ve3Token;
-                } else {
-                    IERC20(_rewardsToken).safeTransfer(_account, reward);
-                }
-                emit RewardPaid(_account, _rewardsToken, reward);
-            }
-        }
-    }
-
     // claim all pending rewards
     function getReward(address _account) external {
         getReward(_account, false);
+    }
+
+    // Claim all pending rewards
+    function getReward(address _account, bool _stake) public updateReward(_account) {
+        for (uint256 i; i < rewardTokens.length(); i++) {
+            address _rewardsToken = rewardTokens.at(i);
+            _getReward(_account, _rewardsToken, _stake);
+        }
+    }
+
+    function getReward(
+        address _account,
+        bool _stake,
+        address[] calldata _rewardsTokens
+    ) public updateReward(_account) {
+        for (uint256 i; i < _rewardsTokens.length; i++) {
+            address _rewardsToken = _rewardsTokens[i];
+
+            if (!rewardTokens.contains(_rewardsToken)) {
+                continue;
+            }
+            _getReward(_account, _rewardsToken, _stake);
+        }
+    }
+
+    function _getReward(
+        address _account,
+        address _rewardsToken,
+        bool _stake
+    ) internal nonReentrant returns (bool) {
+        uint256 reward = rewards[_account][_rewardsToken];
+        if (reward > 0) {
+            rewards[_account][_rewardsToken] = 0;
+            if (rewardData[_rewardsToken].isVeAsset) {
+                try
+                    IVeAssetDeposit(rewardData[_rewardsToken].veAssetDeposits).deposit(
+                        reward,
+                        false
+                    )
+                {} catch {
+                    return false;
+                }
+
+                uint256 _ve3TokenBalance = IERC20(rewardData[_rewardsToken].ve3Token).balanceOf(
+                    address(this)
+                );
+
+                if (_stake) {
+                    IRewards(rewardData[_rewardsToken].ve3TokenStaking).stakeFor(
+                        _account,
+                        _ve3TokenBalance
+                    );
+                } else {
+                    IERC20(rewardData[_rewardsToken].ve3Token).safeTransfer(
+                        _account,
+                        _ve3TokenBalance
+                    );
+                }
+                reward = _ve3TokenBalance;
+                _rewardsToken = rewardData[_rewardsToken].ve3Token;
+            } else {
+                IERC20(_rewardsToken).safeTransfer(_account, reward);
+            }
+            emit RewardPaid(_account, _rewardsToken, reward);
+            return true;
+        }
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */

@@ -15,6 +15,7 @@ import "./Interfaces/IRewards.sol";
 import "./Interfaces/ITokenMinter.sol";
 import "./Interfaces/IStash.sol";
 import "./Interfaces/IStashFactory.sol";
+import "./Interfaces/IVoteEscrow.sol";
 
 contract Booster is ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -484,19 +485,22 @@ contract Booster is ReentrancyGuard {
     function _earmarkRewards(uint256 _pid) internal {
         PoolInfo storage pool = poolInfo[_pid];
         require(pool.shutdown == false, "pool is closed");
-
+        address stash = pool.stash;
         address gauge = pool.gauge;
+
+        if (
+            stash != address(0) && IVoteEscrow(staker).escrowModle == IVoteEscrow.EscrowModle.ANGLE
+        ) {
+            _claimStashReward(stash);
+        }
 
         //claim veAsset
         IStaker(staker).claimVeAsset(gauge);
 
         //check if there are extra rewards
-        address stash = pool.stash;
+
         if (stash != address(0)) {
-            //claim extra rewards
-            IStash(stash).claimRewards();
-            //process extra rewards
-            IStash(stash).processStash();
+            _claimStashReward(stash);
         }
 
         //veAsset balance
@@ -552,6 +556,13 @@ contract Booster is ReentrancyGuard {
                 IRewards(stakerLockRewards).queueNewRewards(veAsset, _stakerLockIncentive);
             }
         }
+    }
+
+    function _claimStashReward(address stash) internal {
+        //claim extra rewards
+        IStash(stash).claimRewards();
+        //process extra rewards
+        IStash(stash).processStash();
     }
 
     function earmarkRewards(uint256 _pid) external returns (bool) {
@@ -613,5 +624,14 @@ contract Booster is ReentrancyGuard {
         require(msg.sender == owner, "!Auth");
 
         IRewards(lockRewards).recoverUnuserReward(owner);
+    }
+
+    function recoverUnusedClaimedReward(address _token, address _destination) external {
+        require(msg.sender == owner, "!Auth");
+
+        uint256 _amount = IERC20(_token).balanceOf(address(this));
+        if (_amount > 0) {
+            IERC20(_token).safeTransfer(_amount, _destination);
+        }
     }
 }

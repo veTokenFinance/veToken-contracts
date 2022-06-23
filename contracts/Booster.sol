@@ -489,7 +489,8 @@ contract Booster is ReentrancyGuard {
         address gauge = pool.gauge;
 
         if (
-            stash != address(0) && IVoteEscrow(staker).escrowModle == IVoteEscrow.EscrowModle.ANGLE
+            stash != address(0) &&
+            IVoteEscrow(staker).escrowModle() == IVoteEscrow.EscrowModle.ANGLE
         ) {
             _claimStashReward(stash);
         }
@@ -631,7 +632,7 @@ contract Booster is ReentrancyGuard {
 
         uint256 _amount = IERC20(_token).balanceOf(address(this));
         if (_amount > 0) {
-            IERC20(_token).safeTransfer(_amount, _destination);
+            IERC20(_token).safeTransfer(_destination, _amount);
         }
     }
 }

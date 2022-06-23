@@ -29,20 +29,19 @@ contract VeTokenMinter is Ownable {
         reductionPerCliff = maxSupply.div(totalCliffs);
     }
 
-    function addOperator(address _newOperator) public onlyOwner {
+    ///@dev weight is 10**25 precision
+    function addOperator(address _newOperator, uint256 _newWeight) public onlyOwner {
+        require(_newWeight > 0 && _newWeight <= 100 * 10**25, "Invalid weight");
         operators.add(_newOperator);
+        totalWeight = totalWeight.sub(veAssetWeights[_newOperator]);
+        veAssetWeights[_newOperator] = _newWeight;
+        totalWeight = totalWeight.add(_newWeight);
     }
 
     function removeOperator(address _operator) public onlyOwner {
+        totalWeight = totalWeight.sub(veAssetWeights[_operator]);
+        veAssetWeights[_operator] = 0;
         operators.remove(_operator);
-    }
-
-    ///@dev weight is 10**25 precision
-    function updateveAssetWeight(address veAssetOperator, uint256 newWeight) external onlyOwner {
-        require(operators.contains(veAssetOperator), "not an veAsset operator");
-        totalWeight -= veAssetWeights[veAssetOperator];
-        veAssetWeights[veAssetOperator] = newWeight;
-        totalWeight += newWeight;
     }
 
     function mint(address _to, uint256 _amount) external {
@@ -70,11 +69,13 @@ contract VeTokenMinter is Ownable {
 
             //mint
             veToken.safeTransfer(_to, _amount);
-            totalSupply += _amount;
+            totalSupply = totalSupply.add(_amount);
         }
     }
 
     function withdraw(address _destination, uint256 _amount) external onlyOwner {
+        totalSupply = totalSupply.add(_amount);
+
         veToken.safeTransfer(_destination, _amount);
 
         emit Withdraw(_destination, _amount);

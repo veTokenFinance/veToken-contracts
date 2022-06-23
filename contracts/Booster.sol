@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 import "./Interfaces/IFeeDistro.sol";
 import "./Interfaces/IRewardFactory.sol";
@@ -14,8 +15,9 @@ import "./Interfaces/IRewards.sol";
 import "./Interfaces/ITokenMinter.sol";
 import "./Interfaces/IStash.sol";
 import "./Interfaces/IStashFactory.sol";
+import "./Interfaces/IVoteEscrow.sol";
 
-contract Booster {
+contract Booster is ReentrancyGuard {
     using SafeERC20 for IERC20;
     using Address for address;
     using SafeMath for uint256;
@@ -69,6 +71,7 @@ contract Booster {
     //index(pid) -> pool
     PoolInfo[] public poolInfo;
     mapping(address => bool) public gaugeMap;
+    mapping(address => bool) public gaugeTokenMap;
 
     event Deposited(address indexed user, uint256 indexed poolid, uint256 amount);
     event Withdrawn(address indexed user, uint256 indexed poolid, uint256 amount);
@@ -127,13 +130,13 @@ contract Booster {
     }
 
     function setFeeManager(address _feeM) external {
-        require(msg.sender == feeManager, "!auth");
+        require(msg.sender == owner, "!auth");
         feeManager = _feeM;
         emit FeeManagerUpdated(_feeM);
     }
 
     function setPoolManager(address _poolM) external {
-        require(msg.sender == poolManager, "!auth");
+        require(msg.sender == owner, "!auth");
         poolManager = _poolM;
         emit PoolManagerUpdated(_poolM);
     }
@@ -166,7 +169,7 @@ contract Booster {
     }
 
     function setVoteDelegate(address _voteDelegate) external {
-        require(msg.sender == voteDelegate, "!auth");
+        require(msg.sender == owner, "!auth");
         voteDelegate = _voteDelegate;
         emit VoteDelegateUpdated(_voteDelegate);
     }
@@ -180,9 +183,13 @@ contract Booster {
 
         //reward contracts are immutable or else the owner
         //has a means to redeploy and mint cvx via rewardClaimed()
-        if (lockRewards == address(0)) {
+        if (lockRewards == address(0) && _rewards != address(0)) {
             lockRewards = _rewards;
+        }
+        if (stakerRewards == address(0) && _stakerRewards != address(0)) {
             stakerRewards = _stakerRewards;
+        }
+        if (stakerLockRewards == address(0) && _stakerLockRewards != address(0)) {
             stakerLockRewards = _stakerLockRewards;
         }
 
@@ -192,6 +199,7 @@ contract Booster {
     // Set reward token and claim contract, get from Curve's registry
     function setFeeInfo(uint256 _lockFeesIncentive, uint256 _stakerLockFeesIncentive) external {
         require(msg.sender == feeManager, "!auth");
+        require(_lockFeesIncentive.add(_stakerLockFeesIncentive) == FEE_DENOMINATOR);
 
         lockFeesIncentive = _lockFeesIncentive;
         stakerLockFeesIncentive = _stakerLockFeesIncentive;
@@ -290,6 +298,7 @@ contract Booster {
             })
         );
         gaugeMap[_gauge] = true;
+        gaugeTokenMap[_lptoken] = true;
 
         //give stashes access to rewardfactory and voteproxy
         //   voteproxy so it can grab the incentive tokens off the contract after claiming rewards
@@ -314,31 +323,10 @@ contract Booster {
 
         pool.shutdown = true;
         gaugeMap[pool.gauge] = false;
+        gaugeTokenMap[pool.lptoken] = false;
 
         emit PoolShuttedDown(_pid);
         return true;
-    }
-
-    //shutdown this contract.
-    //  unstake and pull all lp tokens to this address
-    //  only allow withdrawals
-    function shutdownSystem() external {
-        require(msg.sender == owner, "!auth");
-        isShutdown = true;
-
-        for (uint256 i = 0; i < poolInfo.length; i++) {
-            PoolInfo storage pool = poolInfo[i];
-            if (pool.shutdown) continue;
-
-            address token = pool.lptoken;
-            address gauge = pool.gauge;
-
-            //withdraw from gauge
-            try IStaker(staker).withdrawAll(token, gauge) {
-                pool.shutdown = true;
-            } catch {}
-        }
-        emit SystemShuttedDown();
     }
 
     //deposit lp tokens and stake
@@ -346,7 +334,7 @@ contract Booster {
         uint256 _pid,
         uint256 _amount,
         bool _stake
-    ) public returns (bool) {
+    ) public nonReentrant returns (bool) {
         require(!isShutdown, "shutdown");
         PoolInfo storage pool = poolInfo[_pid];
         require(pool.shutdown == false, "pool is closed");
@@ -371,6 +359,7 @@ contract Booster {
             //mint here and send to rewards on user behalf
             ITokenMinter(token).mint(address(this), _amount);
             address rewardContract = pool.veAssetRewards;
+            IERC20(token).safeApprove(rewardContract, 0);
             IERC20(token).safeApprove(rewardContract, _amount);
             IRewards(rewardContract).stakeFor(msg.sender, _amount);
         } else {
@@ -383,7 +372,7 @@ contract Booster {
     }
 
     //deposit all lp tokens and stake
-    function depositAll(uint256 _pid, bool _stake) external returns (bool) {
+    function depositAll(uint256 _pid, bool _stake) external nonReentrant returns (bool) {
         address lptoken = poolInfo[_pid].lptoken;
         uint256 balance = IERC20(lptoken).balanceOf(msg.sender);
         deposit(_pid, balance, _stake);
@@ -396,7 +385,7 @@ contract Booster {
         uint256 _amount,
         address _from,
         address _to
-    ) internal {
+    ) internal nonReentrant {
         PoolInfo storage pool = poolInfo[_pid];
         address lptoken = pool.lptoken;
         address gauge = pool.gauge;
@@ -472,7 +461,7 @@ contract Booster {
         return true;
     }
 
-    function claimRewards(uint256 _pid, address _gauge) external returns (bool) {
+    function claimRewards(uint256 _pid, address _gauge) external nonReentrant returns (bool) {
         address stash = poolInfo[_pid].stash;
         require(msg.sender == stash, "!auth");
 
@@ -496,19 +485,22 @@ contract Booster {
     function _earmarkRewards(uint256 _pid) internal {
         PoolInfo storage pool = poolInfo[_pid];
         require(pool.shutdown == false, "pool is closed");
-
+        address stash = pool.stash;
         address gauge = pool.gauge;
+
+        if (
+            stash != address(0) && IVoteEscrow(staker).escrowModle == IVoteEscrow.EscrowModle.ANGLE
+        ) {
+            _claimStashReward(stash);
+        }
 
         //claim veAsset
         IStaker(staker).claimVeAsset(gauge);
 
         //check if there are extra rewards
-        address stash = pool.stash;
+
         if (stash != address(0)) {
-            //claim extra rewards
-            IStash(stash).claimRewards();
-            //process extra rewards
-            IStash(stash).processStash();
+            _claimStashReward(stash);
         }
 
         //veAsset balance
@@ -566,6 +558,13 @@ contract Booster {
         }
     }
 
+    function _claimStashReward(address stash) internal {
+        //claim extra rewards
+        IStash(stash).claimRewards();
+        //process extra rewards
+        IStash(stash).processStash();
+    }
+
     function earmarkRewards(uint256 _pid) external returns (bool) {
         require(!isShutdown, "shutdown");
         _earmarkRewards(_pid);
@@ -611,5 +610,28 @@ contract Booster {
         ITokenMinter(minter).mint(_address, _veAssetEarned);
 
         return true;
+    }
+
+    function recoverUnusedRewardFromPools(uint256 _pid) external {
+        require(msg.sender == owner, "!Auth");
+        address rewardContract = poolInfo[_pid].veAssetRewards;
+        if (rewardContract != address(0)) {
+            IRewards(rewardContract).recoverUnuserReward(owner);
+        }
+    }
+
+    function recoverUnusedRewardFromLockPool() external {
+        require(msg.sender == owner, "!Auth");
+
+        IRewards(lockRewards).recoverUnuserReward(owner);
+    }
+
+    function recoverUnusedClaimedReward(address _token, address _destination) external {
+        require(msg.sender == owner, "!Auth");
+
+        uint256 _amount = IERC20(_token).balanceOf(address(this));
+        if (_amount > 0) {
+            IERC20(_token).safeTransfer(_amount, _destination);
+        }
     }
 }

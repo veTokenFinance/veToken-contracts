@@ -1,14 +1,5 @@
-const {
-  BN,
-  constants,
-  expectEvent,
-  expectRevert,
-  time,
-} = require("@openzeppelin/test-helpers");
-const {
-  loadContracts,
-  contractAddresseList,
-} = require("./helper/dumpAddresses");
+const { BN, constants, expectEvent, expectRevert, time } = require("@openzeppelin/test-helpers");
+const { loadContracts, contractAddresseList } = require("./helper/dumpAddresses");
 var jsonfile = require("jsonfile");
 var baseContractList = jsonfile.readFileSync("contracts.json");
 const { parseEther, formatEther, parseUnits } = require("@ethersproject/units");
@@ -60,9 +51,7 @@ contract("lptoken Deposit only Test", async (accounts) => {
   before("setup", async () => {
     await loadContracts();
     vetoken = await VeToken.at(baseContractList.system.vetoken);
-    vetokenRewards = await VE3DRewardPool.at(
-      baseContractList.system.vetokenRewards
-    );
+    vetokenRewards = await VE3DRewardPool.at(baseContractList.system.vetokenRewards);
     veassetToken = await IERC20.at(contractAddresseList[0]);
     lpToken = await IERC20.at(contractAddresseList[2]);
     voterProxy = await VoterProxy.at(contractAddresseList[3]);
@@ -86,10 +75,7 @@ contract("lptoken Deposit only Test", async (accounts) => {
     const parsedPoolInfo = JSON.parse(poolInfo);
     const rewardPool = await BaseRewardPool.at(parsedPoolInfo.veAssetRewards);
     const lpTokenBalanceOfUserA = await lpToken.balanceOf(userA);
-    console.log(
-      "userA initial Lp token balance:" +
-        formatEther(lpTokenBalanceOfUserA.toString())
-    );
+    console.log("userA initial Lp token balance:" + formatEther(lpTokenBalanceOfUserA.toString()));
     await lpToken.approve(booster.address, lpTokenBalanceOfUserA);
 
     // deposit only, no stake
@@ -120,19 +106,12 @@ contract("lptoken Deposit only Test", async (accounts) => {
     // get lp token rewards
     await time.increase(86400);
     await time.advanceBlock();
-    console.log(
-      "userB veAssetToken balance:" +
-        (await veassetToken.balanceOf(userB)).toString()
-    );
+    console.log("userB veAssetToken balance:" + (await veassetToken.balanceOf(userB)).toString());
     await booster.earmarkRewards(poolId, { from: userB });
     console.log("get lp token rewards by earmarkRewards() called by user B...");
 
-    let rewardPoolBal = (
-      await veassetToken.balanceOf(rewardPool.address)
-    ).toString();
-    console.log(
-      "rewardPool veAssetToken balance after earmarkRewards():" + rewardPoolBal
-    );
+    let rewardPoolBal = (await veassetToken.balanceOf(rewardPool.address)).toString();
+    console.log("rewardPool veAssetToken balance after earmarkRewards():" + rewardPoolBal);
     console.log(
       "ve3TokenRewardPool veAssetToken balance after earmarkRewards():" +
         (await veassetToken.balanceOf(ve3TokenRewardPool.address)).toString()
@@ -150,26 +129,18 @@ contract("lptoken Deposit only Test", async (accounts) => {
     expect(Number(earned.toString())).to.equal(0);
 
     // withdraw too much
-    await expectRevert(
-      booster.withdraw(poolId, lpTokenBalanceOfUserA + 10, { from: userA }),
-      "revert"
-    );
+    await expectRevert(booster.withdraw(poolId, lpTokenBalanceOfUserA + 10, { from: userA }), "revert");
     console.log(" ->reverted (withdraw too much, fail on user funds)");
 
     // withdraw a portion of deposited lp token
     await booster.withdraw(poolId, wei("10"), { from: userA });
     const userAlpTokenAfterWithdraw = await lpToken.balanceOf(userA);
-    expect(Number(formatEther(userAlpTokenAfterWithdraw.toString()))).to.equal(
-      10
-    );
+    expect(Number(formatEther(userAlpTokenAfterWithdraw.toString()))).to.equal(10);
 
     // withdraw all deposited lp token
     await booster.withdrawAll(poolId, { from: userA });
     const userAlpTokenAfterWithdrawAll = await lpToken.balanceOf(userA);
-    console.log(
-      "userA lptoken after withdraw all:" +
-        (await lpToken.balanceOf(userA)).toString()
-    );
+    console.log("userA lptoken after withdraw all:" + (await lpToken.balanceOf(userA)).toString());
     expect(formatEther(userAlpTokenAfterWithdrawAll.toString())).to.equal(
       formatEther(lpTokenBalanceOfUserA.toString())
     );

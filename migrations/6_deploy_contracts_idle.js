@@ -100,7 +100,7 @@ module.exports = async function (deployer, network, accounts) {
   addContract("system", "ve3_idle", ve3Token.address);
 
   // Depositer
-  await deployer.deploy(VeAssetDepositor, voter.address, ve3Token.address, idle.address, stkIDLE, MAXTiME);
+  await deployer.deploy(VeAssetDepositor, voter.address, ve3Token.address, idle.address, stkIDLE);
   const depositor = await VeAssetDepositor.deployed();
   addContract("system", "idle_depositor", depositor.address);
 
@@ -113,6 +113,8 @@ module.exports = async function (deployer, network, accounts) {
   logTransaction(await ve3Token.setOperator(depositor.address), "ve3Token setOperator");
 
   logTransaction(await voter.setDepositor(depositor.address), "voter setDepositor");
+
+  logTransaction(await depositor.setLockMaxTime(MAXTiME), "set max time");
 
   logTransaction(await depositor.initialLock(), "initial Lock created on stkIDLE");
 
@@ -139,7 +141,6 @@ module.exports = async function (deployer, network, accounts) {
     ),
     "ve3dLocker addRewardToken"
   );
-
 
   logTransaction(await booster.setTreasury(depositor.address), "booster setTreasury");
 

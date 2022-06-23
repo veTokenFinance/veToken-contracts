@@ -1,16 +1,7 @@
-const {
-  BN,
-  constants,
-  expectEvent,
-  expectRevert,
-  time,
-} = require("@openzeppelin/test-helpers");
+const { BN, constants, expectEvent, expectRevert, time } = require("@openzeppelin/test-helpers");
 var jsonfile = require("jsonfile");
 var baseContractList = jsonfile.readFileSync("contracts.json");
-const {
-  loadContracts,
-  contractAddresseList,
-} = require("./helper/dumpAddresses");
+const { loadContracts, contractAddresseList } = require("./helper/dumpAddresses");
 const pickleProxyABI = require("./helper/gaugeProxyABI_pickle.json");
 const gaugeProxyABI = require("./helper/gaugeProxyABI.json");
 const { hashMessage } = require("@ethersproject/hash");
@@ -73,9 +64,7 @@ contract("Voting Test", async (accounts) => {
   before("setup", async () => {
     await loadContracts();
     vetoken = await VeToken.at(baseContractList.system.vetoken);
-    vetokenRewards = await VE3DRewardPool.at(
-      baseContractList.system.vetokenRewards
-    );
+    vetokenRewards = await VE3DRewardPool.at(baseContractList.system.vetokenRewards);
     veassetToken = await IERC20.at(contractAddresseList[0]);
     lpToken = await IERC20.at(contractAddresseList[2]);
     voterProxy = await VoterProxy.at(contractAddresseList[3]);
@@ -105,23 +94,14 @@ contract("Voting Test", async (accounts) => {
     await veassetToken.approve(veassetDepositor.address, veAssetBalanceBefore, {
       from: userA,
     });
-    await veassetDepositor.deposit(
-      toBN(veAssetBalanceBefore).div(2),
-      true,
-      ve3TokenRewardPool.address,
-      {
-        from: userA,
-      }
-    );
+    await veassetDepositor.deposit(toBN(veAssetBalanceBefore).div(2), true, ve3TokenRewardPool.address, {
+      from: userA,
+    });
 
     const veAssetBalanceAfter = await veassetToken.balanceOf(userA);
     console.log("userA veasset balance after:", veAssetBalanceAfter.toString());
-    await veassetToken
-      .balanceOf(veassetDepositor.address)
-      .then((a) => console.log("depositor veassetToken: " + a));
-    await veassetToken
-      .balanceOf(voterProxy.address)
-      .then((a) => console.log("voterProxy veassetToken: " + a));
+    await veassetToken.balanceOf(veassetDepositor.address).then((a) => console.log("depositor veassetToken: " + a));
+    await veassetToken.balanceOf(voterProxy.address).then((a) => console.log("voterProxy veassetToken: " + a));
 
     await time.increase(86400);
     await time.advanceBlock();
@@ -131,10 +111,7 @@ contract("Voting Test", async (accounts) => {
     console.log("gauge weight testing...");
 
     // case 1: vote as non-delegate(revert)
-    await expectRevert(
-      booster.voteGaugeWeight([parsedPoolInfo.gauge], [10000], { from: userB }),
-      "revert"
-    );
+    await expectRevert(booster.voteGaugeWeight([parsedPoolInfo.gauge], [10000], { from: userB }), "revert");
     // case 2: vote as delegate
     // PICKLE: https://etherscan.io/address/0x2e57627ACf6c1812F99e274d0ac61B786c19E74f#readContract
 
@@ -142,29 +119,16 @@ contract("Voting Test", async (accounts) => {
       // check to make sure our voterProxy has dill(vePickle) so it can vote.
       const vePickleAddress = "0xbBCf169eE191A1Ba7371F30A1C344bFC498b29Cf";
       const vePickle = await IERC20.at(vePickleAddress);
-      await vePickle
-        .balanceOf(veassetDepositor.address)
-        .then((a) => console.log("depositor vePickle: " + a));
-      await vePickle
-        .balanceOf(voterProxy.address)
-        .then((a) => console.log("voterProxy vePickle >0: " + a));
+      await vePickle.balanceOf(veassetDepositor.address).then((a) => console.log("depositor vePickle: " + a));
+      await vePickle.balanceOf(voterProxy.address).then((a) => console.log("voterProxy vePickle >0: " + a));
 
       // show that weight power has changed
-      const pickleProxyControllerContract = new web3.eth.Contract(
-        pickleProxyABI,
-        controllerAddress
-      );
-      const totalWeightBefore = await pickleProxyControllerContract.methods
-        .totalWeight()
-        .call();
+      const pickleProxyControllerContract = new web3.eth.Contract(pickleProxyABI, controllerAddress);
+      const totalWeightBefore = await pickleProxyControllerContract.methods.totalWeight().call();
       console.log("totalWeightBefore: " + totalWeightBefore.toString());
       await booster.voteGaugeWeight([lpToken.address], [10000]);
-      const totalWeightAfter = await pickleProxyControllerContract.methods
-        .totalWeight()
-        .call();
-      const votes = await pickleProxyControllerContract.methods
-        .votes(voterProxy.address, lpToken.address)
-        .call();
+      const totalWeightAfter = await pickleProxyControllerContract.methods.totalWeight().call();
+      const votes = await pickleProxyControllerContract.methods.votes(voterProxy.address, lpToken.address).call();
       console.log("votes: " + votes);
       console.log("totalWeightAfter: " + totalWeightAfter);
       assert.isAbove(Number(totalWeightAfter - totalWeightBefore), 0);
@@ -175,14 +139,10 @@ contract("Voting Test", async (accounts) => {
     else {
       let controller = new web3.eth.Contract(gaugeProxyABI, controllerAddress);
       console.log("lptokenGauge info:", parsedPoolInfo.gauge);
-      var voteInfoBefore = await controller.methods
-        .vote_user_slopes(voterProxy.address, parsedPoolInfo.gauge)
-        .call();
+      var voteInfoBefore = await controller.methods.vote_user_slopes(voterProxy.address, parsedPoolInfo.gauge).call();
       console.log("gauge weight power before: " + voteInfoBefore[1]);
       await booster.voteGaugeWeight([parsedPoolInfo.gauge], [10]);
-      const voteInfoAfter = await controller.methods
-        .vote_user_slopes(voterProxy.address, parsedPoolInfo.gauge)
-        .call();
+      const voteInfoAfter = await controller.methods.vote_user_slopes(voterProxy.address, parsedPoolInfo.gauge).call();
       console.log("gauge weight power after: " + voteInfoAfter[1]);
       assert.isAbove(Number(voteInfoAfter[1] - voteInfoBefore[1]), 0);
     }

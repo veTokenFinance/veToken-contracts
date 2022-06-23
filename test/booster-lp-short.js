@@ -12,17 +12,8 @@ const PoolManager = artifacts.require("PoolManager");
 const VeToken = artifacts.require("VeToken");
 const IERC20 = artifacts.require("IERC20");
 
-const {
-  loadContracts,
-  contractAddresseList,
-  Networks,
-} = require("./helper/dumpAddresses");
-const {
-  ether,
-  balance,
-  constants,
-  time,
-} = require("@openzeppelin/test-helpers");
+const { loadContracts, contractAddresseList, Networks } = require("./helper/dumpAddresses");
+const { ether, balance, constants, time } = require("@openzeppelin/test-helpers");
 const { parseEther, formatEther, parseUnits } = require("@ethersproject/units");
 const { toBN, log } = require("./helper/utils");
 var jsonfile = require("jsonfile");
@@ -64,17 +55,13 @@ contract("Booster LP Stake", async (accounts) => {
   before("setup", async () => {
     network = await loadContracts();
     // basic contract
-    vetokenMinter = await VeTokenMinter.at(
-      baseContractList.system.vetokenMinter
-    );
+    vetokenMinter = await VeTokenMinter.at(baseContractList.system.vetokenMinter);
     vetoken = await VeToken.at(baseContractList.system.vetoken);
     rFactory = await RewardFactory.at(baseContractList.system.rFactory);
     tFactory = await TokenFactory.at(baseContractList.system.tFactory);
     sFactory = await StashFactory.at(baseContractList.system.sFactory);
     poolManager = await PoolManager.at(baseContractList.system.poolManager);
-    vetokenRewards = await VE3DRewardPool.at(
-      baseContractList.system.vetokenRewards
-    );
+    vetokenRewards = await VE3DRewardPool.at(baseContractList.system.vetokenRewards);
     // veasset contracts
     veassetToken = await IERC20.at(contractAddresseList[0]);
     escrow = await IERC20.at(contractAddresseList[1]);
@@ -85,14 +72,8 @@ contract("Booster LP Stake", async (accounts) => {
     veassetDepositer = await VeAssetDepositor.at(contractAddresseList[6]);
     ve3TokenRewardPool = await BaseRewardPool.at(contractAddresseList[7]);
     feeDistro = await booster.feeDistro();
-    uniExchange = new web3.eth.Contract(
-      uniswapV2Router,
-      uniExchangeRouterAddress
-    );
-    sushiExchange = new web3.eth.Contract(
-      uniswapV2Router,
-      sushiExchangeRouterAddress
-    );
+    uniExchange = new web3.eth.Contract(uniswapV2Router, uniExchangeRouterAddress);
+    sushiExchange = new web3.eth.Contract(uniswapV2Router, sushiExchangeRouterAddress);
     await reverter.snapshot();
   });
 
@@ -118,18 +99,10 @@ contract("Booster LP Stake", async (accounts) => {
     });
 
     it("deposit lp token 0 and check earned", async () => {
-      await veassetToken
-        .balanceOf(USER1)
-        .then((a) => log("veassetToken balance:", formatEther(a.toString())));
-      await ve3Token
-        .balanceOf(USER1)
-        .then((a) => log("ve3token balance:", formatEther(a.toString())));
-      await vetoken
-        .balanceOf(USER1)
-        .then((a) => log("vetoken balance:", formatEther(a.toString())));
-      await lpToken
-        .balanceOf(USER1)
-        .then((a) => log("lptoken balance:", formatEther(a.toString())));
+      await veassetToken.balanceOf(USER1).then((a) => log("veassetToken balance:", formatEther(a.toString())));
+      await ve3Token.balanceOf(USER1).then((a) => log("ve3token balance:", formatEther(a.toString())));
+      await vetoken.balanceOf(USER1).then((a) => log("vetoken balance:", formatEther(a.toString())));
+      await lpToken.balanceOf(USER1).then((a) => log("lptoken balance:", formatEther(a.toString())));
       await booster.deposit(0, depositAmount, true);
 
       // increase time
@@ -140,46 +113,22 @@ contract("Booster LP Stake", async (accounts) => {
       await booster.earmarkRewards(0, { from: USER2 });
       log("earmarkRewards from user2 executed", "");
       // const veAssetRewardBalance = await veassetToken.balanceOf;
-      await veassetToken
-        .balanceOf(USER2)
-        .then((a) =>
-          log("veassetToken balance of user2:", formatEther(a.toString()))
-        );
-      let rewardPoolBal = (
-        await veassetToken.balanceOf(rewardPool.address)
-      ).toString();
-      log(
-        "rewardPoolBalance (veassetToken balance):",
-        formatEther(rewardPoolBal)
-      );
+      await veassetToken.balanceOf(USER2).then((a) => log("veassetToken balance of user2:", formatEther(a.toString())));
+      let rewardPoolBal = (await veassetToken.balanceOf(rewardPool.address)).toString();
+      log("rewardPoolBalance (veassetToken balance):", formatEther(rewardPoolBal));
 
       await veassetToken
         .balanceOf(ve3TokenRewardPool.address)
-        .then((a) =>
-          log("ve3TokenRewardPool balance:", formatEther(a.toString()))
-        );
+        .then((a) => log("ve3TokenRewardPool balance:", formatEther(a.toString())));
 
       await veassetToken
         .balanceOf(vetokenRewards.address)
-        .then((a) =>
-          log(
-            "veassetToken balance on vetokenRewards address:",
-            formatEther(a.toString())
-          )
-        );
+        .then((a) => log("veassetToken balance on vetokenRewards address:", formatEther(a.toString())));
 
-      await veassetToken
-        .balanceOf(USER1)
-        .then((a) => log("veassetToken balance:", formatEther(a.toString())));
-      await ve3Token
-        .balanceOf(USER1)
-        .then((a) => log("ve3token balance:", formatEther(a.toString())));
-      await vetoken
-        .balanceOf(USER1)
-        .then((a) => log("vetoken balance:", formatEther(a.toString())));
-      await lpToken
-        .balanceOf(USER1)
-        .then((a) => log("lptoken balance:", formatEther(a.toString())));
+      await veassetToken.balanceOf(USER1).then((a) => log("veassetToken balance:", formatEther(a.toString())));
+      await ve3Token.balanceOf(USER1).then((a) => log("ve3token balance:", formatEther(a.toString())));
+      await vetoken.balanceOf(USER1).then((a) => log("vetoken balance:", formatEther(a.toString())));
+      await lpToken.balanceOf(USER1).then((a) => log("lptoken balance:", formatEther(a.toString())));
 
       //assert.equal((await rewardPool.earned(USER1)).toString(), 0);
 
@@ -196,51 +145,35 @@ contract("Booster LP Stake", async (accounts) => {
       if (network === Networks.pickle) {
         const poolInfo = JSON.stringify(await booster.poolInfo(1));
         const parsedPoolInfo = JSON.parse(poolInfo);
-        const rewardPoolTwo = await BaseRewardPool.at(
-          parsedPoolInfo.veAssetRewards
-        );
+        const rewardPoolTwo = await BaseRewardPool.at(parsedPoolInfo.veAssetRewards);
 
         const poolInfoThree = JSON.stringify(await booster.poolInfo(2));
         const parsedPoolInfoThree = JSON.parse(poolInfoThree);
-        const rewardPoolThree = await BaseRewardPool.at(
-          parsedPoolInfoThree.veAssetRewards
-        );
+        const rewardPoolThree = await BaseRewardPool.at(parsedPoolInfoThree.veAssetRewards);
 
         const poolInfoFour = JSON.stringify(await booster.poolInfo(3));
         const parsedPoolInfoFour = JSON.parse(poolInfoFour);
-        const rewardPoolFour = await BaseRewardPool.at(
-          parsedPoolInfoFour.veAssetRewards
-        );
+        const rewardPoolFour = await BaseRewardPool.at(parsedPoolInfoFour.veAssetRewards);
 
         const poolInfoFive = JSON.stringify(await booster.poolInfo(4));
         const parsedPoolInfoFive = JSON.parse(poolInfoFive);
-        const rewardPoolFive = await BaseRewardPool.at(
-          parsedPoolInfoFive.veAssetRewards
-        );
+        const rewardPoolFive = await BaseRewardPool.at(parsedPoolInfoFive.veAssetRewards);
 
         const poolInfoSix = JSON.stringify(await booster.poolInfo(5));
         const parsedPoolInfoSix = JSON.parse(poolInfoSix);
-        const rewardPoolSix = await BaseRewardPool.at(
-          parsedPoolInfoSix.veAssetRewards
-        );
+        const rewardPoolSix = await BaseRewardPool.at(parsedPoolInfoSix.veAssetRewards);
 
         const poolInfoSeven = JSON.stringify(await booster.poolInfo(6));
         const parsedPoolInfoSeven = JSON.parse(poolInfoSeven);
-        const rewardPoolSeven = await BaseRewardPool.at(
-          parsedPoolInfoSeven.veAssetRewards
-        );
+        const rewardPoolSeven = await BaseRewardPool.at(parsedPoolInfoSeven.veAssetRewards);
 
         const poolInfoEight = JSON.stringify(await booster.poolInfo(7));
         const parsedPoolInfoEight = JSON.parse(poolInfoEight);
-        const rewardPoolEight = await BaseRewardPool.at(
-          parsedPoolInfoEight.veAssetRewards
-        );
+        const rewardPoolEight = await BaseRewardPool.at(parsedPoolInfoEight.veAssetRewards);
 
         const poolInfoNine = JSON.stringify(await booster.poolInfo(8));
         const parsedPoolInfoNine = JSON.parse(poolInfoNine);
-        const rewardPoolNine = await BaseRewardPool.at(
-          parsedPoolInfoNine.veAssetRewards
-        );
+        const rewardPoolNine = await BaseRewardPool.at(parsedPoolInfoNine.veAssetRewards);
 
         const lpTokenTwo = await IERC20.at(parsedPoolInfo.lptoken);
         const lpTokenThree = await IERC20.at(parsedPoolInfoThree.lptoken);
@@ -310,17 +243,11 @@ contract("Booster LP Stake", async (accounts) => {
           from: contractAddresseList[47],
         });
         const wethBalance = await weth.balanceOf(USER1);
-        await weth
-          .balanceOf(USER1)
-          .then((a) => log("weth balance:", formatEther(a.toString())));
+        await weth.balanceOf(USER1).then((a) => log("weth balance:", formatEther(a.toString())));
         const pickleBalance = await pickle.balanceOf(USER1);
-        await pickle
-          .balanceOf(USER1)
-          .then((a) => log("pickle balance:", formatEther(a.toString())));
+        await pickle.balanceOf(USER1).then((a) => log("pickle balance:", formatEther(a.toString())));
         const veCRVDAOBalance = await veCRVDAO.balanceOf(USER1);
-        await veCRVDAO
-          .balanceOf(USER1)
-          .then((a) => log("veCRVDAO balance:", formatEther(a.toString())));
+        await veCRVDAO.balanceOf(USER1).then((a) => log("veCRVDAO balance:", formatEther(a.toString())));
         let starttime = await time.latest();
         await weth.transfer(USER1, web3.utils.toWei("500"), {
           from: contractAddresseList[47],
@@ -335,32 +262,14 @@ contract("Booster LP Stake", async (accounts) => {
           from: USER1,
         });
         await uniExchange.methods
-          .addLiquidity(
-            weth.address,
-            pickle.address,
-            wethBalance,
-            pickleBalance,
-            0,
-            0,
-            USER1,
-            starttime + 3000
-          )
+          .addLiquidity(weth.address, pickle.address, wethBalance, pickleBalance, 0, 0, USER1, starttime + 3000)
           .send({ from: USER1, gas: 300000 });
         const wethBalanceTwo = await weth.balanceOf(USER1);
         await weth.approve(sushiExchangeRouterAddress, wethBalanceTwo, {
           from: USER1,
         });
         await sushiExchange.methods
-          .addLiquidity(
-            weth.address,
-            veCRVDAO.address,
-            wethBalanceTwo,
-            veCRVDAOBalance,
-            0,
-            0,
-            USER1,
-            starttime + 3000
-          )
+          .addLiquidity(weth.address, veCRVDAO.address, wethBalanceTwo, veCRVDAOBalance, 0, 0, USER1, starttime + 3000)
           .send({ from: USER1, gas: 300000 });
         await weth.transfer(USER1, web3.utils.toWei("500"), {
           from: contractAddresseList[47],
@@ -374,16 +283,7 @@ contract("Booster LP Stake", async (accounts) => {
           from: USER1,
         });
         await sushiExchange.methods
-          .addLiquidity(
-            weth.address,
-            dai.address,
-            wethBalanceThree,
-            daiBalance,
-            0,
-            0,
-            USER1,
-            starttime + 3000
-          )
+          .addLiquidity(weth.address, dai.address, wethBalanceThree, daiBalance, 0, 0, USER1, starttime + 3000)
           .send({ from: USER1, gas: 300000 });
         await weth.transfer(USER1, web3.utils.toWei("500"), {
           from: contractAddresseList[47],
@@ -402,16 +302,7 @@ contract("Booster LP Stake", async (accounts) => {
           from: USER1,
         });
         await sushiExchange.methods
-          .addLiquidity(
-            weth.address,
-            usdc.address,
-            wethBalanceFour,
-            usdcBalance,
-            0,
-            0,
-            USER1,
-            starttime + 3000
-          )
+          .addLiquidity(weth.address, usdc.address, wethBalanceFour, usdcBalance, 0, 0, USER1, starttime + 3000)
           .send({ from: USER1, gas: 300000 });
         await weth.transfer(USER1, web3.utils.toWei("500"), {
           from: contractAddresseList[47],
@@ -425,16 +316,7 @@ contract("Booster LP Stake", async (accounts) => {
           from: USER1,
         });
         await sushiExchange.methods
-          .addLiquidity(
-            weth.address,
-            usdt.address,
-            wethBalanceFive,
-            usdtBalance,
-            0,
-            0,
-            USER1,
-            starttime + 3000
-          )
+          .addLiquidity(weth.address, usdt.address, wethBalanceFive, usdtBalance, 0, 0, USER1, starttime + 3000)
           .send({ from: USER1, gas: 300000 });
         await weth.transfer(USER1, web3.utils.toWei("500"), {
           from: contractAddresseList[47],
@@ -448,16 +330,7 @@ contract("Booster LP Stake", async (accounts) => {
           from: USER1,
         });
         await sushiExchange.methods
-          .addLiquidity(
-            weth.address,
-            wbtc.address,
-            wethBalanceSix,
-            wbtcBalance,
-            0,
-            0,
-            USER1,
-            starttime + 3000
-          )
+          .addLiquidity(weth.address, wbtc.address, wethBalanceSix, wbtcBalance, 0, 0, USER1, starttime + 3000)
           .send({ from: USER1, gas: 300000 });
 
         await weth.transfer(USER1, web3.utils.toWei("500"), {
@@ -472,16 +345,7 @@ contract("Booster LP Stake", async (accounts) => {
           from: USER1,
         });
         await sushiExchange.methods
-          .addLiquidity(
-            weth.address,
-            yfi.address,
-            wethBalanceSeven,
-            yfiBalance,
-            0,
-            0,
-            USER1,
-            starttime + 3000
-          )
+          .addLiquidity(weth.address, yfi.address, wethBalanceSeven, yfiBalance, 0, 0, USER1, starttime + 3000)
           .send({ from: USER1, gas: 300000 });
 
         const mirBalance = await mir.balanceOf(USER1);
@@ -493,45 +357,18 @@ contract("Booster LP Stake", async (accounts) => {
           from: USER1,
         });
         await uniExchange.methods
-          .addLiquidity(
-            ust.address,
-            mir.address,
-            ustBalance,
-            mirBalance,
-            0,
-            0,
-            USER1,
-            starttime + 3000
-          )
+          .addLiquidity(ust.address, mir.address, ustBalance, mirBalance, 0, 0, USER1, starttime + 3000)
           .send({ from: USER1, gas: 300000 });
 
-        await lpTokenTwo
-          .balanceOf(USER1)
-          .then((a) => log("lptokenTwo balance:", formatEther(a.toString())));
-        await yveCRVDAO
-          .balanceOf(USER1)
-          .then((a) => log("yveCRVDAO balance:", formatEther(a.toString())));
-        await daiSushiLp
-          .balanceOf(USER1)
-          .then((a) => log("daiSushiLp balance:", formatEther(a.toString())));
-        await usdcSushiLp
-          .balanceOf(USER1)
-          .then((a) => log("usdcSushiLp balance:", formatEther(a.toString())));
-        await usdtSushiLp
-          .balanceOf(USER1)
-          .then((a) => log("usdtSushiLp balance:", formatEther(a.toString())));
-        await wbtcSushiLp
-          .balanceOf(USER1)
-          .then((a) => log("wbtcSushiLp balance:", formatEther(a.toString())));
-        await yfiSushiLp
-          .balanceOf(USER1)
-          .then((a) => log("yfiSushiLp balance:", formatEther(a.toString())));
-        await curvestETHLp
-          .balanceOf(USER1)
-          .then((a) => log("curvestETHLp balance:", formatEther(a.toString())));
-        await uniMirUstLP
-          .balanceOf(USER1)
-          .then((a) => log("uniMirUstLP balance:", formatEther(a.toString())));
+        await lpTokenTwo.balanceOf(USER1).then((a) => log("lptokenTwo balance:", formatEther(a.toString())));
+        await yveCRVDAO.balanceOf(USER1).then((a) => log("yveCRVDAO balance:", formatEther(a.toString())));
+        await daiSushiLp.balanceOf(USER1).then((a) => log("daiSushiLp balance:", formatEther(a.toString())));
+        await usdcSushiLp.balanceOf(USER1).then((a) => log("usdcSushiLp balance:", formatEther(a.toString())));
+        await usdtSushiLp.balanceOf(USER1).then((a) => log("usdtSushiLp balance:", formatEther(a.toString())));
+        await wbtcSushiLp.balanceOf(USER1).then((a) => log("wbtcSushiLp balance:", formatEther(a.toString())));
+        await yfiSushiLp.balanceOf(USER1).then((a) => log("yfiSushiLp balance:", formatEther(a.toString())));
+        await curvestETHLp.balanceOf(USER1).then((a) => log("curvestETHLp balance:", formatEther(a.toString())));
+        await uniMirUstLP.balanceOf(USER1).then((a) => log("uniMirUstLP balance:", formatEther(a.toString())));
         const yveCRVDAOBalance = await yveCRVDAO.balanceOf(USER1);
         await yveCRVDAO.approve(lpTokenThree.address, yveCRVDAOBalance);
         const daiSushiLpBalance = await daiSushiLp.balanceOf(USER1);
@@ -548,57 +385,22 @@ contract("Booster LP Stake", async (accounts) => {
         await yfiSushiLp.approve(lpTokenEight.address, yfiSushiLpBalance);
         await curvestETHLp.approve(lpTokenNine.address, curvestETHLpBalance);
         //await uniMirUstLP.approve(lpTokenTen.address, uniMirUstLPBalance);
-        const pickleJarThree = new web3.eth.Contract(
-          pickleJar,
-          lpTokenThree.address
-        );
-        await pickleJarThree.methods
-          .deposit(yveCRVDAOBalance)
-          .send({ from: USER1, gas: 300000 });
-        const pickleJarFour = new web3.eth.Contract(
-          pickleJar,
-          lpTokenFour.address
-        );
-        await pickleJarFour.methods
-          .deposit(daiSushiLpBalance)
-          .send({ from: USER1, gas: 300000 });
-        const pickleJarFive = new web3.eth.Contract(
-          pickleJar,
-          lpTokenFive.address
-        );
-        await pickleJarFive.methods
-          .deposit(usdcSushiLpBalance)
-          .send({ from: USER1, gas: 300000 });
-        const pickleJarSix = new web3.eth.Contract(
-          pickleJar,
-          contractAddresseList[14]
-        );
-        await pickleJarSix.methods
-          .deposit(usdtSushiLpBalance)
-          .send({ from: USER1, gas: 300000 });
-        const pickleJarSeven = new web3.eth.Contract(
-          pickleJar,
-          contractAddresseList[15]
-        );
-        await pickleJarSeven.methods
-          .deposit(wbtcSushiLpBalance)
-          .send({ from: USER1, gas: 300000 });
+        const pickleJarThree = new web3.eth.Contract(pickleJar, lpTokenThree.address);
+        await pickleJarThree.methods.deposit(yveCRVDAOBalance).send({ from: USER1, gas: 300000 });
+        const pickleJarFour = new web3.eth.Contract(pickleJar, lpTokenFour.address);
+        await pickleJarFour.methods.deposit(daiSushiLpBalance).send({ from: USER1, gas: 300000 });
+        const pickleJarFive = new web3.eth.Contract(pickleJar, lpTokenFive.address);
+        await pickleJarFive.methods.deposit(usdcSushiLpBalance).send({ from: USER1, gas: 300000 });
+        const pickleJarSix = new web3.eth.Contract(pickleJar, contractAddresseList[14]);
+        await pickleJarSix.methods.deposit(usdtSushiLpBalance).send({ from: USER1, gas: 300000 });
+        const pickleJarSeven = new web3.eth.Contract(pickleJar, contractAddresseList[15]);
+        await pickleJarSeven.methods.deposit(wbtcSushiLpBalance).send({ from: USER1, gas: 300000 });
 
-        const pickleJarEight = new web3.eth.Contract(
-          pickleJar,
-          contractAddresseList[16]
-        );
-        await pickleJarEight.methods
-          .deposit(yfiSushiLpBalance)
-          .send({ from: USER1, gas: 300000 });
+        const pickleJarEight = new web3.eth.Contract(pickleJar, contractAddresseList[16]);
+        await pickleJarEight.methods.deposit(yfiSushiLpBalance).send({ from: USER1, gas: 300000 });
 
-        const pickleJarNine = new web3.eth.Contract(
-          pickleJar,
-          contractAddresseList[17]
-        );
-        await pickleJarNine.methods
-          .deposit(curvestETHLpBalance)
-          .send({ from: USER1, gas: 300000 });
+        const pickleJarNine = new web3.eth.Contract(pickleJar, contractAddresseList[17]);
+        await pickleJarNine.methods.deposit(curvestETHLpBalance).send({ from: USER1, gas: 300000 });
 
         //const pickleJarTen = new web3.eth.Contract(pickleJar, contractAddresseList[18]);
         //await pickleJarTen.methods.deposit(uniMirUstLPBalance).send({ from: USER1, gas: 300000 });
@@ -608,32 +410,18 @@ contract("Booster LP Stake", async (accounts) => {
         const lpTokenFourBalance = await lpTokenFour.balanceOf(USER1);
         const lpTokenFiveBalance = await lpTokenFive.balanceOf(USER1);
         const lpTokenSixBalance = await lpTokenSix.balanceOf(USER1);
-        await lpTokenThree
-          .balanceOf(USER1)
-          .then((a) => log("lpTokenThree balance:", formatEther(a.toString())));
-        await lpTokenFour
-          .balanceOf(USER1)
-          .then((a) => log("lpTokenFour balance:", formatEther(a.toString())));
-        await lpTokenFive
-          .balanceOf(USER1)
-          .then((a) => log("lpTokenFive balance:", formatEther(a.toString())));
-        await lpTokenSix
-          .balanceOf(USER1)
-          .then((a) => log("lpTokenFive balance:", formatEther(a.toString())));
+        await lpTokenThree.balanceOf(USER1).then((a) => log("lpTokenThree balance:", formatEther(a.toString())));
+        await lpTokenFour.balanceOf(USER1).then((a) => log("lpTokenFour balance:", formatEther(a.toString())));
+        await lpTokenFive.balanceOf(USER1).then((a) => log("lpTokenFive balance:", formatEther(a.toString())));
+        await lpTokenSix.balanceOf(USER1).then((a) => log("lpTokenFive balance:", formatEther(a.toString())));
         const lpTokenSevenBalance = await lpTokenSeven.balanceOf(USER1);
-        await lpTokenSeven
-          .balanceOf(USER1)
-          .then((a) => log("lpTokenSeven balance:", formatEther(a.toString())));
+        await lpTokenSeven.balanceOf(USER1).then((a) => log("lpTokenSeven balance:", formatEther(a.toString())));
 
         const lpTokenEightBalance = await lpTokenEight.balanceOf(USER1);
-        await lpTokenEight
-          .balanceOf(USER1)
-          .then((a) => log("lpTokenEight balance:", formatEther(a.toString())));
+        await lpTokenEight.balanceOf(USER1).then((a) => log("lpTokenEight balance:", formatEther(a.toString())));
 
         const lpTokenNineBalance = await lpTokenNine.balanceOf(USER1);
-        await lpTokenNine
-          .balanceOf(USER1)
-          .then((a) => log("lpTokenNine balance:", formatEther(a.toString())));
+        await lpTokenNine.balanceOf(USER1).then((a) => log("lpTokenNine balance:", formatEther(a.toString())));
 
         //const lpTokenTenBalance = await lpTokenTen.balanceOf(USER1)
         //await lpTokenTen.balanceOf(USER1).then(a => log('lpTokenTen balance: ' + formatEther(a.toString())))
@@ -711,30 +499,22 @@ contract("Booster LP Stake", async (accounts) => {
       if (network === Networks.ribbon) {
         const poolInfo = JSON.stringify(await booster.poolInfo(1));
         const parsedPoolInfo = JSON.parse(poolInfo);
-        const rewardPoolTwo = await BaseRewardPool.at(
-          parsedPoolInfo.veAssetRewards
-        );
+        const rewardPoolTwo = await BaseRewardPool.at(parsedPoolInfo.veAssetRewards);
 
         const poolInfoThree = JSON.stringify(await booster.poolInfo(2));
         const parsedPoolInfoThree = JSON.parse(poolInfoThree);
-        const rewardPoolThree = await BaseRewardPool.at(
-          parsedPoolInfoThree.veAssetRewards
-        );
+        const rewardPoolThree = await BaseRewardPool.at(parsedPoolInfoThree.veAssetRewards);
 
         const poolInfoFour = JSON.stringify(await booster.poolInfo(3));
         const parsedPoolInfoFour = JSON.parse(poolInfoFour);
-        const rewardPoolFour = await BaseRewardPool.at(
-          parsedPoolInfoFour.veAssetRewards
-        );
+        const rewardPoolFour = await BaseRewardPool.at(parsedPoolInfoFour.veAssetRewards);
 
         const lpTokenTwo = await IERC20.at(parsedPoolInfo.lptoken);
         const lpTokenThree = await IERC20.at(parsedPoolInfoThree.lptoken);
         const lpTokenFour = await IERC20.at(parsedPoolInfoFour.lptoken);
 
         const btcThetaVault = await IERC20.at(lpTokenTwo.address);
-        depositAmountTwo = await btcThetaVault.balanceOf(
-          contractAddresseList[11]
-        );
+        depositAmountTwo = await btcThetaVault.balanceOf(contractAddresseList[11]);
         await btcThetaVault.transfer(accounts[0], depositAmountTwo, {
           from: contractAddresseList[11],
           gas: 80000,
@@ -752,19 +532,13 @@ contract("Booster LP Stake", async (accounts) => {
           gas: 80000,
         });
 
-        await lpTokenTwo
-          .balanceOf(USER1)
-          .then((a) => log("lptokenTwo balance:", formatEther(a.toString())));
+        await lpTokenTwo.balanceOf(USER1).then((a) => log("lptokenTwo balance:", formatEther(a.toString())));
         const lpTokenTwoBalance = await lpTokenTwo.balanceOf(USER1);
 
-        await lpTokenThree
-          .balanceOf(USER1)
-          .then((a) => log("lptokenThree balance:", formatEther(a.toString())));
+        await lpTokenThree.balanceOf(USER1).then((a) => log("lptokenThree balance:", formatEther(a.toString())));
         const lpTokenThreeBalance = await lpTokenThree.balanceOf(USER1);
 
-        await lpTokenFour
-          .balanceOf(USER1)
-          .then((a) => log("lpTokenFour balance:", formatEther(a.toString())));
+        await lpTokenFour.balanceOf(USER1).then((a) => log("lpTokenFour balance:", formatEther(a.toString())));
         const lpTokenFourBalance = await lpTokenFour.balanceOf(USER1);
 
         await lpTokenTwo.approve(booster.address, lpTokenTwoBalance);
@@ -802,64 +576,46 @@ contract("Booster LP Stake", async (accounts) => {
       if (network === Networks.idle) {
         const poolInfo = JSON.stringify(await booster.poolInfo(1));
         const parsedPoolInfo = JSON.parse(poolInfo);
-        const rewardPoolTwo = await BaseRewardPool.at(
-          parsedPoolInfo.veAssetRewards
-        );
+        const rewardPoolTwo = await BaseRewardPool.at(parsedPoolInfo.veAssetRewards);
 
         const poolInfoThree = JSON.stringify(await booster.poolInfo(2));
         const parsedPoolInfoThree = JSON.parse(poolInfoThree);
-        const rewardPoolThree = await BaseRewardPool.at(
-          parsedPoolInfoThree.veAssetRewards
-        );
+        const rewardPoolThree = await BaseRewardPool.at(parsedPoolInfoThree.veAssetRewards);
 
         const poolInfoFour = JSON.stringify(await booster.poolInfo(3));
         const parsedPoolInfoFour = JSON.parse(poolInfoFour);
-        const rewardPoolFour = await BaseRewardPool.at(
-          parsedPoolInfoFour.veAssetRewards
-        );
+        const rewardPoolFour = await BaseRewardPool.at(parsedPoolInfoFour.veAssetRewards);
 
         const lpTokenTwo = await IERC20.at(parsedPoolInfo.lptoken);
         const lpTokenThree = await IERC20.at(parsedPoolInfoThree.lptoken);
         const lpTokenFour = await IERC20.at(parsedPoolInfoFour.lptoken);
 
         const idleCvxalUSD3CRV = await IERC20.at(contractAddresseList[10]);
-        depositAmountTwo = await idleCvxalUSD3CRV.balanceOf(
-          contractAddresseList[11]
-        );
+        depositAmountTwo = await idleCvxalUSD3CRV.balanceOf(contractAddresseList[11]);
         await idleCvxalUSD3CRV.transfer(accounts[0], depositAmountTwo, {
           from: contractAddresseList[11],
           gas: 80000,
         });
         const idleCvxFRAX3CRV = await IERC20.at(lpTokenThree.address);
-        depositAmountThree = await idleCvxFRAX3CRV.balanceOf(
-          contractAddresseList[13]
-        );
+        depositAmountThree = await idleCvxFRAX3CRV.balanceOf(contractAddresseList[13]);
         await idleCvxFRAX3CRV.transfer(accounts[0], depositAmountThree, {
           from: contractAddresseList[13],
           gas: 80000,
         });
         const idleCvxMIM3LP3CRV = await IERC20.at(lpTokenFour.address);
-        depositAmountFour = await idleCvxMIM3LP3CRV.balanceOf(
-          contractAddresseList[15]
-        );
+        depositAmountFour = await idleCvxMIM3LP3CRV.balanceOf(contractAddresseList[15]);
         await idleCvxMIM3LP3CRV.transfer(accounts[0], depositAmountFour, {
           from: contractAddresseList[15],
           gas: 80000,
         });
 
-        await lpTokenTwo
-          .balanceOf(USER1)
-          .then((a) => log("lptokenTwo balance:", formatEther(a.toString())));
+        await lpTokenTwo.balanceOf(USER1).then((a) => log("lptokenTwo balance:", formatEther(a.toString())));
         const lpTokenTwoBalance = await lpTokenTwo.balanceOf(USER1);
 
-        await lpTokenThree
-          .balanceOf(USER1)
-          .then((a) => log("lptokenThree balance:", formatEther(a.toString())));
+        await lpTokenThree.balanceOf(USER1).then((a) => log("lptokenThree balance:", formatEther(a.toString())));
         const lpTokenThreeBalance = await lpTokenThree.balanceOf(USER1);
 
-        await lpTokenFour
-          .balanceOf(USER1)
-          .then((a) => log("lpTokenFour balance:", formatEther(a.toString())));
+        await lpTokenFour.balanceOf(USER1).then((a) => log("lpTokenFour balance:", formatEther(a.toString())));
         const lpTokenFourBalance = await lpTokenFour.balanceOf(USER1);
 
         await lpTokenTwo.approve(booster.address, lpTokenTwoBalance);
@@ -897,62 +653,44 @@ contract("Booster LP Stake", async (accounts) => {
       if (network === Networks.angle) {
         const poolInfo = JSON.stringify(await booster.poolInfo(1));
         const parsedPoolInfo = JSON.parse(poolInfo);
-        const rewardPoolTwo = await BaseRewardPool.at(
-          parsedPoolInfo.veAssetRewards
-        );
+        const rewardPoolTwo = await BaseRewardPool.at(parsedPoolInfo.veAssetRewards);
 
         const poolInfoThree = JSON.stringify(await booster.poolInfo(2));
         const parsedPoolInfoThree = JSON.parse(poolInfoThree);
-        const rewardPoolThree = await BaseRewardPool.at(
-          parsedPoolInfoThree.veAssetRewards
-        );
+        const rewardPoolThree = await BaseRewardPool.at(parsedPoolInfoThree.veAssetRewards);
 
         const poolInfoFour = JSON.stringify(await booster.poolInfo(3));
         const parsedPoolInfoFour = JSON.parse(poolInfoFour);
-        const rewardPoolFour = await BaseRewardPool.at(
-          parsedPoolInfoFour.veAssetRewards
-        );
+        const rewardPoolFour = await BaseRewardPool.at(parsedPoolInfoFour.veAssetRewards);
 
         const lpTokenTwo = await IERC20.at(parsedPoolInfo.lptoken);
         const lpTokenThree = await IERC20.at(parsedPoolInfoThree.lptoken);
         const lpTokenFour = await IERC20.at(parsedPoolInfoFour.lptoken);
 
         const sanUSDC_EUR = await IERC20.at(contractAddresseList[10]);
-        depositAmountTwo = await sanUSDC_EUR.balanceOf(
-          contractAddresseList[11]
-        );
+        depositAmountTwo = await sanUSDC_EUR.balanceOf(contractAddresseList[11]);
         await sanUSDC_EUR.transfer(accounts[0], depositAmountTwo, {
           from: contractAddresseList[11],
         });
         const sanFEI_EUR = await IERC20.at(lpTokenThree.address);
-        depositAmountThree = await sanFEI_EUR.balanceOf(
-          contractAddresseList[14]
-        );
+        depositAmountThree = await sanFEI_EUR.balanceOf(contractAddresseList[14]);
         await sanFEI_EUR.transfer(accounts[0], depositAmountThree, {
           from: contractAddresseList[14],
         });
         const sanFRAX_EUR = await IERC20.at(lpTokenFour.address);
-        depositAmountFour = await sanFRAX_EUR.balanceOf(
-          contractAddresseList[15]
-        );
+        depositAmountFour = await sanFRAX_EUR.balanceOf(contractAddresseList[15]);
         await sanFRAX_EUR.transfer(accounts[0], depositAmountFour, {
           from: contractAddresseList[15],
           gas: 80000,
         });
 
-        await lpTokenTwo
-          .balanceOf(USER1)
-          .then((a) => log("lptokenTwo balance:", formatEther(a.toString())));
+        await lpTokenTwo.balanceOf(USER1).then((a) => log("lptokenTwo balance:", formatEther(a.toString())));
         const lpTokenTwoBalance = await lpTokenTwo.balanceOf(USER1);
 
-        await lpTokenThree
-          .balanceOf(USER1)
-          .then((a) => log("lptokenThree balance:", formatEther(a.toString())));
+        await lpTokenThree.balanceOf(USER1).then((a) => log("lptokenThree balance:", formatEther(a.toString())));
         const lpTokenThreeBalance = await lpTokenThree.balanceOf(USER1);
 
-        await lpTokenFour
-          .balanceOf(USER1)
-          .then((a) => log("lpTokenFour balance:", formatEther(a.toString())));
+        await lpTokenFour.balanceOf(USER1).then((a) => log("lpTokenFour balance:", formatEther(a.toString())));
         const lpTokenFourBalance = await lpTokenFour.balanceOf(USER1);
 
         await lpTokenTwo.approve(booster.address, lpTokenTwoBalance);

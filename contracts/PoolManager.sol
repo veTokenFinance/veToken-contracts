@@ -32,6 +32,9 @@ contract PoolManager is Ownable {
         bool gaugeExists = IPools(_pools).gaugeMap(_gauge);
         require(!gaugeExists, "already registered");
 
+        bool gaugeTokenExists = IPools(_pools).gaugeTokenMap(_lptoken);
+        require(!gaugeTokenExists, "gauge token already registered");
+
         IPools(_pools).addPool(_lptoken, _gauge, _stashVersion);
 
         return true;

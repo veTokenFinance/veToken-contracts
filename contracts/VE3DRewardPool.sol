@@ -41,26 +41,24 @@ pragma solidity 0.8.7;
 
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 import "./Interfaces/IVeAssetDeposit.sol";
 import "./Interfaces/IRewards.sol";
 
-contract VE3DRewardPool is Ownable, ReentrancyGuard {
-    using SafeERC20 for IERC20;
+contract VE3DRewardPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
+    using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeMath for uint256;
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    IERC20 public immutable stakingToken;
+    IERC20Upgradeable public stakingToken;
     uint256 public constant duration = 7 days;
     uint256 public constant FEE_DENOMINATOR = 10000;
 
-    address public immutable rewardManager;
+    address public rewardManager;
 
     uint256 public constant newRewardRatio = 830;
     uint256 constant EXTRA_REWARD_POOLS = 8;
@@ -105,8 +103,12 @@ contract VE3DRewardPool is Ownable, ReentrancyGuard {
     event RewardPaid(address indexed user, uint256 reward);
     event Recovered(address _token, uint256 _amount);
 
-    constructor(address stakingToken_, address rewardManager_) {
-        stakingToken = IERC20(stakingToken_);
+    function __VE3DRewardPool_init(address stakingToken_, address rewardManager_)
+        external
+        initializer
+    {
+        __Ownable_init();
+        stakingToken = IERC20Upgradeable(stakingToken_);
 
         rewardManager = rewardManager_;
     }
@@ -366,8 +368,11 @@ contract VE3DRewardPool is Ownable, ReentrancyGuard {
         uint256 reward = earnedReward(_rewardToken, _account);
         if (reward > 0) {
             rewardTokenInfo[_rewardToken].rewards[_account] = 0;
-            IERC20(_rewardToken).safeApprove(rewardTokenInfo[_rewardToken].veAssetDeposits, 0);
-            IERC20(_rewardToken).safeApprove(
+            IERC20Upgradeable(_rewardToken).safeApprove(
+                rewardTokenInfo[_rewardToken].veAssetDeposits,
+                0
+            );
+            IERC20Upgradeable(_rewardToken).safeApprove(
                 rewardTokenInfo[_rewardToken].veAssetDeposits,
                 reward
             );
@@ -380,15 +385,14 @@ contract VE3DRewardPool is Ownable, ReentrancyGuard {
                 return false;
             }
 
-            uint256 ve3TokenBalance = IERC20(rewardTokenInfo[_rewardToken].ve3Token).balanceOf(
-                address(this)
-            );
+            uint256 ve3TokenBalance = IERC20Upgradeable(rewardTokenInfo[_rewardToken].ve3Token)
+                .balanceOf(address(this));
             if (_stake) {
-                IERC20(rewardTokenInfo[_rewardToken].ve3Token).safeApprove(
+                IERC20Upgradeable(rewardTokenInfo[_rewardToken].ve3Token).safeApprove(
                     rewardTokenInfo[_rewardToken].ve3TokenRewards,
                     0
                 );
-                IERC20(rewardTokenInfo[_rewardToken].ve3Token).safeApprove(
+                IERC20Upgradeable(rewardTokenInfo[_rewardToken].ve3Token).safeApprove(
                     rewardTokenInfo[_rewardToken].ve3TokenRewards,
                     ve3TokenBalance
                 );
@@ -397,7 +401,7 @@ contract VE3DRewardPool is Ownable, ReentrancyGuard {
                     ve3TokenBalance
                 );
             } else {
-                IERC20(rewardTokenInfo[_rewardToken].ve3Token).safeTransfer(
+                IERC20Upgradeable(rewardTokenInfo[_rewardToken].ve3Token).safeTransfer(
                     _account,
                     ve3TokenBalance
                 );
@@ -408,7 +412,7 @@ contract VE3DRewardPool is Ownable, ReentrancyGuard {
     }
 
     function donate(address _rewardToken, uint256 _amount) external {
-        IERC20(_rewardToken).safeTransferFrom(msg.sender, address(this), _amount);
+        IERC20Upgradeable(_rewardToken).safeTransferFrom(msg.sender, address(this), _amount);
         rewardTokenInfo[_rewardToken].queuedRewards = rewardTokenInfo[_rewardToken]
             .queuedRewards
             .add(_amount);
@@ -463,7 +467,7 @@ contract VE3DRewardPool is Ownable, ReentrancyGuard {
             _extraAmount = reward.sub(_actualReward);
         }
 
-        uint256 balance = IERC20(_rewardToken).balanceOf(address(this));
+        uint256 balance = IERC20Upgradeable(_rewardToken).balanceOf(address(this));
         require(
             rewardTokenInfo[_rewardToken].rewardRate <= balance.div(duration),
             "Provided reward too high"
@@ -485,10 +489,10 @@ contract VE3DRewardPool is Ownable, ReentrancyGuard {
             block.timestamp > rewardTokenInfo[_rewardToken].periodFinish,
             "Cannot withdraw active reward"
         );
-        uint256 _amount = IERC20(_rewardToken).balanceOf(address(this));
+        uint256 _amount = IERC20Upgradeable(_rewardToken).balanceOf(address(this));
 
         if (_amount > 0) {
-            IERC20(_rewardToken).safeTransfer(owner(), _amount);
+            IERC20Upgradeable(_rewardToken).safeTransfer(owner(), _amount);
         }
     }
 }

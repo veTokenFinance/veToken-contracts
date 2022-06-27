@@ -1,6 +1,7 @@
 const { ether, balance, constants, time } = require("@openzeppelin/test-helpers");
 const { addContract, getContract } = require("./helper/addContracts");
 const escrowABI = require("./helper/escrowABI.json");
+const { deployProxy } = require("@openzeppelin/truffle-upgrades");
 
 const VoterProxy = artifacts.require("VoterProxy");
 const VeTokenMinter = artifacts.require("VeTokenMinter");
@@ -89,8 +90,12 @@ module.exports = async function (deployer, network, accounts) {
   addContract("system", "idle_voterProxy", voter.address);
 
   // booster
-  await deployer.deploy(Booster, voter.address, contractList.system.vetokenMinter, idle.address, feeDistro);
-  const booster = await Booster.deployed();
+  const booster = await deployProxy(
+    Booster,
+    [voter.address, contractList.system.vetokenMinter, idle.address, feeDistro],
+    { deployer, initializer: "__Booster_init" }
+  );
+
   addContract("system", "idle_booster", booster.address);
   logTransaction(await voter.setOperator(booster.address), "voter setOperator");
 
@@ -100,8 +105,11 @@ module.exports = async function (deployer, network, accounts) {
   addContract("system", "ve3_idle", ve3Token.address);
 
   // Depositer
-  await deployer.deploy(VeAssetDepositor, voter.address, ve3Token.address, idle.address, stkIDLE);
-  const depositor = await VeAssetDepositor.deployed();
+  const depositor = await deployProxy(VeAssetDepositor, [voter.address, ve3Token.address, idle.address, stkIDLE], {
+    deployer,
+    initializer: "__VeAssetDepositor_init",
+  });
+
   addContract("system", "idle_depositor", depositor.address);
 
   // base reward pool for VE3Token
@@ -156,9 +164,8 @@ module.exports = async function (deployer, network, accounts) {
   logTransaction(await booster.setFeeInfo(toBN(10000), toBN(0)), "booster setFeeInfo");
   //vetoken minter setup
   const vetokenMinter = await VeTokenMinter.at(contractList.system.vetokenMinter);
-  logTransaction(await vetokenMinter.addOperator(booster.address), "vetokenMinter addOperator");
   logTransaction(
-    await vetokenMinter.updateveAssetWeight(booster.address, toBN(10).pow(25).times(10)),
-    "vetokenMinter updateveAssetWeight"
+    await vetokenMinter.addOperator(booster.address, toBN(10).pow(25).times(10)),
+    "vetokenMinter addOperator"
   );
 };

@@ -2,19 +2,20 @@
 pragma solidity 0.8.7;
 
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import "./Interfaces/IPools.sol";
 import "./Interfaces/IRegistry.sol";
 
-contract PoolManager is Ownable {
-    using SafeERC20 for IERC20;
-    using Address for address;
+contract PoolManager is OwnableUpgradeable {
+    using AddressUpgradeable for address;
     using SafeMath for uint256;
+
+    function __PoolManager_init() external initializer {
+        __Ownable_init();
+    }
 
     //add a new veAsset pool to the system.
     //gauge must be on veAsset's gaugeProxy, thus anyone can call

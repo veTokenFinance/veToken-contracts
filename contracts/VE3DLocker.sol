@@ -2,15 +2,16 @@
 pragma solidity 0.8.7;
 pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 import "./helper/MathUtil.sol";
 import "./helper/BoringMath.sol";
+import "./helper/DecimalsConverter.sol";
 
 import "./Interfaces/IVeAssetDeposit.sol";
 import "./Interfaces/IRewards.sol";
@@ -29,12 +30,12 @@ V2:
 - balanceAtEpoch and supplyAtEpoch return proper values for future epochs
 - do not allow relocking directly to a new address
 */
-contract VE3DLocker is ReentrancyGuard, Ownable {
+contract VE3DLocker is ReentrancyGuardUpgradeable, OwnableUpgradeable {
     using BoringMath for uint256;
     using BoringMath224 for uint224;
     using BoringMath112 for uint112;
     using BoringMath32 for uint32;
-    using SafeERC20 for IERC20;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
     using EnumerableSet for EnumerableSet.AddressSet;
 
     uint256 constant MAX_REWARD_TOKEN = 8;
@@ -43,6 +44,7 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
 
     struct Reward {
         bool isVeAsset;
+        uint256 tokenDecimals;
         uint40 periodFinish;
         uint208 rewardRate;
         uint40 lastUpdateTime;
@@ -70,7 +72,7 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
     }
 
     //token
-    IERC20 public stakingToken; //VE3D
+    IERC20Upgradeable public stakingToken; //VE3D
 
     //rewards
     EnumerableSet.AddressSet internal rewardTokens;
@@ -102,25 +104,31 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
     uint256 public constant denominator = 10000;
 
     //management
-    uint256 public kickRewardPerEpoch = 100;
-    uint256 public kickRewardEpochDelay = 4;
+    uint256 public kickRewardPerEpoch;
+    uint256 public kickRewardEpochDelay;
 
     //shutdown
-    bool public isShutdown = false;
+    bool public isShutdown;
 
     //erc20-like interface
     string private _name;
     string private _symbol;
-    uint8 private immutable _decimals;
+    uint8 private _decimals;
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(address _stakingToken) Ownable() {
+    function __VE3DLocker_init(address _stakingToken) external initializer {
+        __Ownable_init();
+
         _name = "Vote Locked Vetoken Token";
         _symbol = "xVE3D";
         _decimals = 18;
+        isShutdown = false;
 
-        stakingToken = IERC20(_stakingToken);
+        kickRewardPerEpoch = 100;
+        kickRewardEpochDelay = 4;
+
+        stakingToken = IERC20Upgradeable(_stakingToken);
 
         uint256 currentEpoch = block.timestamp.div(rewardsDuration).mul(rewardsDuration);
         epochs.push(Epoch({supply: 0, date: uint32(currentEpoch)}));
@@ -161,6 +169,7 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
         require(rewardTokens.length() < MAX_REWARD_TOKEN, "!max reward token exceed");
         rewardTokens.add(_rewardsToken);
 
+        rewardData[_rewardsToken].tokenDecimals = ERC20Upgradeable(_rewardsToken).decimals();
         rewardData[_rewardsToken].lastUpdateTime = uint40(block.timestamp);
         rewardData[_rewardsToken].periodFinish = uint40(block.timestamp);
         rewardDistributors[_rewardsToken][_distributor] = true;
@@ -233,18 +242,21 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
             address _rewardsToken = rewardTokens.at(i);
             if (rewardData[_rewardsToken].isVeAsset) {
                 // set approve for staking VE3Token
-                IERC20(rewardData[_rewardsToken].ve3Token).safeApprove(
+                IERC20Upgradeable(rewardData[_rewardsToken].ve3Token).safeApprove(
                     rewardData[_rewardsToken].ve3TokenStaking,
                     0
                 );
-                IERC20(rewardData[_rewardsToken].ve3Token).safeApprove(
+                IERC20Upgradeable(rewardData[_rewardsToken].ve3Token).safeApprove(
                     rewardData[_rewardsToken].ve3TokenStaking,
                     type(uint256).max
                 );
 
                 // set approve for locking veAsset
-                IERC20(_rewardsToken).safeApprove(rewardData[_rewardsToken].veAssetDeposits, 0);
-                IERC20(_rewardsToken).safeApprove(
+                IERC20Upgradeable(_rewardsToken).safeApprove(
+                    rewardData[_rewardsToken].veAssetDeposits,
+                    0
+                );
+                IERC20Upgradeable(_rewardsToken).safeApprove(
                     rewardData[_rewardsToken].veAssetDeposits,
                     type(uint256).max
                 );
@@ -786,9 +798,8 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
                     return false;
                 }
 
-                uint256 _ve3TokenBalance = IERC20(rewardData[_rewardsToken].ve3Token).balanceOf(
-                    address(this)
-                );
+                uint256 _ve3TokenBalance = IERC20Upgradeable(rewardData[_rewardsToken].ve3Token)
+                    .balanceOf(address(this));
 
                 if (_stake) {
                     IRewards(rewardData[_rewardsToken].ve3TokenStaking).stakeFor(
@@ -796,7 +807,7 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
                         _ve3TokenBalance
                     );
                 } else {
-                    IERC20(rewardData[_rewardsToken].ve3Token).safeTransfer(
+                    IERC20Upgradeable(rewardData[_rewardsToken].ve3Token).safeTransfer(
                         _account,
                         _ve3TokenBalance
                     );
@@ -804,7 +815,11 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
                 reward = _ve3TokenBalance;
                 _rewardsToken = rewardData[_rewardsToken].ve3Token;
             } else {
-                IERC20(_rewardsToken).safeTransfer(_account, reward);
+                reward = DecimalsConverter.convertFrom18(
+                    reward,
+                    rewardData[_rewardsToken].tokenDecimals
+                );
+                IERC20Upgradeable(_rewardsToken).safeTransfer(_account, reward);
             }
             emit RewardPaid(_account, _rewardsToken, reward);
             return true;
@@ -832,7 +847,7 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
             _extraAmount = _reward.sub(_actualReward);
         }
 
-        uint256 balance = IERC20(_rewardsToken).balanceOf(address(this));
+        uint256 balance = IERC20Upgradeable(_rewardsToken).balanceOf(address(this));
         require(rdata.rewardRate <= balance.div(rewardsDuration), "Provided reward too high");
 
         rdata.lastUpdateTime = block.timestamp.to40();
@@ -845,6 +860,8 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
     {
         require(rewardDistributors[_rewardsToken][msg.sender], "Auth!");
         require(_reward > 0, "No reward");
+
+        _reward = DecimalsConverter.convertTo18(_reward, rewardData[_rewardsToken].tokenDecimals);
 
         _reward = _reward.add(rewardData[_rewardsToken].queuedRewards);
 
@@ -860,9 +877,9 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
             block.timestamp > rewardData[_tokenAddress].periodFinish,
             "Cannot withdraw active reward"
         );
-        uint256 _amount = IERC20(_tokenAddress).balanceOf(address(this));
+        uint256 _amount = IERC20Upgradeable(_tokenAddress).balanceOf(address(this));
         if (_amount > 0) {
-            IERC20(_tokenAddress).safeTransfer(owner(), _amount);
+            IERC20Upgradeable(_tokenAddress).safeTransfer(owner(), _amount);
             emit Recovered(_tokenAddress, _amount);
         }
     }

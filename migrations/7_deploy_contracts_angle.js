@@ -1,7 +1,7 @@
 const { ether, balance, constants, time } = require("@openzeppelin/test-helpers");
 const { addContract, getContract } = require("./helper/addContracts");
 const escrowABI = require("./helper/escrowABI.json");
-
+const { deployProxy } = require("@openzeppelin/truffle-upgrades");
 const VoterProxy = artifacts.require("VoterProxy");
 const VeTokenMinter = artifacts.require("VeTokenMinter");
 const RewardFactory = artifacts.require("RewardFactory");
@@ -103,8 +103,11 @@ module.exports = async function (deployer, network, accounts) {
   addContract("system", "angle_voterProxy", voter.address);
 
   // booster
-  await deployer.deploy(Booster, voter.address, contractList.system.vetokenMinter, angle.address, feeDistro);
-  const booster = await Booster.deployed();
+  const booster = await deployProxy(
+    Booster,
+    [voter.address, contractList.system.vetokenMinter, angle.address, feeDistro],
+    { deployer, initializer: "__Booster_init" }
+  );
   addContract("system", "angle_booster", booster.address);
   logTransaction(await voter.setOperator(booster.address), "voter setOperator");
 
@@ -114,8 +117,10 @@ module.exports = async function (deployer, network, accounts) {
   addContract("system", "ve3_angle", ve3Token.address);
 
   // Depositer
-  await deployer.deploy(VeAssetDepositor, voter.address, ve3Token.address, angle.address, veANGLE);
-  const depositor = await VeAssetDepositor.deployed();
+  const depositor = await deployProxy(VeAssetDepositor, [voter.address, ve3Token.address, angle.address, veANGLE], {
+    deployer,
+    initializer: "__VeAssetDepositor_init",
+  });
   addContract("system", "angle_depositor", depositor.address);
 
   // base reward pool for VE3Token

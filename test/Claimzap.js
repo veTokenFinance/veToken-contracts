@@ -1,13 +1,10 @@
-// const { BN, constants, expectEvent, expectRevert, time } = require('openzeppelin-test-helpers');
 const {BN, time} = require('@openzeppelin/test-helpers');
 const {keccak256: k256} = require('ethereum-cryptography/keccak');
 var jsonfile = require('jsonfile');
 const {toBN} = require('./helper/utils');
 const Reverter = require('./helper/reverter');
 const {logTransaction} = require('../migrations/helper/logger');
-const {contractAddresseList} = require('./helper/dumpAddresses');
 const {formatEther} = require('@ethersproject/units');
-const feeDisrtroABI = require('./helper/feeDistroABI.json');
 var contractList = jsonfile.readFileSync('./contracts.json');
 
 const IERC20 = artifacts.require('IERC20');
@@ -33,14 +30,10 @@ let ve3TokenRewardPool;
 let ve3dRewardPool;
 let ve3dLocker;
 let booster;
-let threeCrv;
 let lpToken;
 let feeToken;
 
 let userA;
-let userB;
-let userC;
-let userD;
 
 let starttime;
 let veAssetBalance;
@@ -48,6 +41,20 @@ let lpTokenBalance;
 let zap;
 
 const reverter = new Reverter(web3);
+
+async function logBalances() {
+  await ve3Token.totalSupply().then(a => console.log('ve3Token total supply: ' + web3.utils.fromWei(a, 'ether')));
+  await veAsset.balanceOf(userA).then(a => console.log('userA veAsset: ' + web3.utils.fromWei(a, 'ether')));
+  await ve3Token.balanceOf(userA).then(a => console.log('userA ve3Token: ' + web3.utils.fromWei(a, 'ether')));
+  await veToken.balanceOf(userA).then(a => console.log('userA veToken: ' + web3.utils.fromWei(a, 'ether')));
+  await lpToken.balanceOf(userA).then(a => console.log('userA lpToken: ' + web3.utils.fromWei(a, 'ether')));
+  await ve3TokenRewardPool.balanceOf(userA).then(a => console.log('pool ve3Token: ' + web3.utils.fromWei(a, 'ether')));
+  await ve3dRewardPool.balanceOf(userA).then(a => console.log('pool veToken: ' + web3.utils.fromWei(a, 'ether')));
+  await ve3TokenRewardPool.earned(userA).then(a => console.log('pool ve3Token earned: ' + web3.utils.fromWei(a, 'ether')));
+  // await ve3dRewardPool.earned(veToken.address, userA).then(a => console.log('pool veToken earned: ' + web3.utils.fromWei(a, "ether")));
+  await ve3dLocker.lockedBalanceOf(userA).then(a => console.log('locked balance: ' + web3.utils.fromWei(a, 'ether')));
+  await ve3dLocker.claimableRewards(userA).then(a => console.log('locked claimableRewards: ' + a));
+}
 
 contract.only('Test claim zap', async accounts => {
   before('setup', async () => {
@@ -65,9 +72,6 @@ contract.only('Test claim zap', async accounts => {
     feeToken = await IERC20.at(await booster.feeToken());
 
     userA = accounts[0];
-    userB = accounts[1];
-    userC = accounts[2];
-    userD = accounts[3];
 
     starttime = await time.latest();
 
@@ -86,6 +90,7 @@ contract.only('Test claim zap', async accounts => {
   });
 
   it('swap weth for veAsset', async () => {
+    await logBalances();
     //swap for veAsset
     await weth.sendTransaction({value: web3.utils.toWei('0.1', 'ether'), from: deployer});
     var wethBalance = await weth.balanceOf(deployer);
@@ -98,17 +103,14 @@ contract.only('Test claim zap', async accounts => {
     assert.isAbove(toBN(veAssetBalance).toNumber(), 0);
   });
 
-  it('deposit veAsset, stake and get rewards', async () => {
-    veAssetBalance = await veAsset.balanceOf(userA);
-    console.log('veAsset balance: ' + veAssetBalance);
+  it('deposit lpToken and veAsset, stake and get rewards', async () => {
+    await logBalances();
 
     // send lp token to userA
     let lpTokenHolder = '0xefe1a7b147ac4c0b761da878f6a315923441ca54';
     logTransaction(await lpToken.transfer(userA, web3.utils.toWei('5'), {from: lpTokenHolder}), 'fund userA with lp token');
 
     lpTokenBalance = await lpToken.balanceOf(userA);
-    console.log('lpTokenBalance userA: ', lpTokenBalance.toString());
-
     assert.isAbove(toBN(lpTokenBalance).toNumber(), 0);
 
     const lockFeesPoolAddress = await booster.lockFees();
@@ -119,7 +121,6 @@ contract.only('Test claim zap', async accounts => {
 
     let depositAmount = toBN(web3.utils.toWei('10.0', 'ether'));
     let lpTokenDepositAmount = toBN(web3.utils.toWei('5.0', 'ether'));
-    // let remainingAmount = toBN(veAssetBalance).minus(depositAmount);
 
     const ve3TokenRewardPoolBalanceOfUserABefore = await ve3TokenRewardPool.balanceOf(userA);
     const lpRewardOfUserABefore = await lPRewardPool.balanceOf(userA);
@@ -140,10 +141,8 @@ contract.only('Test claim zap', async accounts => {
 
     // approve and deposit veAsset, staking returned ve3Token
     await veAsset.approve(depositor.address, depositAmount, {from: userA});
-    console.log('Our address ' + userA + ' was approved');
     await depositor.deposit(depositAmount, true, ve3TokenRewardPool.address, {from: userA});
     const veAssetTokenBalanceBefore = await veAsset.balanceOf(userA);
-    const feeTokenBalanceBefore = await feeToken.balanceOf(userA);
     const ve3TokenRewardPoolBalanceOfUserAAfter = await ve3TokenRewardPool.balanceOf(userA);
 
     console.log('ve3TokenRewardPoolBalanceOfUserA Before: ' + formatEther(lpRewardOfUserABefore.toString()) + '\n');
@@ -155,27 +154,17 @@ contract.only('Test claim zap', async accounts => {
 
     // increase time, check rewards
     starttime = await time.latest();
-    console.log('current block time: ' + starttime);
-    const latestBlock = await time.latestBlock();
-    console.log('latest mined block number: ', latestBlock.toString());
     await time.increase(21 * 86400); // 21 days, 1 day = 86400 s
-    // Forces a block to be mined, incrementing the block height.
     await time.advanceBlock();
-    const endTime = await time.latest();
-    console.log('current block time: ' + endTime);
-    const latestBlock2 = await time.latestBlock();
-    console.log('latest mined block number: ', latestBlock2.toString());
 
-
-    await booster.earmarkFees();
     const lockRewardPerToken = await ve3TokenLockRewardPool.rewardPerToken();
     const stakeLockRewardPerToken = await ve3dLocker.rewardPerToken(veAsset.address);
     const userARewardInlockRewardPool = await ve3TokenLockRewardPool.earned(userA);
 
-    await booster.earmarkRewards(0, {from: userB});
+    await booster.earmarkRewards(0);
 
-    let mask = 2 + 4; // not using the options for now
-    await zap.claimRewards([lPRewardPool.address, ve3TokenRewardPool.address], [ve3TokenLockRewardPool.address], [], [],0, 0, 0, mask, {from: userA, gasPrice: 0});
+    let options = 1 + 4 + 8; // ClaimVetoken, ClaimVe3Token, ClaimLockedVeToken
+    await zap.claimRewards([lPRewardPool.address, ve3TokenRewardPool.address], [ve3TokenLockRewardPool.address], [], [], 0, 0, 0, options, {from: userA, gasPrice: 0});
 
     console.log('get veAsset locking rewards:', lockRewardPerToken.toString(), stakeLockRewardPerToken.toString());
     console.log('user A rewards in ve3TokenLockRewardPool from locking', userARewardInlockRewardPool.toString());
@@ -189,7 +178,7 @@ contract.only('Test claim zap', async accounts => {
     );
     console.log('userA earned ve3Token:', toBN(ve3TokenClaimed).minus(ve3TokenBalanceBefore).toString());
 
-    //assert.isAbove(Number((toBN(veAssetBalanceAfterRewardClaimed).minus(veAssetTokenBalanceBefore))), 0);
+    assert.isAbove(Number((toBN(veAssetBalanceAfterRewardClaimed).minus(veAssetTokenBalanceBefore))), 0);
 
     assert.equal(Number(toBN(ve3TokenClaimed).minus(ve3TokenBalanceBefore)), 0);
 
@@ -200,8 +189,7 @@ contract.only('Test claim zap', async accounts => {
     await time.latest().then((a) => console.log('current block time: ' + a));
     await time.latestBlock().then((a) => console.log('current block: ' + a));
 
-    // await booster.earmarkRewards(0, {from: userB});
-    // await booster.earmarkFees({from: userB});
+    await booster.earmarkRewards(0);
 
     const userARewardInlockRewardPool3 = await ve3TokenLockRewardPool.earned(userA);
     const userARewardInlpRewardPool3 = await lPRewardPool.earned(userA);
@@ -212,17 +200,12 @@ contract.only('Test claim zap', async accounts => {
     console.log('user A new reward in RewardPool', userARewardInRewardPool3.toString());
     assert.isAbove(Number(userARewardInRewardPool3), 0);
 
-    // get rewards in different pools
-    // await ve3TokenLockRewardPool.getReward(userA);
-    // await lPRewardPool.getReward(userA, true);
-    // await ve3TokenRewardPool.getReward(userA, true);
-
-    await zap.claimRewards([lPRewardPool.address, ve3TokenRewardPool.address], [ve3TokenLockRewardPool.address], [], [],0, 0, 0, mask, {from: userA, gasPrice: 0});
+    await zap.claimRewards([lPRewardPool.address, ve3TokenRewardPool.address], [ve3TokenLockRewardPool.address], [], [],0, 0, 0, options, {from: userA, gasPrice: 0});
 
     const veAssetBalanceAfterRewardClaimed2 = await veAsset.balanceOf(userA);
     const veAssetEarned = toBN(veAssetBalanceAfterRewardClaimed2).minus(veAssetTokenBalanceBefore);
     console.log('userA earned veAsset:', veAssetEarned.toString());
-    // assert.isAbove(Number(veAssetEarned), 0);
+    assert.isAbove(Number(veAssetEarned), 0);
 
     const ve3TokenClaimed2 = await ve3Token.balanceOf(userA);
     const ve3TokenEarned = toBN(ve3TokenClaimed2).minus(ve3TokenBalanceBefore);
@@ -233,46 +216,8 @@ contract.only('Test claim zap', async accounts => {
     const veTokenEarned = toBN(vetokenClaimed2).minus(veTokenBalanceBefore);
     console.log('userA earned vetoken:', veTokenEarned.toString());
     assert.isAbove(Number(veTokenEarned), 0);
-  });
 
-  it('claim rewards', async () => {
-    //tests
-
-    await veAsset.approve(zap.address, web3.utils.toWei('10000000000.0', 'ether'), {from: userA, gasPrice: 0});
-    await veToken.approve(zap.address, web3.utils.toWei('10000000000.0', 'ether'), {from: userA, gasPrice: 0});
-    console.log('approved');
-
-    await ve3Token.totalSupply().then(a => console.log('ve3Token totaly supply: ' + a));
-    await veAsset.balanceOf(userA).then(a => console.log('userA veAsset: ' + a));
-    await ve3Token.balanceOf(userA).then(a => console.log('userA ve3Token: ' + a));
-    await veToken.balanceOf(userA).then(a => console.log('userA veToken: ' + a));
-    await lpToken.balanceOf(userA).then(a => console.log('userA lpToken: ' + a));
-    await ve3TokenRewardPool.balanceOf(userA).then(a => console.log('pool ve3Token: ' + a));
-    await ve3dRewardPool.balanceOf(userA).then(a => console.log('pool veToken: ' + a));
-    await ve3TokenRewardPool.earned(userA).then(a => console.log('pool ve3Token earned: ' + a));
-    // await ve3dRewardPool.earned(veToken.address, userA).then(a => console.log('pool veToken earned: ' + a));
-    await ve3dLocker.lockedBalanceOf(userA).then(a => console.log('locked balance: ' + a));
-    await ve3dLocker.claimableRewards(userA).then(a => console.log('locked claimableRewards: ' + a));
-
-    time.increase(21 * 86400); // 21 days, 1 day = 86400 s
-    // Forces a block to be mined, incrementing the block height.
-    await time.advanceBlock();
-    const endTime = await time.latest();
-
-    let mask = 2 + 16;
-    await zap.claimRewards([], [], [], [veToken.address], web3.utils.toWei('10000000000.0', 'ether'), 0, web3.utils.toWei('10000000000.0', 'ether'), mask, {from: userA, gasPrice: 0});
-
-    await ve3Token.totalSupply().then(a => console.log('ve3Token totaly supply: ' + a));
-    await veAsset.balanceOf(userA).then(a => console.log('userA veAsset: ' + a));
-    await ve3Token.balanceOf(userA).then(a => console.log('userA ve3Token: ' + a));
-    await veToken.balanceOf(userA).then(a => console.log('userA veToken: ' + a));
-    await lpToken.balanceOf(userA).then(a => console.log('userA lpToken: ' + a));
-    await ve3TokenRewardPool.balanceOf(userA).then(a => console.log('pool ve3Token: ' + a));
-    await ve3dRewardPool.balanceOf(userA).then(a => console.log('pool veToken: ' + a));
-    await ve3TokenRewardPool.earned(userA).then(a => console.log('pool ve3Token earned: ' + a));
-    // await ve3dRewardPool.earned(veToken.address, userA).then(a => console.log('pool veToken earned: ' + a));
-    await ve3dLocker.lockedBalanceOf(userA).then(a => console.log('locked balance: ' + a));
-    await ve3dLocker.claimableRewards(userA).then(a => console.log('locked claimableRewards: ' + a));
+    await logBalances();
   });
 });
 

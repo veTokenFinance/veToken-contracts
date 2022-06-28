@@ -26,9 +26,9 @@ function toBN(number) {
 module.exports = async function (deployer, network, accounts) {
   global.created = true;
   const contractList = getContract();
-  let smartWalletWhitelistAddress = "0xca719728Ef172d0961768581fdF35CB116e0B7a4";
+  let smartWalletWhitelistAddress = "0x2D8b5b65c6464651403955aC6D71f9c0204169D3";
   let idle = await IERC20.at("0x875773784Af8135eA0ef43b5a374AaD105c5D39e");
-  let checkerAdmin = "0x40907540d8a6c65c637785e8f8b742ae6b0b9968";
+  let checkerAdmin = "0xFb3bD022D5DAcF95eE28a6B07825D4Ff9C5b3814";
   let idleAdmin = "0xd6dabbc2b275114a2366555d6c481ef08fdc2556";
   const feeDistro = "0xbabb82456c013fd7e3f25857e0729de8207f80e2";
   const feeDistroAdmin = "0xe8eA8bAE250028a8709A3841E0Ae1a44820d677b";
@@ -66,15 +66,15 @@ module.exports = async function (deployer, network, accounts) {
   const voter = await VoterProxy.deployed();
 
   // set wallet checker in escrow
-  const escrow = new web3.eth.Contract(escrowABI, stkIDLE);
+  // const escrow = new web3.eth.Contract(escrowABI, stkIDLE);
 
-  await escrow.methods.commit_smart_wallet_checker(smartWalletWhitelistAddress).send({ from: idleAdmin });
+  // await escrow.methods.commit_smart_wallet_checker(smartWalletWhitelistAddress).send({ from: idleAdmin });
 
-  await escrow.methods.apply_smart_wallet_checker().send({ from: idleAdmin });
+  // await escrow.methods.apply_smart_wallet_checker().send({ from: idleAdmin });
 
   // whitelist the voter proxy
   const whitelist = await SmartWalletWhitelist.at(smartWalletWhitelistAddress);
-  logTransaction(await whitelist.approveWallet(voter.address, { from: checkerAdmin }), "whitelist voter proxy");
+  logTransaction(await whitelist.toggleAddress(voter.address, true, { from: checkerAdmin }), "whitelist voter proxy");
 
   // fund admint idle tokens
   logTransaction(await idle.transfer(admin, web3.utils.toWei("100000"), { from: idleUser }), "fund admin idle");

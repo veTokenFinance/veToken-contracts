@@ -412,7 +412,10 @@ contract VE3DRewardPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     }
 
     function donate(address _rewardToken, uint256 _amount) external {
+        uint256 balanceBefore = IERC20Upgradeable(_rewardToken).balanceOf(address(this));
         IERC20Upgradeable(_rewardToken).safeTransferFrom(msg.sender, address(this), _amount);
+        uint256 balanceAfter = IERC20Upgradeable(_rewardToken).balanceOf(address(this));
+        _amount = balanceAfter.sub(balanceBefore);
         rewardTokenInfo[_rewardToken].queuedRewards = rewardTokenInfo[_rewardToken]
             .queuedRewards
             .add(_amount);

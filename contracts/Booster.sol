@@ -344,7 +344,10 @@ contract Booster is ReentrancyGuardUpgradeable {
 
         //send to proxy to stake
         address lptoken = pool.lptoken;
+        uint256 balanceBefore = IERC20Upgradeable(lptoken).balanceOf(address(this));
         IERC20Upgradeable(lptoken).safeTransferFrom(msg.sender, staker, _amount);
+        uint256 balanceAfter = IERC20Upgradeable(lptoken).balanceOf(address(this));
+        _amount = balanceAfter.sub(balanceBefore);
 
         //stake
         address gauge = pool.gauge;

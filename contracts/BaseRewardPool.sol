@@ -310,7 +310,10 @@ contract BaseRewardPool is ReentrancyGuard {
     }
 
     function donate(uint256 _amount) external {
+        uint256 balanceBefore = IERC20(rewardToken).balanceOf(address(this));
         IERC20(rewardToken).safeTransferFrom(msg.sender, address(this), _amount);
+        uint256 balanceAfter = IERC20(rewardToken).balanceOf(address(this));
+        _amount = balanceAfter.sub(balanceBefore);
         queuedRewards = queuedRewards.add(_amount);
         emit Donated(queuedRewards);
     }

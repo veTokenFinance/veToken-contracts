@@ -8,6 +8,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import "./Interfaces/IPools.sol";
 import "./Interfaces/IRegistry.sol";
+import "./Interfaces/IVoteEscrow.sol";
 
 contract PoolManager is OwnableUpgradeable {
     using AddressUpgradeable for address;
@@ -21,22 +22,28 @@ contract PoolManager is OwnableUpgradeable {
     //gauge must be on veAsset's gaugeProxy, thus anyone can call
     // use by pickle
     function addPool(
-        address _lptoken,
         address _gauge,
         address _pools,
-        uint256 _stashVersion
+        uint256 _stashVersion,
+        IVoteEscrow.EscrowModle _escrowModle
     ) external onlyOwner returns (bool) {
-        require(_lptoken != address(0), "lptoken is 0");
         require(_gauge != address(0), "gauge is 0");
         require(_pools != address(0), "pools is 0");
 
         bool gaugeExists = IPools(_pools).gaugeMap(_gauge);
         require(!gaugeExists, "already registered");
-
-        bool gaugeTokenExists = IPools(_pools).gaugeTokenMap(_lptoken);
+        address _lpToken;
+        if (_escrowModle == IVoteEscrow.EscrowModle.PICKLE) {
+            _lpToken = IRegistry(_gauge).TOKEN();
+        } else if (_escrowModle == IVoteEscrow.EscrowModle.IDLE) {
+            _lpToken = IRegistry(_gauge).staking_token();
+        } else {
+            _lpToken = IRegistry(_gauge).lp_token();
+        }
+        bool gaugeTokenExists = IPools(_pools).gaugeTokenMap(_lpToken);
         require(!gaugeTokenExists, "gauge token already registered");
 
-        IPools(_pools).addPool(_lptoken, _gauge, _stashVersion);
+        IPools(_pools).addPool(_lpToken, _gauge, _stashVersion);
 
         return true;
     }

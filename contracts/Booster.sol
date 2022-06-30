@@ -15,6 +15,7 @@ import "./Interfaces/ITokenMinter.sol";
 import "./Interfaces/IStash.sol";
 import "./Interfaces/IStashFactory.sol";
 import "./Interfaces/IVoteEscrow.sol";
+import "./Interfaces/IGauge.sol";
 
 contract Booster is ReentrancyGuardUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -412,7 +413,10 @@ contract Booster is ReentrancyGuardUpgradeable {
         if (stash != address(0) && !isShutdown && !pool.shutdown) {
             IStash(stash).stashRewards();
         }
-
+        //@dev handle staking factor for Angle
+        if (IVoteEscrow(staker).escrowModle() == IVoteEscrow.EscrowModle.ANGLE) {
+            _amount = (_amount * 10**18) / IGauge(gauge)._scaling_factor();
+        }
         //return lp tokens
         IERC20Upgradeable(lptoken).safeTransfer(_to, _amount);
 

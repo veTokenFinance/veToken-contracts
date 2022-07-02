@@ -772,7 +772,7 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
         address _account,
         address _rewardsToken,
         bool _stake
-    ) internal nonReentrant returns (bool) {
+    ) internal nonReentrant returns (bool status) {
         uint256 reward = rewards[_account][_rewardsToken];
         if (reward > 0) {
             rewards[_account][_rewardsToken] = 0;

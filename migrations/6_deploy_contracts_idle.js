@@ -156,9 +156,6 @@ module.exports = async function (deployer, network, accounts) {
   logTransaction(await booster.setFeeInfo(toBN(10000), toBN(0)), "booster setFeeInfo");
   //vetoken minter setup
   const vetokenMinter = await VeTokenMinter.at(contractList.system.vetokenMinter);
-  logTransaction(await vetokenMinter.addOperator(booster.address), "vetokenMinter addOperator");
-  logTransaction(
-    await vetokenMinter.updateveAssetWeight(booster.address, toBN(10).pow(25).times(10)),
-    "vetokenMinter updateveAssetWeight"
-  );
+  logTransaction(await vetokenMinter.addOperator(booster.address,
+      toBN(10).pow(25).times(10)), "vetokenMinter addOperator");
 };

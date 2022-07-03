@@ -35,7 +35,7 @@ contract PoolManager is OwnableUpgradeable {
         address _lpToken;
         if (_escrowModle == IVoteEscrow.EscrowModle.PICKLE) {
             _lpToken = IRegistry(_gauge).TOKEN();
-        } else if (_escrowModle == IVoteEscrow.EscrowModle.IDLE) {
+        } else if (_escrowModle == IVoteEscrow.EscrowModle.ANGLE) {
             _lpToken = IRegistry(_gauge).staking_token();
         } else {
             _lpToken = IRegistry(_gauge).lp_token();

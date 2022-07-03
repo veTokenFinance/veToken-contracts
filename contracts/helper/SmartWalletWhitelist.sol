@@ -52,6 +52,8 @@ contract SmartWalletWhitelist {
         emit ApproveWallet(_wallet);
     }
 
+    function toggleAddress(address addr, bool _enabled) external {}
+
     function revokeWallet(address _wallet) external {
         require(msg.sender == dao, "!dao");
         wallets[_wallet] = false;

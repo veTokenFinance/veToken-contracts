@@ -56,7 +56,7 @@ async function logBalances() {
   await ve3dLocker.claimableRewards(userA).then(a => console.log('locked claimableRewards: ' + a));
 }
 
-contract.only('Test claim zap', async accounts => {
+contract('Test claim zap', async accounts => {
   before('setup', async () => {
     veToken = await IERC20.at(contractList.system.vetoken);
     ve3Token = await IERC20.at(contractList.system.ve3_idle);

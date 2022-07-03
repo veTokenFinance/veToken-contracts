@@ -263,7 +263,7 @@ contract VE3DRewardPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         emit Staked(msg.sender, _amount);
     }
 
-    function stakeAll() external nonReentrant {
+    function stakeAll() external {
         uint256 balance = stakingToken.balanceOf(msg.sender);
         stake(balance);
     }
@@ -336,7 +336,7 @@ contract VE3DRewardPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         bool _claimExtras,
         bool _stake,
         address[] calldata _rewardsTokens
-    ) public nonReentrant updateReward(_account) {
+    ) public updateReward(_account) nonReentrant {
         address _rewardToken;
         for (uint256 i = 0; i < _rewardsTokens.length; i++) {
             _rewardToken = _rewardsTokens[i];
@@ -356,7 +356,7 @@ contract VE3DRewardPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         }
     }
 
-    function getReward(bool _stake) external {
+    function getReward(bool _stake) external nonReentrant {
         getReward(msg.sender, true, _stake);
     }
 
@@ -364,7 +364,7 @@ contract VE3DRewardPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         address _rewardToken,
         address _account,
         bool _stake
-    ) internal nonReentrant returns (bool) {
+    ) internal returns (bool) {
         uint256 reward = earnedReward(_rewardToken, _account);
         if (reward > 0) {
             rewardTokenInfo[_rewardToken].rewards[_account] = 0;

@@ -3,7 +3,7 @@ const { addContract, getContract } = require("./helper/addContracts");
 const escrowABI = require("./helper/escrowABI.json");
 const { deployProxy } = require("@openzeppelin/truffle-upgrades");
 
-const VoterProxy = artifacts.require("VoterProxy");
+const VoterProxyV2 = artifacts.require("VoterProxyV2");
 const VeTokenMinter = artifacts.require("VeTokenMinter");
 const RewardFactory = artifacts.require("RewardFactory");
 const VE3Token = artifacts.require("VE3Token");
@@ -62,15 +62,11 @@ module.exports = async function (deployer, network, accounts) {
   await web3.eth.sendTransaction({ from: admin, to: stashRewardTokenUser, value: web3.utils.toWei("1") });
 
   // voter proxy
-  await deployer.deploy(VoterProxy, "idleVoterProxy", idle.address, stkIDLE, gaugeController, idleMintr, 3);
-  const voter = await VoterProxy.deployed();
-
-  // set wallet checker in escrow
-  // const escrow = new web3.eth.Contract(escrowABI, stkIDLE);
-
-  // await escrow.methods.commit_smart_wallet_checker(smartWalletWhitelistAddress).send({ from: idleAdmin });
-
-  // await escrow.methods.apply_smart_wallet_checker().send({ from: idleAdmin });
+  const voter = await deployProxy(
+    VoterProxyV2,
+    ["idleVoterProxy", idle.address, stkIDLE, gaugeController, idleMintr, 3],
+    { deployer, initializer: "__VoterProxyV2_init" }
+  );
 
   // whitelist the voter proxy
   const whitelist = await SmartWalletWhitelist.at(smartWalletWhitelistAddress);

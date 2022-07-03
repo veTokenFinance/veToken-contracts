@@ -4,13 +4,13 @@ pragma solidity 0.8.7;
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 import "./Interfaces/IStaker.sol";
 import "./Interfaces/ITokenMinter.sol";
 import "./Interfaces/IRewards.sol";
 
-contract VeAssetDepositor is Initializable {
+contract VeAssetDepositor is ReentrancyGuardUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using AddressUpgradeable for address;
     using SafeMath for uint256;
@@ -132,7 +132,7 @@ contract VeAssetDepositor is Initializable {
         uint256 _amount,
         bool _lock,
         address _stakeAddress
-    ) public {
+    ) public nonReentrant {
         require(_amount > 0, "!>0");
 
         if (_lock) {

@@ -345,9 +345,9 @@ contract Booster is ReentrancyGuardUpgradeable {
 
         //send to proxy to stake
         address lptoken = pool.lptoken;
-        uint256 balanceBefore = IERC20Upgradeable(lptoken).balanceOf(address(this));
+        uint256 balanceBefore = IERC20Upgradeable(lptoken).balanceOf(address(staker));
         IERC20Upgradeable(lptoken).safeTransferFrom(msg.sender, staker, _amount);
-        uint256 balanceAfter = IERC20Upgradeable(lptoken).balanceOf(address(this));
+        uint256 balanceAfter = IERC20Upgradeable(lptoken).balanceOf(address(staker));
         _amount = balanceAfter.sub(balanceBefore);
 
         //stake
@@ -379,7 +379,7 @@ contract Booster is ReentrancyGuardUpgradeable {
     }
 
     //deposit all lp tokens and stake
-    function depositAll(uint256 _pid, bool _stake) external nonReentrant returns (bool) {
+    function depositAll(uint256 _pid, bool _stake) external returns (bool) {
         address lptoken = poolInfo[_pid].lptoken;
         uint256 balance = IERC20Upgradeable(lptoken).balanceOf(msg.sender);
         deposit(_pid, balance, _stake);

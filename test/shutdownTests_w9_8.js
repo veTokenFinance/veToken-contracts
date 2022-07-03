@@ -109,8 +109,5 @@ contract("Shutdown Test", async (accounts) => {
     await voterProxy
       .balanceOfPool(parsedPoolInfo.gauge)
       .then((a) => console.log("gauge balance: " + formatEther(a.toString())));
-
-    await booster.shutdownSystem({ from: userA });
-    assert.equal(await booster.isShutdown(), true);
   });
 });

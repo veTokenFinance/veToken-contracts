@@ -2,7 +2,7 @@ const { ether, balance, constants, time } = require("@openzeppelin/test-helpers"
 const { addContract, getContract } = require("./helper/addContracts");
 const escrowABI = require("./helper/escrowABI.json");
 const { deployProxy } = require("@openzeppelin/truffle-upgrades");
-const VoterProxy = artifacts.require("VoterProxy");
+const VoterProxyV2 = artifacts.require("VoterProxyV2");
 const VeTokenMinter = artifacts.require("VeTokenMinter");
 const RewardFactory = artifacts.require("RewardFactory");
 const VE3Token = artifacts.require("VE3Token");
@@ -62,24 +62,11 @@ module.exports = async function (deployer, network, accounts) {
   await web3.eth.sendTransaction({ from: admin, to: feeDistroAdmin, value: web3.utils.toWei("1") });
   await web3.eth.sendTransaction({ from: admin, to: feeTokenHolder, value: web3.utils.toWei("1") });
 
-  // voter proxy
-  await deployer.deploy(
-    VoterProxy,
-    "angleVoterProxy",
-    angle.address,
-    veANGLE,
-    gaugeController,
-    constants.ZERO_ADDRESS,
-    4
+  const voter = await deployProxy(
+    VoterProxyV2,
+    ["angleVoterProxy", angle.address, veANGLE, gaugeController, constants.ZERO_ADDRESS, 4],
+    { deployer, initializer: "__VoterProxyV2_init" }
   );
-  const voter = await VoterProxy.deployed();
-
-  // set wallet checker in escrow
-  // const escrow = new web3.eth.Contract(escrowABI, veANGLE);
-
-  // await escrow.methods.commit_smart_wallet_checker(smartWalletWhitelistAddress).send({ from: angleAdmin });
-
-  // await escrow.methods.apply_smart_wallet_checker().send({ from: angleAdmin });
 
   // whitelist the voter proxy
   const whitelist = await SmartWalletWhitelist.at(smartWalletWhitelistAddress);

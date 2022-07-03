@@ -14,6 +14,7 @@ const StashFactory = artifacts.require("StashFactory");
 const VE3DRewardPool = artifacts.require("VE3DRewardPool");
 const VE3DLocker = artifacts.require("VE3DLocker");
 const IERC20 = artifacts.require("IERC20");
+const ClaimZap = artifacts.require("ClaimZap");
 const SmartWalletWhitelist = artifacts.require("SmartWalletWhitelist");
 const BigNumber = require("bignumber.js");
 const { logTransaction } = require("./helper/logger");
@@ -95,7 +96,7 @@ module.exports = async function (deployer, network, accounts) {
   logTransaction(await voter.setOperator(booster.address), "voter setOperator");
 
   // VE3Token
-  await deployer.deploy(VE3Token, "VeToken Finance stkIDLE", "ve3RBN");
+  await deployer.deploy(VE3Token, "VeToken Finance stkIDLE", "ve3Idle");
   const ve3Token = await VE3Token.deployed();
   addContract("system", "ve3_idle", ve3Token.address);
 
@@ -161,4 +162,11 @@ module.exports = async function (deployer, network, accounts) {
     await vetokenMinter.updateveAssetWeight(booster.address, toBN(10).pow(25).times(10)),
     "vetokenMinter updateveAssetWeight"
   );
+
+  // ClaimZap setup
+  //ToDo: replace hard coded address with the right exchange address
+  await deployer.deploy(ClaimZap, idle.address, contractList.system.vetoken, ve3Token.address, depositor.address, ve3TokenRewardPool.address, ve3dRewardPool.address, "0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F", ve3dLocker.address);
+  const claimZap = await ClaimZap.deployed();
+  await claimZap.setApprovals();
+  addContract("system", "idle_claimZap", claimZap.address);
 };

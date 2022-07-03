@@ -23,6 +23,8 @@
     "deploy-server-angle": "truffle migrate --network server_fork -f 7 --to 7 --compile-none && truffle migrate --network server_fork -f 25 --to 25  --compile-none",
     "test-all": "npm run deploy-local && truffle test --compile-none --migrations_directory test",
     "test-no-deploy": "truffle test --compile-none --migrations_directory test",
+    "test-no-deploy-idle": "truffle test --compile-none --migrations_directory test --network idle",
+    "test-no-deploy-angle": "truffle test --compile-none --migrations_directory test --network angle",
     "lint-fix": "npm run lint-sol-fix && npm run lint-js-fix && npm run lint-json-fix",
     "lint-json-fix": "prettier --write \"./[a-zA-Z0-9.]+(?!-lock).json\"",
     "lint-js-fix": "prettier --write \"./**/*.js\"",

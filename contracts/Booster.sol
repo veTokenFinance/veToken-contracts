@@ -414,9 +414,9 @@ contract Booster is ReentrancyGuardUpgradeable {
             IStash(stash).stashRewards();
         }
         //@dev handle staking factor for Angle
-        if (IVoteEscrow(staker).escrowModle() == IVoteEscrow.EscrowModle.ANGLE) {
-            _amount = (_amount * 10**18) / IGauge(gauge)._scaling_factor();
-        }
+        // if (IVoteEscrow(staker).escrowModle() == IVoteEscrow.EscrowModle.ANGLE) {
+        //     _amount = (_amount * 10**18) / IGauge(gauge)._scaling_factor();
+        // }
         //return lp tokens
         IERC20Upgradeable(lptoken).safeTransfer(_to, _amount);
 

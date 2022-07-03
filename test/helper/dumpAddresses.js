@@ -12,7 +12,7 @@ const Networks = {
 };
 
 async function loadContracts() {
-  networkId = await web3.eth.net.getId();
+  networkId = await web3.eth.getChainId();
   //pickle
   if (networkId == "80001") {
     contractAddresseList.push(contractList.system.pickle_address);

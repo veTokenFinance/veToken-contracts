@@ -91,7 +91,7 @@ module.exports = async function (deployer, network, accounts) {
   logTransaction(await angle.transfer(voter.address, web3.utils.toWei("1000"), { from: admin }), "fund voter angle");
   // fund fee token to admin
   logTransaction(
-    await feeToken.transfer(admin, web3.utils.toWei("10000", "mwei"), { from: feeTokenHolder }),
+    await feeToken.transfer(admin, web3.utils.toWei("1000", "mwei"), { from: feeTokenHolder }),
     "fund admin fee token"
   );
   // vetoken
@@ -170,9 +170,6 @@ module.exports = async function (deployer, network, accounts) {
 
   //vetoken minter setup
   const vetokenMinter = await VeTokenMinter.at(contractList.system.vetokenMinter);
-  logTransaction(await vetokenMinter.addOperator(booster.address), "vetokenMinter addOperator");
-  logTransaction(
-    await vetokenMinter.updateveAssetWeight(booster.address, toBN(10).pow(25).times(15)),
-    "vetokenMinter updateveAssetWeight"
-  );
+  logTransaction(await vetokenMinter.addOperator(booster.address,
+    toBN(10).pow(25).times(10)), "vetokenMinter addOperator");
 };

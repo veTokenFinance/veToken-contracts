@@ -362,7 +362,7 @@ contract VE3DRewardPool is Ownable, ReentrancyGuard {
         address _rewardToken,
         address _account,
         bool _stake
-    ) internal nonReentrant returns (bool) {
+    ) internal nonReentrant returns (bool status) {
         uint256 reward = earnedReward(_rewardToken, _account);
         if (reward > 0) {
             rewardTokenInfo[_rewardToken].rewards[_account] = 0;

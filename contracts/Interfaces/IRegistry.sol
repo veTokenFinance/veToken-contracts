@@ -13,4 +13,10 @@ interface IRegistry {
     function get_gauges(address) external view returns (address[10] memory, uint128[10] memory);
 
     function getGauge(address) external view returns (address);
+
+    function lp_token() external view returns (address);
+
+    function staking_token() external view returns (address);
+
+    function TOKEN() external view returns (address);
 }

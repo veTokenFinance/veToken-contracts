@@ -120,13 +120,6 @@ contract("Booster", async (accounts) => {
       await truffleAssert.reverts(booster.deposit(poolId, depositAmount, true), "pool is closed");
     });
 
-    it("should revert if system shutdown", async () => {
-      await booster.shutdownSystem();
-      assert.equal(await booster.isShutdown(), true);
-
-      await truffleAssert.reverts(booster.deposit(poolId, depositAmount, true), "shutdown");
-    });
-
     it("deposit all lp token and stake", async () => {
       await booster.depositAll(poolId, true);
 
@@ -243,38 +236,6 @@ contract("Booster", async (accounts) => {
 
       await poolManager.shutdownPool(booster.address, 0);
       assert.equal((await booster.poolInfo(poolId))[5], true);
-
-      assert.equal((await lpToken.balanceOf(USER1)).toString(), 0);
-      assert.equal((await rewardPool.balanceOf(USER1)).toString(), depositAmount);
-      assert.equal((await lpToken.balanceOf(booster.address)).toString(), depositAmount);
-
-      await rewardPool.withdrawAndUnwrap(depositAmount, false);
-      assert.equal((await rewardPool.balanceOf(USER1)).toString(), 0);
-      assert.equal((await lpToken.balanceOf(USER1)).toString(), depositAmount);
-    });
-
-    it("withdraw lp token in two steps when shutdown system", async () => {
-      await booster.deposit(poolId, depositAmount, true);
-
-      await booster.shutdownSystem();
-      assert.equal((await booster.poolInfo(poolId))[5], true);
-      assert.equal(await booster.isShutdown(), true);
-
-      assert.equal((await lpToken.balanceOf(USER1)).toString(), 0);
-      assert.equal((await rewardPool.balanceOf(USER1)).toString(), depositAmount);
-      assert.equal((await lpToken.balanceOf(booster.address)).toString(), depositAmount);
-
-      await rewardPool.withdraw(depositAmount, false);
-      assert.equal((await rewardPool.balanceOf(USER1)).toString(), 0);
-      await booster.withdraw(poolId, depositAmount);
-      assert.equal((await lpToken.balanceOf(USER1)).toString(), depositAmount);
-    });
-
-    it("withdraw lp token in one steps when shutdown system", async () => {
-      await booster.deposit(poolId, depositAmount, true);
-      await booster.shutdownSystem();
-      assert.equal((await booster.poolInfo(poolId))[5], true);
-      assert.equal(await booster.isShutdown(), true);
 
       assert.equal((await lpToken.balanceOf(USER1)).toString(), 0);
       assert.equal((await rewardPool.balanceOf(USER1)).toString(), depositAmount);
@@ -608,7 +569,7 @@ contract("Booster", async (accounts) => {
 
         assert.isTrue(toBN(extraRewardPoolBalance).gt(0));
         assert.equal((await lpRewardPool.extraRewardsLength()).toString(), "1");
-        assert.equal(await lpRewardPool.extraRewards(0), stashTokenRewardPoolAddress);
+        assert.equal(await lpRewardPool.getExtraReward(0), stashTokenRewardPoolAddress);
 
         log("extra reward pool (stash) balance ", formatEther(extraRewardPoolBalance));
       } else this.skip();

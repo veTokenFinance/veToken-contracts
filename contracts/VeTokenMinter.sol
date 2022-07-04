@@ -1,19 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.7;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-contract VeTokenMinter is Ownable {
-    using SafeERC20 for ERC20;
+contract VeTokenMinter is OwnableUpgradeable {
+    using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeMath for uint256;
     using EnumerableSet for EnumerableSet.AddressSet;
 
     uint256 public constant maxSupply = 30 * 1000000 * 1e18; //30mil
-    ERC20 public veToken;
+    IERC20Upgradeable public veToken;
     EnumerableSet.AddressSet internal operators;
     uint256 public totalCliffs;
     uint256 public reductionPerCliff;
@@ -23,8 +22,9 @@ contract VeTokenMinter is Ownable {
 
     event Withdraw(address destination, uint256 amount);
 
-    constructor(address veTokenAddress) {
-        veToken = ERC20(veTokenAddress);
+    function __VeTokenMinter_init(address veTokenAddress) external initializer {
+        __Ownable_init();
+        veToken = IERC20Upgradeable(veTokenAddress);
         totalCliffs = 1000;
         reductionPerCliff = maxSupply.div(totalCliffs);
     }

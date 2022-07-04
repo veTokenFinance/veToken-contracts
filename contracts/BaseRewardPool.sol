@@ -121,6 +121,10 @@ contract BaseRewardPool is ReentrancyGuard {
         return extraRewards.length();
     }
 
+    function getExtraReward(uint256 _index) external view returns (address) {
+        return extraRewards.at(_index);
+    }
+
     function addExtraReward(address _reward) external returns (bool) {
         require(msg.sender == rewardManager, "!authorized");
         require(_reward != address(0), "!reward setting");
@@ -192,7 +196,7 @@ contract BaseRewardPool is ReentrancyGuard {
         return true;
     }
 
-    function stakeAll() external nonReentrant returns (bool) {
+    function stakeAll() external returns (bool) {
         uint256 balance = stakingToken.balanceOf(msg.sender);
         stake(balance);
         return true;
@@ -283,7 +287,6 @@ contract BaseRewardPool is ReentrancyGuard {
 
     function getReward(address _account, bool _claimExtras)
         public
-        nonReentrant
         updateReward(_account)
         returns (bool)
     {
@@ -304,13 +307,16 @@ contract BaseRewardPool is ReentrancyGuard {
         return true;
     }
 
-    function getReward() external returns (bool) {
+    function getReward() external nonReentrant returns (bool) {
         getReward(msg.sender, true);
         return true;
     }
 
     function donate(uint256 _amount) external {
+        uint256 balanceBefore = IERC20(rewardToken).balanceOf(address(this));
         IERC20(rewardToken).safeTransferFrom(msg.sender, address(this), _amount);
+        uint256 balanceAfter = IERC20(rewardToken).balanceOf(address(this));
+        _amount = balanceAfter.sub(balanceBefore);
         queuedRewards = queuedRewards.add(_amount);
         emit Donated(queuedRewards);
     }

@@ -2,9 +2,9 @@
 pragma solidity 0.8.7;
 
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import "./Interfaces/IGauge.sol";
 import "./Interfaces/IVoteEscrow.sol";
@@ -13,16 +13,15 @@ import "./Interfaces/IFeeDistro.sol";
 import "./Interfaces/IVoting.sol";
 import "./Interfaces/ITokenMinter.sol";
 
-contract VoterProxy {
-    using SafeERC20 for IERC20;
-    using Address for address;
+contract VoterProxyV2 is Initializable {
+    using SafeERC20Upgradeable for IERC20Upgradeable;
+    using AddressUpgradeable for address;
     using SafeMath for uint256;
 
-    address public immutable veAsset;
-    address public immutable escrow;
-    address public immutable gaugeProxy;
-
-    address public immutable minter;
+    address public veAsset;
+    address public escrow;
+    address public gaugeProxy;
+    address public minter;
 
     address public owner;
     address public operator;
@@ -38,14 +37,14 @@ contract VoterProxy {
 
     event VoteSet(bytes32 hash, bool valid);
 
-    constructor(
+    function __VoterProxyV2_init(
         string memory _name,
         address _veAsset,
         address _escrow,
         address _gaugeProxy,
         address _minter,
         IVoteEscrow.EscrowModle _escrowModle
-    ) {
+    ) external {
         name = _name;
         veAsset = _veAsset;
         escrow = _escrow;
@@ -96,17 +95,17 @@ contract VoterProxy {
         if (protectedTokens[_gauge] == false) {
             protectedTokens[_gauge] = true;
         }
-        uint256 balance = IERC20(_token).balanceOf(address(this));
+        uint256 balance = IERC20Upgradeable(_token).balanceOf(address(this));
         if (balance > 0) {
-            IERC20(_token).safeApprove(_gauge, 0);
-            IERC20(_token).safeApprove(_gauge, balance);
+            IERC20Upgradeable(_token).safeApprove(_gauge, 0);
+            IERC20Upgradeable(_token).safeApprove(_gauge, balance);
             IGauge(_gauge).deposit(balance);
         }
         return true;
     }
 
     //stash only function for pulling extra incentive reward tokens out
-    function withdraw(IERC20 _asset) external returns (uint256 balance) {
+    function withdraw(IERC20Upgradeable _asset) external returns (uint256 balance) {
         require(stashPool[msg.sender] == true, "!auth");
 
         //check protection
@@ -126,18 +125,20 @@ contract VoterProxy {
         uint256 _amount
     ) public returns (bool) {
         require(msg.sender == operator, "!auth");
-        uint256 _balance = IERC20(_token).balanceOf(address(this));
+        uint256 _balance = IERC20Upgradeable(_token).balanceOf(address(this));
         if (_balance < _amount) {
             _amount = _withdrawSome(_gauge, _amount.sub(_balance));
             _amount = _amount.add(_balance);
         }
-        IERC20(_token).safeTransfer(msg.sender, _amount);
+        IERC20Upgradeable(_token).safeTransfer(msg.sender, _amount);
         return true;
     }
 
     function withdrawAll(address _token, address _gauge) external returns (bool) {
         require(msg.sender == operator, "!auth");
-        uint256 amount = balanceOfPool(_gauge).add(IERC20(_token).balanceOf(address(this)));
+        uint256 amount = balanceOfPool(_gauge).add(
+            IERC20Upgradeable(_token).balanceOf(address(this))
+        );
         withdraw(_token, _gauge, amount);
         return true;
     }
@@ -149,16 +150,16 @@ contract VoterProxy {
 
     function createLock(uint256 _value, uint256 _unlockTime) external returns (bool) {
         require(msg.sender == depositor, "!auth");
-        IERC20(veAsset).safeApprove(escrow, 0);
-        IERC20(veAsset).safeApprove(escrow, _value);
+        IERC20Upgradeable(veAsset).safeApprove(escrow, 0);
+        IERC20Upgradeable(veAsset).safeApprove(escrow, _value);
         IVoteEscrow(escrow).create_lock(_value, _unlockTime);
         return true;
     }
 
     function increaseAmount(uint256 _value) external returns (bool) {
         require(msg.sender == depositor, "!auth");
-        IERC20(veAsset).safeApprove(escrow, 0);
-        IERC20(veAsset).safeApprove(escrow, _value);
+        IERC20Upgradeable(veAsset).safeApprove(escrow, 0);
+        IERC20Upgradeable(veAsset).safeApprove(escrow, _value);
         IVoteEscrow(escrow).increase_amount(_value);
         return true;
     }
@@ -210,14 +211,10 @@ contract VoterProxy {
     {
         require(msg.sender == operator, "!auth");
 
-        if (escrowModle == IVoteEscrow.EscrowModle.PICKLE) {
-            //vote
-            IVoting(gaugeProxy).vote(_tokenVote, _weight);
-        } else {
-            for (uint256 i = 0; i < _tokenVote.length; i++) {
-                IVoting(gaugeProxy).vote_for_gauge_weights(_tokenVote[i], _weight[i]);
-            }
+        for (uint256 i = 0; i < _tokenVote.length; i++) {
+            IVoting(gaugeProxy).vote_for_gauge_weights(_tokenVote[i], _weight[i]);
         }
+
         return true;
     }
 
@@ -226,21 +223,18 @@ contract VoterProxy {
 
         uint256 _balance = 0;
 
-        if (escrowModle == IVoteEscrow.EscrowModle.PICKLE) {
-            try IGauge(_gauge).getReward() {} catch {
+        if (escrowModle == IVoteEscrow.EscrowModle.IDLE) {
+            try ITokenMinter(minter).distribute(_gauge) {} catch {
                 return _balance;
             }
-        } else if (
-            escrowModle == IVoteEscrow.EscrowModle.CURVE ||
-            escrowModle == IVoteEscrow.EscrowModle.RIBBON
-        ) {
-            try ITokenMinter(minter).mint(_gauge) {} catch {
+        } else if (escrowModle == IVoteEscrow.EscrowModle.ANGLE) {
+            try IGauge(_gauge).claim_rewards() {} catch {
                 return _balance;
             }
         }
 
-        _balance = IERC20(veAsset).balanceOf(address(this));
-        IERC20(veAsset).safeTransfer(operator, _balance);
+        _balance = IERC20Upgradeable(veAsset).balanceOf(address(this));
+        IERC20Upgradeable(veAsset).safeTransfer(operator, _balance);
 
         return _balance;
     }
@@ -254,8 +248,8 @@ contract VoterProxy {
     function claimFees(address _distroContract, address _token) external returns (uint256) {
         require(msg.sender == operator, "!auth");
         IFeeDistro(_distroContract).claim();
-        uint256 _balance = IERC20(_token).balanceOf(address(this));
-        IERC20(_token).safeTransfer(operator, _balance);
+        uint256 _balance = IERC20Upgradeable(_token).balanceOf(address(this));
+        IERC20Upgradeable(_token).safeTransfer(operator, _balance);
         return _balance;
     }
 

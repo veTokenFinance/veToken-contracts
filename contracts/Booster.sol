@@ -413,10 +413,13 @@ contract Booster is ReentrancyGuardUpgradeable {
         if (stash != address(0) && !isShutdown && !pool.shutdown) {
             IStash(stash).stashRewards();
         }
-        //@dev handle staking factor for Angle
-        // if (IVoteEscrow(staker).escrowModle() == IVoteEscrow.EscrowModle.ANGLE) {
-        //     _amount = (_amount * 10**18) / IGauge(gauge)._scaling_factor();
-        // }
+        // @dev handle staking factor for Angle ,
+        // use try and catch as not all Angle gauges have scaling factor
+        if (IVoteEscrow(staker).escrowModle() == IVoteEscrow.EscrowModle.ANGLE) {
+            try IGauge(gauge)._scaling_factor() {
+                _amount = (_amount * 10**18) / IGauge(gauge)._scaling_factor();
+            } catch {}
+        }
         //return lp tokens
         IERC20Upgradeable(lptoken).safeTransfer(_to, _amount);
 

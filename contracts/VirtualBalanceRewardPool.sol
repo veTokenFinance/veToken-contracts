@@ -213,7 +213,10 @@ contract VirtualBalanceRewardPool is VirtualBalanceWrapper {
             _extraAmount = reward.sub(_actualReward);
         }
 
-        uint256 balance = rewardToken.balanceOf(address(this));
+        uint256 balance = DecimalsConverter.convertTo18(
+            rewardToken.balanceOf(address(this)),
+            tokenDecimals
+        );
         require(rewardRate <= balance.div(duration), "Provided reward too high");
 
         currentRewards = reward;

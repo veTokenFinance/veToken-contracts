@@ -364,7 +364,7 @@ contract VE3DRewardPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         address _rewardToken,
         address _account,
         bool _stake
-    ) internal returns (bool) {
+    ) internal returns (bool status) {
         uint256 reward = earnedReward(_rewardToken, _account);
         if (reward > 0) {
             rewardTokenInfo[_rewardToken].rewards[_account] = 0;

@@ -784,7 +784,7 @@ contract VE3DLocker is ReentrancyGuardUpgradeable, OwnableUpgradeable {
         address _account,
         address _rewardsToken,
         bool _stake
-    ) internal nonReentrant returns (bool) {
+    ) internal nonReentrant returns (bool status) {
         uint256 reward = rewards[_account][_rewardsToken];
         if (reward > 0) {
             rewards[_account][_rewardsToken] = 0;
@@ -847,8 +847,15 @@ contract VE3DLocker is ReentrancyGuardUpgradeable, OwnableUpgradeable {
             _extraAmount = _reward.sub(_actualReward);
         }
 
-        uint256 balance = IERC20Upgradeable(_rewardsToken).balanceOf(address(this));
-        require(rdata.rewardRate <= balance.div(rewardsDuration), "Provided reward too high");
+        uint256 balance = DecimalsConverter.convertTo18(
+            IERC20Upgradeable(_rewardsToken).balanceOf(address(this)),
+            rewardData[_rewardsToken].tokenDecimals
+        );
+
+        require(
+            rdata.rewardRate <= balance.div(rewardsDuration).to208(),
+            "Provided reward too high"
+        );
 
         rdata.lastUpdateTime = block.timestamp.to40();
         rdata.periodFinish = block.timestamp.add(rewardsDuration).to40();

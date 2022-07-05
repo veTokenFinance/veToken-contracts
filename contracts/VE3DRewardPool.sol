@@ -482,7 +482,7 @@ contract VE3DRewardPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         emit RewardAdded(reward);
     }
 
-    function recoverUnuserReward(address _rewardToken)
+    function recoverUnusedReward(address _rewardToken)
         external
         onlyOwner
         updateReward(address(0))

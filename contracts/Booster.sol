@@ -3,6 +3,7 @@ pragma solidity 0.8.7;
 
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
@@ -421,7 +422,10 @@ contract Booster is ReentrancyGuardUpgradeable {
             } catch {}
         }
         //return lp tokens
-        IERC20Upgradeable(lptoken).safeTransfer(_to, _amount);
+        IERC20Upgradeable(lptoken).safeTransfer(
+            _to,
+            Math.min(_amount, IERC20Upgradeable(lptoken).balanceOf(address(this)))
+        );
 
         emit Withdrawn(_to, _pid, _amount);
     }

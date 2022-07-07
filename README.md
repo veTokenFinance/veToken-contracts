@@ -84,6 +84,7 @@ Each voting proxy has the voting power for corresponding projects. And it delega
 # Running tests
 
 ### set up
+node version 16
 
 `npm ci`
 
@@ -103,8 +104,9 @@ Each voting proxy has the voting power for corresponding projects. And it delega
 
 `npm run deploy-basic-contract-angle && npm run deploy-local-angle`
 
-### test all
+### test 
 
-`npm run test-no-deploy`
+`npm run test-no-deploy-idle`
+`npm run test-no-deploy-angle`
 
 > **Note:** all deployed addresses will be in contracts.json file

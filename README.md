@@ -76,13 +76,14 @@ Each voting proxy has the voting power for corresponding projects. And it delega
 
 
 
-![Vetoken-Finance-CD-Main Contracts](https://user-images.githubusercontent.com/77819086/170214459-c6857ac3-1199-4872-b876-60a65fbd25be.svg)
-![Vetoken-Finance-CD-Reward Contracts](https://user-images.githubusercontent.com/77819086/170215780-a9e9b605-492a-4a04-8069-cea2413b2e98.svg)
-![Vetoken-Finance-CD-Factory](https://user-images.githubusercontent.com/77819086/170216085-2856ddd9-97ef-4e3b-9cca-994bd63e25e5.svg)
+![Vetoekn-Finance-CD-Main Contracts](https://user-images.githubusercontent.com/77819086/170214459-c6857ac3-1199-4872-b876-60a65fbd25be.svg)
+![Vetoekn-Finance-CD-Reward Contracts](https://user-images.githubusercontent.com/77819086/170215780-a9e9b605-492a-4a04-8069-cea2413b2e98.svg)
+![Vetoekn-Finance-CD-Factory](https://user-images.githubusercontent.com/77819086/170216085-2856ddd9-97ef-4e3b-9cca-994bd63e25e5.svg)
 
 # Running tests
 
 ### set up
+node version 16
 
 `npm ci`
 
@@ -94,19 +95,18 @@ Each voting proxy has the voting power for corresponding projects. And it delega
 
 `npm run idle_network`
 
-`npm run deploy-basic-contract-idle && npm run deploy-local-idle`
+`npm run deploy-basic-contract && npm run deploy-local-idle`
 
 ### deploy angle
 
 `npm run angle_network`
 
-`npm run deploy-basic-contract-angle && npm run deploy-local-angle`
+`npm run deploy-basic-contract && npm run deploy-local-angle`
 
 
-### test idle or angle
+### test 
 
 `npm run test-no-deploy-idle`
-
 `npm run test-no-deploy-angle`
 
 > **Note:** all deployed addresses will be in contracts.json file

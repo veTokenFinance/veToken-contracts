@@ -29,7 +29,7 @@ const { parseEther, formatEther, parseUnits, formatUnits } = require("@etherspro
 const Reverter = require("./helper/reverter");
 const BigNumber = require("bignumber.js");
 
-contract("Booster", async (accounts) => {
+contract("Ve3tokenMultipleRewards", async (accounts) => {
   let vetokenMinter;
   let vetoken;
   let rFactory;
@@ -72,8 +72,12 @@ contract("Booster", async (accounts) => {
   const poolId = 0;
   const FEE_DENOMINATOR = 10000;
 
-  before("setup", async () => {
+  before("setup", async function () {
     network = await loadContracts();
+
+    if (network != Networks.none) {
+      this.skip();
+    }
     // basic contract
     vetokenMinter = await VeTokenMinter.at(baseContractList.system.vetokenMinter);
     vetoken = await VeToken.at(baseContractList.system.vetoken);
@@ -131,7 +135,10 @@ contract("Booster", async (accounts) => {
     let stakerLockIncentive_angle;
     let platformFee;
 
-    beforeEach("setup", async () => {
+    beforeEach("setup", async function () {
+      if (network != Networks.none) {
+        this.skip();
+      }
       //idle
       depositAmount_idle = await lpToken_idle.balanceOf(USER1);
       await lpToken_idle.approve(booster_idle.address, depositAmount_idle);
@@ -143,7 +150,10 @@ contract("Booster", async (accounts) => {
       rewardPool_angle = await BaseRewardPool.at((await booster_angle.poolInfo(poolId))[3]);
     });
 
-    it("earmarkRewards full flow for idle and angle", async () => {
+    it("earmarkRewards full flow for idle and angle", async function () {
+      if (network != Networks.none) {
+        this.skip();
+      }
       await booster_idle.deposit(poolId, depositAmount_idle, true);
       await booster_angle.deposit(poolId, depositAmount_angle, true);
 

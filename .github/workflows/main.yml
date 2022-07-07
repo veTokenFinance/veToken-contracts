@@ -36,3 +36,12 @@ jobs:
 
       - name: Run tests - Angle
         run: npm run test-no-deploy-angle
+
+      - name: Run private network - All Networks
+        run: npm run fork-mainnet > /dev/null &
+
+      - name: Run migrations - All Networks
+        run: npm run deploy-local
+
+      - name: Run tests - All Networks
+        run: npm run test-no-deploy-custom

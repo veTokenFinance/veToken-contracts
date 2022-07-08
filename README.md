@@ -84,13 +84,14 @@ Each voting proxy has the voting power for corresponding projects. And it delega
 # Running tests
 
 ### set up
+
 node version 16
 
 `npm ci`
 
 `truffle compile`
 
-`set up config keys in secret.json based on secret-copy.json`
+`set up config keys in .env based on .env.example`
 
 ### deploy idle
 
@@ -104,7 +105,7 @@ node version 16
 
 `npm run deploy-basic-contract-angle && npm run deploy-local-angle`
 
-### test 
+### test
 
 `npm run test-no-deploy-idle`
 `npm run test-no-deploy-angle`

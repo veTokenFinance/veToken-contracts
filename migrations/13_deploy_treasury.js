@@ -1,7 +1,7 @@
 const Treasury = artifacts.require("Treasury");
 
 module.exports = async function (deployer, network, accounts) {
-  const ve3Token = "0x1F209ed40DD77183e9B69c72106F043e0B51bf24";
+  const veToken = "0x1F209ed40DD77183e9B69c72106F043e0B51bf24";
   const startTime = "7777777777";
   const totalTime = 3600 * 24 * 365; // 1 year
 
@@ -10,7 +10,7 @@ module.exports = async function (deployer, network, accounts) {
 
   await deployer.deploy(
     Treasury,
-    ve3Token,
+    veToken,
     admin,
     funder,
     startTime,

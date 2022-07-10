@@ -1,5 +1,5 @@
 const Treasury = artifacts.require("Treasury");
-const VE3Token = artifacts.require("VE3Token");
+const VeToken = artifacts.require("VeToken");
 
 const { time, constants } = require("@openzeppelin/test-helpers");
 const truffleAssert = require("truffle-assertions");
@@ -10,7 +10,7 @@ function toBN(number) {
 }
 
 contract("Treasury", async (accounts) => {
-  let ve3Token;
+  let ve3d;
   let treasury;
   let startTime;
 
@@ -23,12 +23,12 @@ contract("Treasury", async (accounts) => {
   const toWei = web3.utils.toWei;
 
   beforeEach("setup", async () => {
-    ve3Token = await VE3Token.new("VE3", "VE3", { from: funder });
-    await ve3Token.mint(funder, toWei("1000000"), {from: funder})
+    ve3d = await VeToken.new({ from: funder });
+    await ve3d.mint(funder, toWei("1000000"), {from: funder})
     startTime = Number(await time.latest()) + 1000;
 
     treasury = await Treasury.new(
-      ve3Token.address,
+      ve3d.address,
       admin,
       funder,
       startTime,
@@ -102,7 +102,7 @@ contract("Treasury", async (accounts) => {
     const fundAmount = toWei("100");
 
     beforeEach(async () => {
-      await ve3Token.approve(treasury.address, constants.MAX_UINT256, {
+      await ve3d.approve(treasury.address, constants.MAX_UINT256, {
         from: funder,
       });
     });
@@ -136,7 +136,7 @@ contract("Treasury", async (accounts) => {
           from: funder,
         });
 
-        assert.equal(await ve3Token.balanceOf(treasury.address), fundAmount);
+        assert.equal(await ve3d.balanceOf(treasury.address), fundAmount);
       });
 
       it("it updates totalLocked", async () => {
@@ -203,7 +203,7 @@ contract("Treasury", async (accounts) => {
           .times(elapsed)
           .dividedToIntegerBy(TOTAL_TIME);
 
-        assert.equal(await ve3Token.balanceOf(admin), claimed.toString());
+        assert.equal(await ve3d.balanceOf(admin), claimed.toString());
       });
 
       it("it updates totalClaimed", async () => {
@@ -230,7 +230,7 @@ contract("Treasury", async (accounts) => {
           from: admin,
         });
 
-        assert.equal(await ve3Token.balanceOf(admin), fundAmount);
+        assert.equal(await ve3d.balanceOf(admin), fundAmount);
       });
 
       it("it emits event", async () => {

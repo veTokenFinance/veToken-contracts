@@ -1,5 +1,5 @@
 const Ve3VestedEscrow = artifacts.require("Ve3VestedEscrow");
-const VE3Token = artifacts.require("VE3Token");
+const VeToken = artifacts.require("VeToken");
 
 const { time, constants } = require("@openzeppelin/test-helpers");
 const truffleAssert = require("truffle-assertions");
@@ -10,7 +10,7 @@ function toBN(number) {
 }
 
 contract("Ve3VestedEscrow", async (accounts) => {
-  let ve3Token;
+  let ve3d;
   let vestedEscrow;
   let startTime;
 
@@ -24,12 +24,12 @@ contract("Ve3VestedEscrow", async (accounts) => {
   const toWei = web3.utils.toWei;
 
   beforeEach("setup", async () => {
-    ve3Token = await VE3Token.new("VE3", "VE3", { from: funder });
-    await ve3Token.mint(funder, toWei("1000000"), {from: funder})
+    ve3d = await VeToken.new({ from: funder });
+    await ve3d.mint(funder, toWei("1000000"), {from: funder})
     startTime = Number(await time.latest()) + 1000;
 
     vestedEscrow = await Ve3VestedEscrow.new(
-      ve3Token.address,
+      ve3d.address,
       admin,
       funder,
       startTime,
@@ -136,7 +136,7 @@ contract("Ve3VestedEscrow", async (accounts) => {
     const bobAmount = toWei("50");
 
     beforeEach(async () => {
-      await ve3Token.approve(vestedEscrow.address, constants.MAX_UINT256, {
+      await ve3d.approve(vestedEscrow.address, constants.MAX_UINT256, {
         from: funder,
       });
     });
@@ -178,7 +178,7 @@ contract("Ve3VestedEscrow", async (accounts) => {
         });
 
         assert.equal(
-          await ve3Token.balanceOf(vestedEscrow.address),
+          await ve3d.balanceOf(vestedEscrow.address),
           toBN(aliceAmount).plus(bobAmount).toString()
         );
       });
@@ -260,7 +260,7 @@ contract("Ve3VestedEscrow", async (accounts) => {
           .times(elapsed)
           .dividedToIntegerBy(TOTAL_TIME);
 
-        assert.equal(await ve3Token.balanceOf(alice), claimed.toString());
+        assert.equal(await ve3d.balanceOf(alice), claimed.toString());
       });
 
       it("it updates totalClaimed for recipient", async () => {
@@ -290,7 +290,7 @@ contract("Ve3VestedEscrow", async (accounts) => {
           from: alice,
         });
 
-        assert.equal(await ve3Token.balanceOf(alice), aliceAmount);
+        assert.equal(await ve3d.balanceOf(alice), aliceAmount);
       });
 
       it("it emits event", async () => {
@@ -345,7 +345,7 @@ contract("Ve3VestedEscrow", async (accounts) => {
       it("it transfers remaining tokens to admin address", async () => {
         await vestedEscrow.cancel(alice, { from: admin });
 
-        assert.equal(await ve3Token.balanceOf(admin), aliceAmount);
+        assert.equal(await ve3d.balanceOf(admin), aliceAmount);
       });
 
       it("it claimes current pending balance to recipient", async () => {
@@ -362,9 +362,9 @@ contract("Ve3VestedEscrow", async (accounts) => {
           .times(elapsed)
           .dividedToIntegerBy(TOTAL_TIME);
 
-        assert.equal(await ve3Token.balanceOf(alice), claimed.toString());
+        assert.equal(await ve3d.balanceOf(alice), claimed.toString());
         assert.equal(
-          await ve3Token.balanceOf(admin),
+          await ve3d.balanceOf(admin),
           toBN(aliceAmount).minus(claimed).toString()
         );
       });

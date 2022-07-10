@@ -11,6 +11,8 @@ const VeTokenMinter = artifacts.require("VeTokenMinter");
 const PoolManager = artifacts.require("PoolManager");
 const VeToken = artifacts.require("VeToken");
 const IERC20 = artifacts.require("IERC20");
+const VE3DLocker = artifacts.require("VE3DLocker");
+const truffleAssert = require("truffle-assertions");
 
 const { loadContracts, contractAddresseList, Networks } = require("./helper/dumpAddresses");
 const { ether, balance, constants, time } = require("@openzeppelin/test-helpers");
@@ -33,6 +35,7 @@ contract("Booster LP Stake", async (accounts) => {
   let poolManager;
   let vetokenRewards;
   let veassetToken;
+  let ve3dLocker;
   let escrow;
   let feeDistro;
   let lpToken;
@@ -75,6 +78,7 @@ contract("Booster LP Stake", async (accounts) => {
     feeDistro = await booster.feeDistro();
     uniExchange = new web3.eth.Contract(uniswapV2Router, uniExchangeRouterAddress);
     sushiExchange = new web3.eth.Contract(uniswapV2Router, sushiExchangeRouterAddress);
+    ve3dLocker = await VE3DLocker.at(baseContractList.system.ve3dLocker);
     await reverter.snapshot();
   });
 
@@ -803,6 +807,28 @@ contract("Booster LP Stake", async (accounts) => {
         const earnedFour = (await rewardPoolFour.earned(USER1)).toString();
         log("EarnedFour:", formatEther(earnedFour));
       }
+    });
+
+    it("check setRewardContracts (check for address zero)", async () => {
+      await booster.setRewardContracts(
+        "0x0000000000000000000000000000000000000000",
+        "0x0000000000000000000000000000000000000000",
+        "0x0000000000000000000000000000000000000000"
+      );
+      await truffleAssert.reverts(
+        booster.setRewardContracts(
+          "0x0000000000000000000000000000000000000000",
+          "0x0000000000000000000000000000000000000000",
+          "0x0000000000000000000000000000000000000000"
+        ),
+        "Not Fail"
+      );
+      // Seems not failing at all!
+    });
+
+    it("check setFeeInfo (try to set more than FEE_DENOMINATOR)", async () => {
+      await truffleAssert.reverts(booster.setFeeInfo(toBN(10001), toBN(0)), "status 0");
+      // Seems not failing at all!
     });
 
     it("angle scaling factor withdraw (test), also check earned", async () => {

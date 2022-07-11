@@ -1,4 +1,4 @@
-const Ve3VestedEscrow = artifacts.require("Ve3VestedEscrow");
+const Ve3dVestedEscrow = artifacts.require("Ve3dVestedEscrow");
 const VeToken = artifacts.require("VeToken");
 
 const { time, constants } = require("@openzeppelin/test-helpers");
@@ -9,7 +9,7 @@ function toBN(number) {
   return new BigNumber(number);
 }
 
-contract("Ve3VestedEscrow", async (accounts) => {
+contract("Ve3dVestedEscrow", async (accounts) => {
   let ve3d;
   let vestedEscrow;
   let startTime;
@@ -28,7 +28,7 @@ contract("Ve3VestedEscrow", async (accounts) => {
     await ve3d.mint(funder, toWei("1000000"), {from: funder})
     startTime = Number(await time.latest()) + 1000;
 
-    vestedEscrow = await Ve3VestedEscrow.new(
+    vestedEscrow = await Ve3dVestedEscrow.new(
       ve3d.address,
       admin,
       funder,

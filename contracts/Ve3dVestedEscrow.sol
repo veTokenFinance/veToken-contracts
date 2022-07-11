@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-contract Ve3VestedEscrow is ReentrancyGuard {
+contract Ve3dVestedEscrow is ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     IERC20 public immutable rewardToken;
@@ -30,7 +30,7 @@ contract Ve3VestedEscrow is ReentrancyGuard {
     event StartTimeChanged(uint64 newStartTime);
 
     /**
-     * @param rewardToken_    Reward token (VE3)
+     * @param rewardToken_    Reward token (VE3D)
      * @param admin_          Admin to cancel rewards
      * @param funder_         Funder to fund rewards
      * @param startTime_      Timestamp when claim starts
@@ -197,7 +197,7 @@ contract Ve3VestedEscrow is ReentrancyGuard {
     }
 
     /**
-     * @dev Claim reward token (VE3).
+     * @dev Claim reward token (VE3D).
      * @param _recipient  Address to receive rewards.
      * @return success Indicates success or failure
      */

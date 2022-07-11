@@ -26,7 +26,7 @@ contract Treasury is ReentrancyGuard {
     event FunderChanged(address indexed newFunder);
 
     /**
-     * @param rewardToken_    Reward token (VE3)
+     * @param rewardToken_    Reward token (VE3D)
      * @param admin_          Admin to cancel rewards
      * @param funder_         Funder to fund rewards
      * @param startTime_      Timestamp when claim starts
@@ -146,7 +146,7 @@ contract Treasury is ReentrancyGuard {
     }
 
     /**
-     * @dev Claim reward token (VE3).
+     * @dev Claim reward token (VE3D).
      * @return success Indicates success or failure
      */
     function _claim() internal returns (bool success) {

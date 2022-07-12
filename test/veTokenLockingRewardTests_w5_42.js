@@ -99,6 +99,14 @@ contract("veToken Locking Reward Test", async (accounts) => {
     await time.increase(10 * 86400);
     await time.advanceBlock();
 
+    const advanceTime = async (secondsElaspse) => {
+      await time.increase(secondsElaspse);
+      await time.advanceBlock();
+      console.log("\n  >>>>  advance time " +(secondsElaspse/86400) +" days  >>>>\n");
+    }
+
+    const day = 86400;
+
     await rewardPool
       .balanceOf(userA)
       .then((a) => console.log("user A lp rewardPool initial balance: " + formatEther(a.toString())));
@@ -173,19 +181,19 @@ contract("veToken Locking Reward Test", async (accounts) => {
     const lockerInfo = async () => {
       await currentEpoch();
       console.log("\t==== locker info =====");
-      await veassetToken.balanceOf(veTokenLocker.address).then(a=>console.log("\t   veToken: " +a));
-      await veassetToken.balanceOf(treasury).then(a=>console.log("\t   treasury cvx: " +a));
+      await veassetToken.balanceOf(veTokenLocker.address).then(a=>console.log("\t   veAsset: " +a));
+      await veassetToken.balanceOf(treasury).then(a=>console.log("\t   treasury veAsset: " +a));
       var tsup = await veTokenLocker.totalSupply();
       console.log("\t   totalSupply: " +tsup);
       await veTokenLocker.lockedSupply().then(a=>console.log("\t   lockedSupply: " +a));
-      await veTokenLocker.boostedSupply().then(a=>console.log("\t   boostedSupply: " +a));
-      await vetoken.balanceOf(veTokenLocker.address).then(a=>console.log("\t   cvxcrv: " +a));
-      var epochs = await locker.epochCount();
+      await vetoken.balanceOf(veTokenLocker.address).then(a=>console.log("\t   veToken: " +a));
+      var epochs = await veTokenLocker.epochCount();
       console.log("\t   epochs: " +epochs);
       for(var i = 0; i < epochs; i++){
         var epochdata = await veTokenLocker.epochs(i);
         var epochTime = epochdata.date;
         var epochSupply = epochdata.supply;
+        //todo: Error: Returned error: VM Exception while processing transaction: revert
         var tsupAtEpoch = await veTokenLocker.totalSupplyAtEpoch(i);
         console.log("\t   voteSupplyAtEpoch("+i+") " +tsupAtEpoch +", date: " +epochTime +"  sup: " +epochSupply);
         if(i==epochs-2){
@@ -196,11 +204,11 @@ contract("veToken Locking Reward Test", async (accounts) => {
     }
 
     const userInfo = async (_user) => {
-      console.log("\t==== user info: "+userNames[_user]+" ====");
+      //todo: Error: Returned error: VM Exception while processing transaction: revert
       var bal = await veTokenLocker.balanceOf(_user);
       console.log("\t   balanceOf: " +bal);
       await veTokenLocker.pendingLockOf(_user).then(a=>console.log("\t   pending balance: " +a));
-      await veTokenLocker.rewardWeightOf(_user).then(a=>console.log("\t   reward weightOf: " +a));
+      //await veTokenLocker.rewardWeightOf(_user).then(a=>console.log("\t   reward weightOf: " +a));
       await veTokenLocker.lockedBalanceOf(_user).then(a=>console.log("\t   lockedBalanceOf: " +a));
       await veTokenLocker.lockedBalances(_user).then(a=>console.log("\t   lockedBalances: " +a.total +", " +a.unlockable +", " +a.locked +"\n\t     lock data: " +JSON.stringify(a.lockData) ));
       await veTokenLocker.balances(_user).then(a=>console.log("\t   nextunlockIndex: " +a.nextUnlockIndex ));
@@ -208,39 +216,40 @@ contract("veToken Locking Reward Test", async (accounts) => {
       await veassetToken.balanceOf(_user).then(a=>console.log("\t  veAssest wallet: " +a));
       await vetoken.balanceOf(_user).then(a=>console.log("\t   veToken wallet: " +a));
       await vetokenRewards.balanceOf(_user).then(a=>console.log("\t   staked veToken: " +a));
-      var epochs = await locker.epochCount();
-      for(var i = 0; i < epochs; i++){
-        var balAtE = await veTokenLocker.balanceAtEpochOf(i, _user);
-        var pendingAtE = await veTokenLocker.pendingLockAtEpochOf(i, _user);
-        console.log("\t   voteBalanceAtEpochOf("+i+") " +balAtE +", pnd: " +pendingAtE);
+      var epochs = await veTokenLocker.epochCount();
+      // for(var i = 0; i < epochs; i++){
+      //   var balAtE = await veTokenLocker.balanceAtEpochOf(i, _user);
+      //   var pendingAtE = await veTokenLocker.pendingLockAtEpochOf(i, _user);
+      //   console.log("\t   voteBalanceAtEpochOf("+i+") " +balAtE +", pnd: " +pendingAtE);
 
         //this check is a bit annoying if you dont checkpointEpoch..
-        if(!isShutdown && i==epochs-2){
-          assert(balAtE.toString()==bal.toString(),"balanceOf should be equal in value to the current epoch (" +i +")");
-        }
-      }
-      console.log("\t---- user info: "+userNames[_user]+"("+_user +") end ----");
+      //   if(i==epochs-2){
+      //     assert(balAtE.toString()==bal.toString(),"balanceOf should be equal in value to the current epoch (" +i +")");
+      //   }
+      // }
+      //console.log("\t---- user info: "+userNames[_user]+"("+_user +") end ----");
     }
 
-    await lockerInfo();
-    await userInfo(userC);
+    //await lockerInfo();
+    await userInfo(userB);
 
     //userC lock veToken
     console.log("start lock")
-    var veTokenUserCBalance= await vetoken.balanceOf(userC);
-    await vetoken.approve(veTokenLocker.address,veTokenUserCBalance,{from:userC});
-    var tx = await locker.lock(userC,veTokenUserCBalance,{from:userZ});
-    console.log("locked for user z, gas: " +tx.receipt.gasUsed);
+    var veTokenUserBBalance= await vetoken.balanceOf(userB);
+    console.log(veTokenUserBBalance);
+    await vetoken.approve(veTokenLocker.address,veTokenUserBBalance,{from:userB});
+    var tx = await veTokenLocker.lock(userB,veTokenUserBBalance,{from:userB});
+    console.log("locked for user B, gas: " +tx.receipt.gasUsed);
     await lockerInfo();
-    await userInfo(userC);
-
+    await userInfo(userB);
+    //
     //check that balanceOf increases after next epoch starts
     console.log("\n\n\n\n##### check weight start at next epoch..\n");
     for(var i = 0; i < 7; i++){
       await advanceTime(day);
-      await locker.checkpointEpoch();
+      await veTokenLocker.checkpointEpoch();
       await currentEpoch();
-      await userInfo(userZ);
+      await userInfo(userB);
     }
 
 

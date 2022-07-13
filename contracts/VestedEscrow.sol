@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.6.12;
+pragma solidity 0.8.7;
 
 /*
 Rewrite of Curve Finance's Vested Escrow
@@ -10,16 +10,16 @@ Changes:
 - only one fund admin
 - add claim and stake
 */
-import "./Interfaces.sol";
-import "./interfaces/MathUtil.sol";
-import '@openzeppelin/contracts/math/SafeMath.sol';
-import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import '@openzeppelin/contracts/utils/Address.sol';
-import '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "./helper/MathUtil.sol";
+import "./interfaces/IRewards.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 
-contract VestedEscrow is ReentrancyGuard{
+contract VestedEscrow is ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -48,9 +48,9 @@ contract VestedEscrow is ReentrancyGuard{
         uint256 endtime_,
         address stakeContract_,
         address fundAdmin_
-    ) public {
-        require(starttime_ >= block.timestamp,"start must be future");
-        require(endtime_ > starttime_,"end must be greater");
+    ) {
+        require(starttime_ >= block.timestamp, "start must be future");
+        require(endtime_ > starttime_, "end must be greater");
 
         rewardToken = IERC20(rewardToken_);
         startTime = starttime_;
@@ -63,15 +63,24 @@ contract VestedEscrow is ReentrancyGuard{
 
     function setAdmin(address _admin) external {
         require(msg.sender == admin, "!auth");
+        require(_admin != address(0), "!zero address");
         admin = _admin;
     }
 
     function setFundAdmin(address _fundadmin) external {
         require(msg.sender == admin, "!auth");
+        require(_fundadmin != address(0), "!zero address");
         fundAdmin = _fundadmin;
     }
 
-    function addTokens(uint256 _amount) external returns(bool){
+    function setStartTime(uint64 _startTime) external {
+        require(msg.sender == admin, "!auth");
+        require(_startTime >= block.timestamp, "start must be future");
+        startTime = _startTime;
+        endTime = startTime + totalTime;
+    }
+
+    function addTokens(uint256 _amount) external returns (bool){
         require(msg.sender == admin, "!auth");
 
         rewardToken.safeTransferFrom(msg.sender, address(this), _amount);
@@ -79,15 +88,19 @@ contract VestedEscrow is ReentrancyGuard{
         return true;
     }
 
-    function fund(address[] calldata _recipient, uint256[] calldata _amount) external nonReentrant returns(bool){
+    function fund(address[] calldata _recipient, uint256[] calldata _amount) external nonReentrant returns (bool){
         require(msg.sender == fundAdmin || msg.sender == admin, "!auth");
+        require(_recipient.length == _amount.length && _recipient.length != 0 && _amount.length != 0, "!arr");
 
         uint256 totalAmount = 0;
-        for(uint256 i = 0; i < _recipient.length; i++){
+        for (uint256 i = 0; i < _recipient.length; i++) {
             uint256 amount = _amount[i];
+
+            require(amount != 0, "!zero amount");
+
             initialLocked[_recipient[i]] = initialLocked[_recipient[i]].add(amount);
             totalAmount = totalAmount.add(amount);
-            emit Fund(_recipient[i],amount);
+            emit Fund(_recipient[i], amount);
         }
 
         initialLockedSupply = initialLockedSupply.add(totalAmount);
@@ -95,50 +108,50 @@ contract VestedEscrow is ReentrancyGuard{
         return true;
     }
 
-    function _totalVestedOf(address _recipient, uint256 _time) internal view returns(uint256){
-        if(_time < startTime){
+    function _totalVestedOf(address _recipient, uint256 _time) internal view returns (uint256){
+        if (_time < startTime) {
             return 0;
         }
         uint256 locked = initialLocked[_recipient];
         uint256 elapsed = _time.sub(startTime);
-        uint256 total = MathUtil.min(locked * elapsed / totalTime, locked );
+        uint256 total = MathUtil.min(locked * elapsed / totalTime, locked);
         return total;
     }
 
-    function _totalVested() internal view returns(uint256){
+    function _totalVested() internal view returns (uint256){
         uint256 _time = block.timestamp;
-        if(_time < startTime){
+        if (_time < startTime) {
             return 0;
         }
         uint256 locked = initialLockedSupply;
         uint256 elapsed = _time.sub(startTime);
-        uint256 total = MathUtil.min(locked * elapsed / totalTime, locked );
+        uint256 total = MathUtil.min(locked * elapsed / totalTime, locked);
         return total;
     }
 
-    function vestedSupply() external view returns(uint256){
+    function vestedSupply() external view returns (uint256){
         return _totalVested();
     }
 
-    function lockedSupply() external view returns(uint256){
+    function lockedSupply() external view returns (uint256){
         return initialLockedSupply.sub(_totalVested());
     }
 
-    function vestedOf(address _recipient) external view returns(uint256){
+    function vestedOf(address _recipient) external view returns (uint256){
         return _totalVestedOf(_recipient, block.timestamp);
     }
 
-    function balanceOf(address _recipient) external view returns(uint256){
+    function balanceOf(address _recipient) external view returns (uint256){
         uint256 vested = _totalVestedOf(_recipient, block.timestamp);
         return vested.sub(totalClaimed[_recipient]);
     }
 
-    function lockedOf(address _recipient) external view returns(uint256){
+    function lockedOf(address _recipient) external view returns (uint256){
         uint256 vested = _totalVestedOf(_recipient, block.timestamp);
         return initialLocked[_recipient].sub(vested);
     }
 
-    function claim(address _recipient) public nonReentrant{
+    function claim(address _recipient) public nonReentrant {
         uint256 vested = _totalVestedOf(_recipient, block.timestamp);
         uint256 claimable = vested.sub(totalClaimed[_recipient]);
 
@@ -148,27 +161,27 @@ contract VestedEscrow is ReentrancyGuard{
         emit Claim(msg.sender, claimable);
     }
 
-    function claim() external{
+    function claim() external {
         claim(msg.sender);
     }
 
-    function claimAndStake(address _recipient) internal nonReentrant{
-        require(stakeContract != address(0),"no staking contract");
-        require(IRewards(stakeContract).stakingToken() == address(rewardToken),"stake token mismatch");
+    function claimAndStake(address _recipient) internal nonReentrant {
+        require(stakeContract != address(0), "no staking contract");
+        require(IRewards(stakeContract).stakingToken() == address(rewardToken), "stake token mismatch");
 
         uint256 vested = _totalVestedOf(_recipient, block.timestamp);
         uint256 claimable = vested.sub(totalClaimed[_recipient]);
 
         totalClaimed[_recipient] = totalClaimed[_recipient].add(claimable);
 
-        rewardToken.safeApprove(stakeContract,0);
-        rewardToken.safeApprove(stakeContract,claimable);
+        rewardToken.safeApprove(stakeContract, 0);
+        rewardToken.safeApprove(stakeContract, claimable);
         IRewards(stakeContract).stakeFor(_recipient, claimable);
 
         emit Claim(_recipient, claimable);
     }
 
-    function claimAndStake() external{
+    function claimAndStake() external {
         claimAndStake(msg.sender);
     }
 }

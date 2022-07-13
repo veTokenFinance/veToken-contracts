@@ -187,13 +187,16 @@ contract Booster is ReentrancyGuardUpgradeable {
 
         //reward contracts are immutable or else the owner
         //has a means to redeploy and mint cvx via rewardClaimed()
-        if (lockRewards == address(0) && _rewards != address(0)) {
+        if (lockRewards == address(0)) {
+            require(_rewards != address(0), "Not allowed!");
             lockRewards = _rewards;
         }
-        if (stakerRewards == address(0) && _stakerRewards != address(0)) {
+        if (stakerRewards == address(0)) {
+            require(_stakerRewards != address(0), "Not allowed!");
             stakerRewards = _stakerRewards;
         }
-        if (stakerLockRewards == address(0) && _stakerLockRewards != address(0)) {
+        if (stakerLockRewards == address(0)) {
+            require(_stakerLockRewards != address(0), "Not allowed!");
             stakerLockRewards = _stakerLockRewards;
         }
 

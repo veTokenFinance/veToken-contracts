@@ -5,6 +5,7 @@ const VE3DRewardPool = artifacts.require('VE3DRewardPool');
 const {time, constants} = require('@openzeppelin/test-helpers');
 const truffleAssert = require('truffle-assertions');
 const BigNumber = require('bignumber.js');
+const Reverter = require("./helper/reverter");
 
 function toBN(number) {
   return new BigNumber(number);
@@ -24,9 +25,11 @@ contract.only('VestedEscrow', async (accounts) => {
   const userA = accounts[2];
   const userB = accounts[3];
 
+  const reverter = new Reverter(web3);
+
   const toWei = web3.utils.toWei;
 
-  beforeEach('setup', async () => {
+  before('setup', async () => {
     ve3d = await VeToken.new({from: admin});
     await ve3d.mint(admin, toWei('1000000'), {from: admin});
     startTime = Number(await time.latest()) + 1000;
@@ -41,7 +44,10 @@ contract.only('VestedEscrow', async (accounts) => {
         ve3dRewardPool.address,
         fundAdmin,
     );
+    await reverter.snapshot();
   });
+
+  afterEach("revert", reverter.revert);
 
   describe('setter', () => {
     describe('#setAdmin', () => {
@@ -349,6 +355,69 @@ contract.only('VestedEscrow', async (accounts) => {
           );
         });
       });
+    });
+
+    describe("#cancel", () => {
+      beforeEach(async () => {
+        await vestedEscrow.fund([userA, userB], [amountUserA, amountUserB], {
+          from: admin,
+        });
+      });
+
+      it("it reverts if caller is not admin", async () => {
+        await truffleAssert.reverts(
+            vestedEscrow.cancel(userA, { from: userA }),
+            "!auth"
+        );
+      });
+
+      it("it reverts if no tokens locked", async () => {
+        await truffleAssert.reverts(
+            vestedEscrow.cancel(fundAdmin, { from: admin }),
+            "!funding"
+        );
+      });
+
+      it("it cancels vesting", async () => {
+        await vestedEscrow.cancel(userA, { from: admin });
+
+        assert.equal(await vestedEscrow.lockedOf(userA), "0");
+      });
+
+      // it("it transfers remaining tokens to admin address", async () => {
+      //   await vestedEscrow.cancel(userA, { from: admin });
+      //
+      //   assert.equal(await ve3d.balanceOf(admin), amountUserA.toString());
+      // });
+      //
+      // it("it claims current pending balance to recipient", async () => {
+      //   await time.increase("2000");
+      //
+      //  const adminBalanceBefore =  await ve3d.balanceOf(admin);
+      //
+      //   await vestedEscrow.cancel(userA, {
+      //     from: admin,
+      //   });
+      //
+      //   const currentTime = Number(await time.latest());
+      //   const elapsed = currentTime - startTime;
+      //
+      //   const claimed = toBN(amountUserA)
+      //       .times(elapsed)
+      //       .dividedToIntegerBy(TOTAL_TIME);
+      //
+      //   console.log(claimed.toString());
+      //   console.log((await ve3d.balanceOf(userA)).toString());
+      //
+      //   const adminBalanceAfter =  await ve3d.balanceOf(admin);
+      //   const userABalanceAfter =  await ve3d.balanceOf(userA);
+      //
+      //   assert.equal(await ve3d.balanceOf(userA), claimed.toString());
+      //   assert.equal(
+      //       (adminBalanceAfter - adminBalanceBefore).toString(),
+      //       toBN(amountUserA).minus(userABalanceAfter).toString()
+      //   );
+      // });
     });
 
     describe('#overview', () => {

@@ -108,6 +108,21 @@ contract VestedEscrow is ReentrancyGuard {
         return true;
     }
 
+    function cancel(address _recipient) external nonReentrant {
+        require(msg.sender == admin || msg.sender == fundAdmin, "!auth");
+        require(initialLocked[_recipient] != 0, "!funding");
+
+        _claim(_recipient);
+
+        uint256 delta = this.lockedOf(_recipient);
+
+        if (delta != 0) {
+            rewardToken.safeTransfer(admin, delta);
+        }
+
+        initialLocked[_recipient] = 0;
+    }
+
     function _totalVestedOf(address _recipient, uint256 _time) internal view returns (uint256){
         if (_time < startTime) {
             return 0;
@@ -152,6 +167,10 @@ contract VestedEscrow is ReentrancyGuard {
     }
 
     function claim(address _recipient) public nonReentrant {
+        _claim(_recipient);
+    }
+
+    function _claim(address _recipient) internal{
         uint256 vested = _totalVestedOf(_recipient, block.timestamp);
         uint256 claimable = vested.sub(totalClaimed[_recipient]);
 

@@ -111,3 +111,5 @@ node version 16
 `npm run test-no-deploy-angle`
 
 > **Note:** all deployed addresses will be in contracts.json file
+
+> **Note:** please remove generated files under .openzeppelin folder before run the migration scripts

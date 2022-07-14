@@ -3,6 +3,7 @@ pragma solidity 0.8.7;
 
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
@@ -419,12 +420,15 @@ contract Booster is ReentrancyGuardUpgradeable {
         // @dev handle staking factor for Angle ,
         // use try and catch as not all Angle gauges have scaling factor
         if (IVoteEscrow(staker).escrowModle() == IVoteEscrow.EscrowModle.ANGLE) {
-            try IGauge(gauge)._scaling_factor() {
-                _amount = (_amount * 10**18) / IGauge(gauge)._scaling_factor();
+            try IGauge(gauge).scaling_factor() {
+                _amount = _amount.mul(10**18).div(IGauge(gauge).scaling_factor());
             } catch {}
         }
         //return lp tokens
-        IERC20Upgradeable(lptoken).safeTransfer(_to, _amount);
+        IERC20Upgradeable(lptoken).safeTransfer(
+            _to,
+            Math.min(_amount, IERC20Upgradeable(lptoken).balanceOf(address(this)))
+        );
 
         emit Withdrawn(_to, _pid, _amount);
     }
@@ -504,11 +508,10 @@ contract Booster is ReentrancyGuardUpgradeable {
         address stash = pool.stash;
         address gauge = pool.gauge;
 
-        if (
-            stash != address(0) &&
-            IVoteEscrow(staker).escrowModle() == IVoteEscrow.EscrowModle.ANGLE
-        ) {
-            _claimStashReward(stash);
+        if (stash != address(0)) {
+            if (!IStash(stash).hasRedirected()) {
+                _claimStashReward(stash);
+            }
         }
 
         //claim veAsset

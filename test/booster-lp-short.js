@@ -831,7 +831,7 @@ contract("Booster LP Stake", async (accounts) => {
       // Seems not failing at all!
     });
 
-    it("angle scaling factor withdraw (test), also check earned", async () => {
+    it.only("angle scaling factor withdraw (test), also check earned", async () => {
       if (network === Networks.angle) {
         const poolInfo = JSON.stringify(await booster.poolInfo(4));
         const parsedPoolInfo = JSON.parse(poolInfo);
@@ -851,7 +851,9 @@ contract("Booster LP Stake", async (accounts) => {
         await lpTokenWithScaleFactor.balanceOf(USER1).then((a) => log("G-UNI balance:", formatEther(a.toString())));
         await lpTokenWithScaleFactor.approve(booster.address, lpTokenWithScaleFactorBalance);
         await booster.deposit(4, lpTokenWithScaleFactorBalance, true);
-
+        const actualBalance = (
+          await angleGaugeWithScale.methods.balanceOf(voterProxy.address).call({ gas: 300000 })
+        ).toString();
         // increase time
         await time.increase(10 * 86400);
         await time.advanceBlock();
@@ -870,7 +872,7 @@ contract("Booster LP Stake", async (accounts) => {
         await rewardPool.withdraw(lpTokenWithScaleFactorBalance, false);
         assert.equal((await rewardPool.balanceOf(USER1)).toString(), 0);
 
-        await booster.withdraw(4, lpTokenWithScaleFactorBalance, { from: USER1 });
+        await booster.withdraw(4, actualBalance, { from: USER1 });
         // await booster.withdrawAll(4, { from: USER1 }); // reverts as well
         log("Withdraw lptoken from G-UNI (token with scaling_factor) Gauge (with scaling factor)", "");
         await lpTokenWithScaleFactor

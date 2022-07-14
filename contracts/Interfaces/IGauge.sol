@@ -16,5 +16,5 @@ interface IGauge {
 
     function getReward() external;
 
-    function _scaling_factor() external view returns (uint256);
+    function scaling_factor() external view returns (uint256);
 }

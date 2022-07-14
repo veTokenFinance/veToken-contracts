@@ -1,4 +1,5 @@
 const { ether, balance, constants, time } = require("@openzeppelin/test-helpers");
+const { deployProxy } = require("@openzeppelin/truffle-upgrades");
 const RewardFactory = artifacts.require("RewardFactory");
 const TokenFactory = artifacts.require("TokenFactory");
 const StashFactory = artifacts.require("StashFactory");
@@ -16,8 +17,11 @@ module.exports = async function (deployer, network, accounts) {
   const admin = accounts[0];
   web3.eth.sendTransaction({ from: admin, to: vetokenOperator, value: web3.utils.toWei("10") });
   // vetoken minter
-  await deployer.deploy(VeTokenMinter, veTokenAddress);
-  let vetokenMinter = await VeTokenMinter.deployed();
+  let vetokenMinter = await deployProxy(VeTokenMinter, [veTokenAddress], {
+    deployer,
+    initializer: "__VeTokenMinter_init",
+  });
+
   addContract("system", "vetokenMinter", vetokenMinter.address);
   global.created = true;
   //mint vetoke to minter contract
@@ -41,17 +45,25 @@ module.exports = async function (deployer, network, accounts) {
   addContract("system", "sFactory", sFactory.address);
 
   // pool manager
-  await deployer.deploy(PoolManager);
-  const poolManager = await PoolManager.deployed();
+  const poolManager = await deployProxy(PoolManager, {
+    deployer,
+    initializer: "__PoolManager_init",
+  });
+
   addContract("system", "poolManager", poolManager.address);
 
   // VE3DRewardPool
-  await deployer.deploy(VE3DRewardPool, veTokenAddress, admin);
-  const ve3dRewardPool = await VE3DRewardPool.deployed();
+  const ve3dRewardPool = await deployProxy(VE3DRewardPool, [veTokenAddress, admin], {
+    deployer,
+    initializer: "__VE3DRewardPool_init",
+  });
   addContract("system", "vetokenRewards", ve3dRewardPool.address);
 
   // xVE3D Reward Pool
-  await deployer.deploy(VE3DLocker, veTokenAddress);
-  const ve3dLocker = await VE3DLocker.deployed();
+  const ve3dLocker = await deployProxy(VE3DLocker, [veTokenAddress], {
+    deployer,
+    initializer: "__VE3DLocker_init",
+  });
+
   addContract("system", "ve3dLocker", ve3dLocker.address);
 };

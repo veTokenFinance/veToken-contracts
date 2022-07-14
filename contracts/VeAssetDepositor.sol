@@ -2,30 +2,30 @@
 pragma solidity 0.8.7;
 
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 import "./Interfaces/IStaker.sol";
 import "./Interfaces/ITokenMinter.sol";
 import "./Interfaces/IRewards.sol";
 
-contract VeAssetDepositor {
-    using SafeERC20 for IERC20;
-    using Address for address;
+contract VeAssetDepositor is ReentrancyGuardUpgradeable {
+    using SafeERC20Upgradeable for IERC20Upgradeable;
+    using AddressUpgradeable for address;
     using SafeMath for uint256;
 
     uint256 private constant WEEK = 7 * 86400;
 
-    uint256 public lockIncentive = 10; //incentive to users who spend gas to lock veAsset
+    uint256 public lockIncentive; //incentive to users who spend gas to lock veAsset
     uint256 public constant FEE_DENOMINATOR = 10000;
 
-    address public immutable veAsset;
-    address public immutable escrow;
+    address public veAsset;
+    address public escrow;
     address public feeManager;
-    address public immutable staker;
-    address public immutable minter;
-    uint256 public incentiveVeAsset = 0;
+    address public staker;
+    address public minter;
+    uint256 public incentiveVeAsset;
     uint256 public unlockTime;
     uint256 private maxTime;
 
@@ -35,17 +35,18 @@ contract VeAssetDepositor {
     event LockUpdated(uint256 veAssetBalanceStaker, uint256 unlockInWeeks);
     event Deposited(address indexed user, uint256 amount, bool lock);
 
-    constructor(
+    function __VeAssetDepositor_init(
         address _staker,
         address _minter,
         address _veAsset,
         address _escrow
-    ) {
+    ) external initializer {
         staker = _staker;
         minter = _minter;
         veAsset = _veAsset;
         escrow = _escrow;
         feeManager = msg.sender;
+        lockIncentive = 10;
     }
 
     function setLockMaxTime(uint256 _maxTime) external {
@@ -71,7 +72,7 @@ contract VeAssetDepositor {
     function initialLock() external {
         require(msg.sender == feeManager, "!auth");
 
-        uint256 veVeAsset = IERC20(escrow).balanceOf(staker);
+        uint256 veVeAsset = IERC20Upgradeable(escrow).balanceOf(staker);
         if (veVeAsset == 0) {
             uint256 unlockAt = block.timestamp + maxTime;
             uint256 unlockInWeeks = (unlockAt / WEEK) * WEEK;
@@ -79,7 +80,7 @@ contract VeAssetDepositor {
             //release old lock if exists
             IStaker(staker).release();
             //create new lock
-            uint256 veAssetBalanceStaker = IERC20(veAsset).balanceOf(staker);
+            uint256 veAssetBalanceStaker = IERC20Upgradeable(veAsset).balanceOf(staker);
             IStaker(staker).createLock(veAssetBalanceStaker, unlockAt);
             unlockTime = unlockInWeeks;
             emit InitialLockCreated(veAssetBalanceStaker, unlockInWeeks);
@@ -88,13 +89,13 @@ contract VeAssetDepositor {
 
     //lock veAsset
     function _lockVeAsset() internal {
-        uint256 veAssetBalance = IERC20(veAsset).balanceOf(address(this));
+        uint256 veAssetBalance = IERC20Upgradeable(veAsset).balanceOf(address(this));
         if (veAssetBalance > 0) {
-            IERC20(veAsset).safeTransfer(staker, veAssetBalance);
+            IERC20Upgradeable(veAsset).safeTransfer(staker, veAssetBalance);
         }
 
         //increase ammount
-        uint256 veAssetBalanceStaker = IERC20(veAsset).balanceOf(staker);
+        uint256 veAssetBalanceStaker = IERC20Upgradeable(veAsset).balanceOf(staker);
         if (veAssetBalanceStaker == 0) {
             return;
         }
@@ -131,12 +132,12 @@ contract VeAssetDepositor {
         uint256 _amount,
         bool _lock,
         address _stakeAddress
-    ) public {
+    ) public nonReentrant {
         require(_amount > 0, "!>0");
 
         if (_lock) {
             //lock immediately, transfer directly to staker to skip an erc20 transfer
-            IERC20(veAsset).safeTransferFrom(msg.sender, staker, _amount);
+            IERC20Upgradeable(veAsset).safeTransferFrom(msg.sender, staker, _amount);
             _lockVeAsset();
             if (incentiveVeAsset > 0) {
                 //add the incentive tokens here so they can be staked together
@@ -145,7 +146,7 @@ contract VeAssetDepositor {
             }
         } else {
             //move tokens here
-            IERC20(veAsset).safeTransferFrom(msg.sender, address(this), _amount);
+            IERC20Upgradeable(veAsset).safeTransferFrom(msg.sender, address(this), _amount);
             //defer lock cost to another user
             uint256 callIncentive = _amount.mul(lockIncentive).div(FEE_DENOMINATOR);
             _amount = _amount.sub(callIncentive);
@@ -162,8 +163,8 @@ contract VeAssetDepositor {
             //mint here
             ITokenMinter(minter).mint(address(this), _amount);
             //stake for msg.sender
-            IERC20(minter).safeApprove(_stakeAddress, 0);
-            IERC20(minter).safeApprove(_stakeAddress, _amount);
+            IERC20Upgradeable(minter).safeApprove(_stakeAddress, 0);
+            IERC20Upgradeable(minter).safeApprove(_stakeAddress, _amount);
             IRewards(_stakeAddress).stakeFor(msg.sender, _amount);
         }
 
@@ -175,7 +176,7 @@ contract VeAssetDepositor {
     }
 
     function depositAll(bool _lock, address _stakeAddress) external {
-        uint256 veAssetBal = IERC20(veAsset).balanceOf(msg.sender);
+        uint256 veAssetBal = IERC20Upgradeable(veAsset).balanceOf(msg.sender);
         deposit(veAssetBal, _lock, _stakeAddress);
     }
 }

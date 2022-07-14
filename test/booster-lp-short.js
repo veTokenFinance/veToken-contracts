@@ -13,6 +13,7 @@ const VeToken = artifacts.require("VeToken");
 const IERC20 = artifacts.require("IERC20");
 const VE3DLocker = artifacts.require("VE3DLocker");
 const truffleAssert = require("truffle-assertions");
+const { deployProxy } = require("@openzeppelin/truffle-upgrades");
 
 const { loadContracts, contractAddresseList, Networks } = require("./helper/dumpAddresses");
 const { ether, balance, constants, time } = require("@openzeppelin/test-helpers");
@@ -25,6 +26,9 @@ const BigNumber = require("bignumber.js");
 const pickleJar = require("./helper/pickleJarABI.json");
 const uniswapV2Router = require("./helper/UniswapV2RouterABI.json");
 const gaugeAngleABI = require("./helper/gaugeAngleABI.json");
+
+
+module.exports = async function (deployer) {
 
 contract("Booster LP Stake", async (accounts) => {
   let vetokenMinter;
@@ -810,10 +814,10 @@ contract("Booster LP Stake", async (accounts) => {
     });
 
     it("check setRewardContracts (check for address zero)", async () => {
-      await booster.setRewardContracts(
-        "0x0000000000000000000000000000000000000000",
-        "0x0000000000000000000000000000000000000000",
-        "0x0000000000000000000000000000000000000000"
+      const booster = await deployProxy(
+        Booster,
+        [voterProxy.address, vetokenMinter.address, veassetToken.address, feeDistro.address],
+        { deployer, initializer: "__Booster_init" }
       );
       await truffleAssert.reverts(
         booster.setRewardContracts(
@@ -821,7 +825,7 @@ contract("Booster LP Stake", async (accounts) => {
           "0x0000000000000000000000000000000000000000",
           "0x0000000000000000000000000000000000000000"
         ),
-        "Not Fail"
+        "Not allowed!"
       );
       // Seems not failing at all!
     });
@@ -885,3 +889,4 @@ contract("Booster LP Stake", async (accounts) => {
     });
   });
 });
+}

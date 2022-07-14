@@ -318,8 +318,8 @@ contract("Booster", async (accounts) => {
 
       console.log(
         "distributes 15% of rewards 0.5% to the caller + 4.5% to ve3d reward pool" +
-          "\n" +
-          "+ 10% to the ve3Token reward pool + 85% to lp reward pool"
+        "\n" +
+        "+ 10% to the ve3Token reward pool + 85% to lp reward pool"
       );
 
       const callerBalAfter = (await veassetToken.balanceOf(USER2)).toString();
@@ -487,8 +487,8 @@ contract("Booster", async (accounts) => {
 
       console.log(
         "distributes 20% of rewards 0.5% to the caller + 4.5% to ve3d reward pool" +
-          "\n" +
-          "+ 10% to the ve3Token reward pool + 3% to stakerlock pool + 2% platform fee + 80% to lp reward pool"
+        "\n" +
+        "+ 10% to the ve3Token reward pool + 3% to stakerlock pool + 2% platform fee + 80% to lp reward pool"
       );
 
       const callerBalAfter = (await veassetToken.balanceOf(USER2)).toString();
@@ -570,8 +570,6 @@ contract("Booster", async (accounts) => {
           .toString(),
         "lp reward pool 80%"
       );
-
-      await ve3TokenRewardPool.recoverUnusedReward(USER1, { from: await ve3TokenRewardPool.operator() }); //reverts
     });
 
     it("earmarkRewards - claim extra reward (stashing) - idle", async function () {
@@ -760,6 +758,10 @@ contract("Booster", async (accounts) => {
         1,
         "stakerLockFeesIncentiveAmount 70%"
       );
+
+      log('BaseRewardPool recoverUnusedReward')
+      await web3.eth.sendTransaction({ from: USER1, to: await ve3TokenRewardPool.operator(), value: web3.utils.toWei("10") });
+      await truffleAssert.reverts(await ve3TokenRewardPool.recoverUnusedReward(USER1, { from: await ve3TokenRewardPool.operator() })) // Transaction has been reverted by the EVM
     });
   });
 

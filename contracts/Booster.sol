@@ -636,14 +636,14 @@ contract Booster is ReentrancyGuardUpgradeable {
         require(msg.sender == owner, "!Auth");
         address rewardContract = poolInfo[_pid].veAssetRewards;
         if (rewardContract != address(0)) {
-            IRewards(rewardContract).recoverUnuserReward(owner);
+            IRewards(rewardContract).recoverUnusedReward(owner);
         }
     }
 
     function recoverUnusedRewardFromLockPool() external {
         require(msg.sender == owner, "!Auth");
 
-        IRewards(lockRewards).recoverUnuserReward(owner);
+        IRewards(lockRewards).recoverUnusedReward(owner);
     }
 
     function recoverUnusedClaimedReward(address _token, address _destination) external {

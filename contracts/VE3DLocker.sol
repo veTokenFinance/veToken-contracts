@@ -350,11 +350,11 @@ contract VE3DLocker is ReentrancyGuardUpgradeable, OwnableUpgradeable {
         //need to add up since the range could be in the middle somewhere
         //traverse inversely to make more current queries more gas efficient
         for (uint256 i = locks.length; i > 0; i--) {
-            uint256 lockEpoch = uint256(locks[i].unlockTime).sub(lockDuration);
+            uint256 lockEpoch = uint256(locks[i - 1].unlockTime).sub(lockDuration);
             //lock epoch must be less or equal to the epoch we're basing from.
             if (lockEpoch <= epochTime) {
                 if (lockEpoch > cutoffEpoch) {
-                    amount = amount.add(locks[i].amount);
+                    amount = amount.add(locks[i - 1].amount);
                 } else {
                     //stop now as no futher checks matter
                     break;
@@ -395,11 +395,11 @@ contract VE3DLocker is ReentrancyGuardUpgradeable, OwnableUpgradeable {
 
         //traverse inversely to make more current queries more gas efficient
         for (uint256 i = locks.length; i > 0; i--) {
-            uint256 lockEpoch = uint256(locks[i].unlockTime).sub(lockDuration);
+            uint256 lockEpoch = uint256(locks[i - 1].unlockTime).sub(lockDuration);
 
             //return the next epoch balance
             if (lockEpoch == nextEpoch) {
-                return locks[i].amount;
+                return locks[i - 1].amount;
             } else if (lockEpoch < nextEpoch) {
                 //no need to check anymore
                 break;
@@ -422,7 +422,7 @@ contract VE3DLocker is ReentrancyGuardUpgradeable, OwnableUpgradeable {
 
         //traverse inversely to make more current queries more gas efficient
         for (uint256 i = epochindex; i > 0; i--) {
-            Epoch storage e = epochs[i];
+            Epoch storage e = epochs[i - 1];
             if (uint256(e.date) <= cutoffEpoch) {
                 break;
             }
@@ -440,12 +440,12 @@ contract VE3DLocker is ReentrancyGuardUpgradeable, OwnableUpgradeable {
         uint256 cutoffEpoch = epochStart.sub(lockDuration);
 
         //traverse inversely to make more current queries more gas efficient
-        for (uint256 i = _epoch + 1; i > 0; i--) {
-            Epoch storage e = epochs[i];
+        for (uint256 i = _epoch; i > 0; i--) {
+            Epoch storage e = epochs[i - 1];
             if (uint256(e.date) <= cutoffEpoch) {
                 break;
             }
-            supply = supply.add(epochs[i].supply);
+            supply = supply.add(e.supply);
         }
 
         return supply;

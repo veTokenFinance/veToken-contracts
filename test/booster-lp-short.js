@@ -833,7 +833,7 @@ contract("Booster LP Stake", async (accounts) => {
       // Seems not failing at all!
     });
 
-    it.only("angle scaling factor withdraw (test), also check earned", async () => {
+    it("angle scaling factor withdraw (test), also check earned", async () => {
       if (network === Networks.angle) {
         const poolInfo = JSON.stringify(await booster.poolInfo(4));
         const parsedPoolInfo = JSON.parse(poolInfo);

@@ -888,7 +888,7 @@ module.exports = async function (deployer) {
           assert.equal((await rewardPool.balanceOf(USER1)).toString(), 0);
 
           await booster.withdraw(4, actualBalance, { from: USER1 });
-          // await booster.withdrawAll(4, { from: USER1 }); // reverts as well
+          // await booster.withdrawAll(4, { from: USER1 });
           log("Withdraw lptoken from G-UNI (token with scaling_factor) Gauge (with scaling factor)", "");
           await lpTokenWithScaleFactor
             .balanceOf(USER1)

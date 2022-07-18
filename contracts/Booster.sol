@@ -421,7 +421,7 @@ contract Booster is ReentrancyGuardUpgradeable {
         // use try and catch as not all Angle gauges have scaling factor
         if (IVoteEscrow(staker).escrowModle() == IVoteEscrow.EscrowModle.ANGLE) {
             try IGauge(gauge).scaling_factor() {
-                _amount = _amount.mul(10**18).div(IGauge(gauge).scaling_factor());
+                _amount = _amount.mul(IGauge(gauge).scaling_factor()).div(10**18);
             } catch {}
         }
         //return lp tokens

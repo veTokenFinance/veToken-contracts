@@ -377,12 +377,10 @@ contract BaseRewardPool is ReentrancyGuard {
 
     function recoverUnusedReward(address _destination) external updateReward(address(0)) {
         require(msg.sender == operator, "!authorized");
-        require(address(rewardToken) != address(stakingToken), "Cannot withdraw staking token");
         require(block.timestamp > periodFinish, "Cannot withdraw active reward");
 
-        uint256 _amount = rewardToken.balanceOf(address(this));
-        if (_amount > 0) {
-            rewardToken.safeTransfer(_destination, _amount);
+        if (queuedRewards > 0) {
+            rewardToken.safeTransfer(_destination, queuedRewards);
         }
     }
 }

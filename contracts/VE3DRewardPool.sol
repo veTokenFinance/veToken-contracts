@@ -492,10 +492,12 @@ contract VE3DRewardPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             block.timestamp > rewardTokenInfo[_rewardToken].periodFinish,
             "Cannot withdraw active reward"
         );
-        uint256 _amount = IERC20Upgradeable(_rewardToken).balanceOf(address(this));
 
-        if (_amount > 0) {
-            IERC20Upgradeable(_rewardToken).safeTransfer(owner(), _amount);
+        if (rewardTokenInfo[_rewardToken].queuedRewards > 0) {
+            IERC20Upgradeable(_rewardToken).safeTransfer(
+                owner(),
+                rewardTokenInfo[_rewardToken].queuedRewards
+            );
         }
     }
 }

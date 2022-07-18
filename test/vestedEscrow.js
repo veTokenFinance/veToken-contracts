@@ -11,7 +11,7 @@ function toBN(number) {
   return new BigNumber(number);
 }
 
-contract.only('VestedEscrow', async (accounts) => {
+contract('VestedEscrow', async (accounts) => {
   let ve3d;
   let vestedEscrow;
   let startTime;
@@ -58,14 +58,14 @@ contract.only('VestedEscrow', async (accounts) => {
         );
       });
 
-      it('it reverts if new fundAdmin is address(0)', async () => {
+      it('it reverts if new admin is address(0)', async () => {
         await truffleAssert.reverts(
             vestedEscrow.setAdmin(constants.ZERO_ADDRESS, {from: admin}),
             '!zero address',
         );
       });
 
-      it('it sets new fundAdmin', async () => {
+      it('it sets new admin', async () => {
         await vestedEscrow.setAdmin(userA, {from: admin});
 
         assert.equal(await vestedEscrow.admin(), userA);

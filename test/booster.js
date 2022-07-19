@@ -106,6 +106,39 @@ contract("Booster", async (accounts) => {
       assert.equal((await rewardPool.balanceOf(USER1)).toString(), depositAmount);
     });
 
+    it("deposit lp token, stake and try to use recoverUnusedRewards", async () => {
+      await booster.deposit(poolId, depositAmount, true);
+
+      assert.equal((await lpToken.balanceOf(USER1)).toString(), 0);
+      assert.equal((await rewardPool.balanceOf(USER1)).toString(), depositAmount);
+      await booster.recoverUnusedRewardFromPools(poolId, { from: USER1 });
+    });
+
+    it("deposit lp token, stake and try to use recoverUnusedRewardFromLockPool", async () => {
+      await booster.deposit(poolId, depositAmount, true);
+
+      assert.equal((await lpToken.balanceOf(USER1)).toString(), 0);
+      assert.equal((await rewardPool.balanceOf(USER1)).toString(), depositAmount);
+      await booster.recoverUnusedRewardFromLockPool({ from: await booster.owner() });
+    });
+
+    it("deposit lp token, stake and try to use recoverUnusedRewardFromLockPool", async () => {
+      await booster.deposit(poolId, depositAmount, true);
+
+      assert.equal((await lpToken.balanceOf(USER1)).toString(), 0);
+      assert.equal((await rewardPool.balanceOf(USER1)).toString(), depositAmount);
+      await booster.recoverUnusedRewardFromLockPool({ from: await booster.owner() });
+    });
+
+    it("deposit lp token, stake and try to use recoverUnusedClaimedReward", async () => {
+      await booster.deposit(poolId, depositAmount, true);
+      const poolInfo = JSON.stringify(await booster.poolInfo(poolId));
+      const parsedPoolInfo = JSON.parse(poolInfo);
+      assert.equal((await lpToken.balanceOf(USER1)).toString(), 0);
+      assert.equal((await rewardPool.balanceOf(USER1)).toString(), depositAmount);
+      await booster.recoverUnusedClaimedReward(parsedPoolInfo.token, USER1, { from: await booster.owner() });
+    });
+
     it("deposit lp token without stake", async () => {
       await booster.deposit(poolId, depositAmount, false);
 

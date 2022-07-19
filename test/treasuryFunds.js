@@ -59,6 +59,7 @@ contract.only('TreasuryFunds', async (accounts) => {
     treasuryFunds = await TreasuryFunds.new(admin, {from: admin});
 
     ve3dRewardPool = await VE3DRewardPool.new(ve3d.address, admin, {from: admin});
+    await ve3dRewardPool.__VE3DRewardPool_init(ve3d.address, admin, {from: admin});
 
     vestedEscrow = await VestedEscrow.new(
         ve3d.address,

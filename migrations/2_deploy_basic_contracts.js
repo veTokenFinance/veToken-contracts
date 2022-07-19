@@ -5,6 +5,8 @@ const TokenFactory = artifacts.require("TokenFactory");
 const StashFactory = artifacts.require("StashFactory");
 const VeTokenMinter = artifacts.require("VeTokenMinter");
 const PoolManager = artifacts.require("PoolManager");
+const VestedEscrow = artifacts.require('VestedEscrow');
+const TreasuryFunds = artifacts.require('TreasuryFunds');
 const VeToken = artifacts.require("VeToken");
 const VE3DRewardPool = artifacts.require("VE3DRewardPool");
 const { addContract } = require("./helper/addContracts");
@@ -64,6 +66,24 @@ module.exports = async function (deployer, network, accounts) {
     deployer,
     initializer: "__VE3DLocker_init",
   });
-
   addContract("system", "ve3dLocker", ve3dLocker.address);
+
+  // VestedEscrow
+  const TOTAL_TIME = 1.5 * 365 * 86400; // 1,5 years
+  const startTime = Number(await time.latest()) + 1000;
+  const endTime = startTime + TOTAL_TIME;
+  await deployer.deploy(VestedEscrow,
+      veTokenAddress,
+      startTime,
+      endTime,
+      ve3dRewardPool.address,
+      vetokenOperator,
+  );
+  const vestedEscrow = await VestedEscrow.deployed();
+  addContract("system", "vestedEscrow", vestedEscrow.address);
+
+  // TreasuryFunds
+  await deployer.deploy(TreasuryFunds, admin);
+  const treasuryFunds = await TreasuryFunds.deployed();
+  addContract("system", "treasuryFunds", treasuryFunds.address);
 };

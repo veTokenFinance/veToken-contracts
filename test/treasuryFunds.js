@@ -1,21 +1,12 @@
-const VestedEscrow = artifacts.require('VestedEscrow');
 const VeToken = artifacts.require('VeToken');
-const VE3DRewardPool = artifacts.require('VE3DRewardPool');
 const TreasuryFunds = artifacts.require('TreasuryFunds');
 
-const {time} = require('@openzeppelin/test-helpers');
 const truffleAssert = require('truffle-assertions');
 const Reverter = require('./helper/reverter');
 
 contract('TreasuryFunds', async (accounts) => {
   let ve3d;
-  let vestedEscrow;
-  let startTime;
-  let endTime;
-  let ve3dRewardPool;
   let treasuryFunds;
-
-  const TOTAL_TIME = 1.5 * 365 * 86400; // 1,5 years
 
   const admin = accounts[0];
   const fundAdmin = accounts[1];
@@ -29,21 +20,8 @@ contract('TreasuryFunds', async (accounts) => {
   before('setup', async () => {
     ve3d = await VeToken.new({from: admin});
     await ve3d.mint(admin, toWei('1000000'), {from: admin});
-    startTime = Number(await time.latest()) + 1000;
-    endTime = startTime + TOTAL_TIME;
 
     treasuryFunds = await TreasuryFunds.new(admin, {from: admin});
-
-    ve3dRewardPool = await VE3DRewardPool.new(ve3d.address, admin, {from: admin});
-    await ve3dRewardPool.__VE3DRewardPool_init(ve3d.address, admin, {from: admin});
-
-    vestedEscrow = await VestedEscrow.new(
-        ve3d.address,
-        startTime,
-        endTime,
-        ve3dRewardPool.address,
-        fundAdmin,
-    );
     await reverter.snapshot();
   });
 
@@ -96,7 +74,7 @@ contract('TreasuryFunds', async (accounts) => {
     });
   });
 
-  describe('stake in ve3dRewardPool', () => {
+  describe('execute functions from contract', () => {
 
     beforeEach(async () => {
       await ve3d.transfer(treasuryFunds.address, toWei('100'), {from: admin});

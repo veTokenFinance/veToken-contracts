@@ -3,16 +3,11 @@ const VeToken = artifacts.require('VeToken');
 const VE3DRewardPool = artifacts.require('VE3DRewardPool');
 const TreasuryFunds = artifacts.require('TreasuryFunds');
 
-const {time, constants} = require('@openzeppelin/test-helpers');
+const {time} = require('@openzeppelin/test-helpers');
 const truffleAssert = require('truffle-assertions');
-const BigNumber = require('bignumber.js');
 const Reverter = require('./helper/reverter');
 
-function toBN(number) {
-  return new BigNumber(number);
-}
-
-contract.only('TreasuryFunds', async (accounts) => {
+contract('TreasuryFunds', async (accounts) => {
   let ve3d;
   let vestedEscrow;
   let startTime;
@@ -30,25 +25,6 @@ contract.only('TreasuryFunds', async (accounts) => {
   const reverter = new Reverter(web3);
 
   const toWei = web3.utils.toWei;
-
-  const stakeForJsonInterface = {
-    'inputs': [
-      {
-        'internalType': 'address',
-        'name': '_for',
-        'type': 'address',
-      },
-      {
-        'internalType': 'uint256',
-        'name': '_amount',
-        'type': 'uint256',
-      },
-    ],
-    'name': 'stakeFor',
-    'outputs': [],
-    'stateMutability': 'nonpayable',
-    'type': 'function',
-  };
 
   before('setup', async () => {
     ve3d = await VeToken.new({from: admin});
@@ -126,39 +102,25 @@ contract.only('TreasuryFunds', async (accounts) => {
       await ve3d.transfer(treasuryFunds.address, toWei('100'), {from: admin});
     });
 
-    it('reverts when someone other than the operator tries to execute a function', async () => {
+    it('reverts when someone other than the operator tries to execute a function from within the contract', async () => {
       const amount = toWei('10');
 
-      const call = web3.eth.abi.encodeFunctionCall(stakeForJsonInterface, [treasuryFunds.address, amount]);
-      console.log('call', call);
+      const call = ve3d.contract.methods.transfer(userA, amount).encodeABI();
 
       await truffleAssert.reverts(
-          treasuryFunds.execute(ve3dRewardPool.address, toWei('10'), call, {from: userA}),
+          treasuryFunds.execute(ve3d.address, 0, call, {from: userA}),
           '!auth',
       );
     });
 
-    it('executes a function to stake in ve3dRewardPool', async () => {
+    it('executes a function from within the contract', async () => {
       const amount = toWei('10');
 
-      const call = web3.eth.abi.encodeFunctionCall(stakeForJsonInterface, [treasuryFunds.address, amount]);
-      console.log('call', call);
+      const call = ve3d.contract.methods.transfer(userA, amount).encodeABI();
 
-      let tx = await treasuryFunds.execute(ve3dRewardPool.address, toWei('10'), call, {from: admin});
+      await treasuryFunds.execute(ve3d.address, 0, call, {from: admin});
 
-      console.log(tx);
-      console.log((await ve3dRewardPool.balanceOf(treasuryFunds.address)).toString());
-
-      assert.equal(await ve3dRewardPool.balanceOf(treasuryFunds.address), amount);
+      assert.equal(await ve3d.balanceOf(userA), amount);
     });
-    //
-    // it('it emits event', async () => {
-    //   const amount = toWei('10');
-    //   const tx = await treasuryFunds.withdrawTo(ve3d.address, amount, userB, {from: admin});
-    //
-    //   truffleAssert.eventEmitted(tx, 'WithdrawTo', (ev) => {
-    //     return ev.user === userB && ev.amount == amount;
-    //   });
-    // });
   });
 });

@@ -70,9 +70,9 @@ contract Booster is ReentrancyGuardUpgradeable {
     }
 
     struct FeeDistro {
-        address distro;
+        address[] distro;
         address rewards;
-        bytes32 executionHash;
+        bytes32[] executionHash;
         bool active;
     }
 
@@ -213,14 +213,15 @@ contract Booster is ReentrancyGuardUpgradeable {
         emit RewardContractsUpdated(_rewards, _stakerRewards, _stakerLockRewards);
     }
 
-    // Set reward token and claim contract; create new virtual reward pool and set execution hash
+    // Set reward token and distro claim contract; create new virtual reward pool and sets execution hash
     // Also used to update distro contract and execution hash for an already active reward token
     function setFeeInfo(
         uint256 _lockFeesIncentive,
         uint256 _stakerLockFeesIncentive,
         address _feeToken,
         address _distro,
-        bytes32 _executionHash
+        bytes32 _executionHash,
+        uint256 _selector
         ) external {
         require(msg.sender == feeManager, "!auth");
         require(_lockFeesIncentive.add(_stakerLockFeesIncentive) == FEE_DENOMINATOR);
@@ -230,6 +231,8 @@ contract Booster is ReentrancyGuardUpgradeable {
 
         if (feeTokens[_feeToken].active != true) {
             require(!gaugeMap[_feeToken], "!token");
+            //require that we initialize at the zero index
+            require(_selector == 0, "!unassigned");
             //create a new reward contract for the new token
             address lockFees = IRewardFactory(rewardFactory).CreateTokenRewards(_feeToken, lockRewards);
 
@@ -244,19 +247,19 @@ contract Booster is ReentrancyGuardUpgradeable {
                 );
             }
 
-            feeTokens[_feeToken] = FeeDistro({
-                distro: _distro,
-                rewards: lockFees,
-                executionHash: _executionHash,
-                active: true
+            FeeDistro memory distroData;
+            distroData.distro[_selector] = _distro;
+            distroData.rewards = lockFees;
+            distroData.executionHash[_selector] = _executionHash;
+            distroData.active = true;
 
-        });
+            feeTokens[_feeToken] = distroData;
 
             allFeeTokens.push(_feeToken);
 
         } else {
-            feeTokens[_feeToken].distro = _distro;
-            feeTokens[_feeToken].executionHash = _executionHash;
+            feeTokens[_feeToken].distro[_selector] = _distro;
+            feeTokens[_feeToken].executionHash[_selector] = _executionHash;
         }
     }
 
@@ -621,13 +624,13 @@ contract Booster is ReentrancyGuardUpgradeable {
     }
 
     //claim fees from fee distro contract, put in lockers' reward contract
-    function earmarkFees(address feeToken, bytes calldata _executionData) external returns (bool) {
+    function earmarkFees(address feeToken, bytes calldata _executionData, uint256 _selector) external returns (bool) {
         // hash our execution data for comparison
         bytes32 hashedExecutionData = keccak256(_executionData);
         // enforce that the execution data is approved
-        require(hashedExecutionData == feeTokens[feeToken].executionHash, "!auth");
+        require(hashedExecutionData == feeTokens[feeToken].executionHash[_selector], "!auth");
         //claim fee rewards
-        IStaker(staker).claimFees(feeTokens[feeToken].distro, feeToken, _executionData);
+        IStaker(staker).claimFees(feeTokens[feeToken].distro[_selector], feeToken, _executionData);
         // access contract token balance after claiming rewards
         uint256 _balance = IERC20Upgradeable(feeToken).balanceOf(address(this));
 

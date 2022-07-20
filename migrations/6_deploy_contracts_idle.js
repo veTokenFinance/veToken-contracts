@@ -88,7 +88,7 @@ module.exports = async function (deployer, network, accounts) {
   // booster
   const booster = await deployProxy(
     Booster,
-    [voter.address, contractList.system.vetokenMinter, idle.address, feeDistro],
+    [voter.address, contractList.system.vetokenMinter, idle.address],
     { deployer, initializer: "__Booster_init" }
   );
 

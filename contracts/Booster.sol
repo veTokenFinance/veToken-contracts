@@ -247,19 +247,24 @@ contract Booster is ReentrancyGuardUpgradeable {
                 );
             }
 
-            FeeDistro memory distroData;
-            distroData.distro[_selector] = _distro;
-            distroData.rewards = lockFees;
-            distroData.executionHash[_selector] = _executionHash;
-            distroData.active = true;
-
-            feeTokens[_feeToken] = distroData;
+            feeTokens[_feeToken].distro.push(_distro);
+            feeTokens[_feeToken].rewards = lockFees;
+            feeTokens[_feeToken].executionHash.push(_executionHash);
+            feeTokens[_feeToken].active = true;
 
             allFeeTokens.push(_feeToken);
 
         } else {
-            feeTokens[_feeToken].distro[_selector] = _distro;
-            feeTokens[_feeToken].executionHash[_selector] = _executionHash;
+            uint256 length = feeTokens[_feeToken].distro.length + 1;
+            if (_selector == length) {
+                feeTokens[_feeToken].distro.push(_distro);
+                feeTokens[_feeToken].executionHash.push(_executionHash);
+
+            }
+            else {
+                feeTokens[_feeToken].distro[_selector] = _distro;
+                feeTokens[_feeToken].executionHash[_selector] = _executionHash;
+            }
         }
     }
 

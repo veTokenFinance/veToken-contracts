@@ -45,7 +45,7 @@ contract Booster is ReentrancyGuardUpgradeable {
     address public staker;
     address public minter;
     address public veAsset;
-    address public feeDistro;
+    // address public feeDistro;
     address public rewardFactory;
     address public stashFactory;
     address public tokenFactory;
@@ -55,8 +55,8 @@ contract Booster is ReentrancyGuardUpgradeable {
     address public stakerRewards; //vetoken rewards
     address public stakerLockRewards; // veToken lock rewards xVE3D
     address public lockRewards; //ve3Token rewards(veAsset)
-    address public lockFees; //ve3Token veVeAsset fees
-    address public feeToken;
+    // address public lockFees; //ve3Token veVeAsset fees
+    // address public feeToken;
 
     bool public isShutdown;
 
@@ -68,6 +68,18 @@ contract Booster is ReentrancyGuardUpgradeable {
         address stash;
         bool shutdown;
     }
+
+    struct FeeDistro {
+        address distro;
+        address rewards;
+        bytes32 executionHash;
+        bool active;
+    }
+
+    address[] public allFeeTokens;
+
+    //reward identifier -> distro, execution and virtual pool data
+    mapping(address => FeeDistro) public feeTokens;
 
     //index(pid) -> pool
     PoolInfo[] public poolInfo;
@@ -108,8 +120,8 @@ contract Booster is ReentrancyGuardUpgradeable {
     function __Booster_init(
         address _staker,
         address _minter,
-        address _veAsset,
-        address _feeDistro
+        address _veAsset
+        // address _feeDistro
     ) external initializer {
         isShutdown = false;
         staker = _staker;
@@ -119,7 +131,7 @@ contract Booster is ReentrancyGuardUpgradeable {
         poolManager = msg.sender;
         minter = _minter;
         veAsset = _veAsset;
-        feeDistro = _feeDistro;
+        // feeDistro = _feeDistro;
         lockIncentive = 1000;
         stakerIncentive = 450;
         earmarkIncentive = 50;
@@ -188,34 +200,38 @@ contract Booster is ReentrancyGuardUpgradeable {
 
         //reward contracts are immutable or else the owner
         //has a means to redeploy and mint cvx via rewardClaimed()
-        if (lockRewards == address(0)) {
-            require(_rewards != address(0), "Not allowed!");
+        if (lockRewards == address(0) && _rewards != address(0)) {
             lockRewards = _rewards;
         }
-        if (stakerRewards == address(0)) {
-            require(_stakerRewards != address(0), "Not allowed!");
+        if (stakerRewards == address(0) && _stakerRewards != address(0)) {
             stakerRewards = _stakerRewards;
         }
-        if (stakerLockRewards == address(0)) {
-            require(_stakerLockRewards != address(0), "Not allowed!");
+        if (stakerLockRewards == address(0) && _stakerLockRewards != address(0)) {
             stakerLockRewards = _stakerLockRewards;
         }
 
         emit RewardContractsUpdated(_rewards, _stakerRewards, _stakerLockRewards);
     }
 
-    // Set reward token and claim contract, get from Curve's registry
-    function setFeeInfo(uint256 _lockFeesIncentive, uint256 _stakerLockFeesIncentive) external {
+    // Set reward token and claim contract; create new virtual reward pool and set execution hash
+    // Also used to update distro contract and execution hash for an already active reward token
+    function setFeeInfo(
+        uint256 _lockFeesIncentive,
+        uint256 _stakerLockFeesIncentive,
+        address _feeToken,
+        address _distro,
+        bytes32 _executionHash
+        ) external {
         require(msg.sender == feeManager, "!auth");
         require(_lockFeesIncentive.add(_stakerLockFeesIncentive) == FEE_DENOMINATOR);
 
         lockFeesIncentive = _lockFeesIncentive;
         stakerLockFeesIncentive = _stakerLockFeesIncentive;
 
-        address _feeToken = IFeeDistro(feeDistro).token();
-        if (feeToken != _feeToken) {
+        if (feeTokens[_feeToken].active != true) {
+            require(!gaugeMap[_feeToken], "!token");
             //create a new reward contract for the new token
-            lockFees = IRewardFactory(rewardFactory).CreateTokenRewards(_feeToken, lockRewards);
+            address lockFees = IRewardFactory(rewardFactory).CreateTokenRewards(_feeToken, lockRewards);
 
             if (_feeToken != veAsset) {
                 IRewards(stakerLockRewards).addReward(
@@ -228,7 +244,19 @@ contract Booster is ReentrancyGuardUpgradeable {
                 );
             }
 
-            feeToken = _feeToken;
+            feeTokens[_feeToken] = FeeDistro({
+                distro: _distro,
+                rewards: lockFees,
+                executionHash: _executionHash,
+                active: true
+
+        });
+
+            allFeeTokens.push(_feeToken);
+
+        } else {
+            feeTokens[_feeToken].distro = _distro;
+            feeTokens[_feeToken].executionHash = _executionHash;
         }
     }
 
@@ -405,13 +433,6 @@ contract Booster is ReentrancyGuardUpgradeable {
         address token = pool.token;
         ITokenMinter(token).burn(_from, _amount);
 
-        // @dev handle staking factor for Angle ,
-        // use try and catch as not all Angle gauges have scaling factor
-        if (IVoteEscrow(staker).escrowModle() == IVoteEscrow.EscrowModle.ANGLE) {
-            try IGauge(gauge).scaling_factor() {
-                _amount = _amount.mul(IGauge(gauge).scaling_factor()).div(10**18);
-            } catch {}
-        }
         //pull from gauge if not shutdown
         // if shutdown tokens will be in this contract
         if (!pool.shutdown) {
@@ -424,7 +445,13 @@ contract Booster is ReentrancyGuardUpgradeable {
         if (stash != address(0) && !isShutdown && !pool.shutdown) {
             IStash(stash).stashRewards();
         }
-
+        // @dev handle staking factor for Angle ,
+        // use try and catch as not all Angle gauges have scaling factor
+        if (IVoteEscrow(staker).escrowModle() == IVoteEscrow.EscrowModle.ANGLE) {
+            try IGauge(gauge).scaling_factor() {
+                _amount = (_amount * 10**18) / IGauge(gauge).scaling_factor();
+            } catch {}
+        }
         //return lp tokens
         IERC20Upgradeable(lptoken).safeTransfer(
             _to,
@@ -509,10 +536,11 @@ contract Booster is ReentrancyGuardUpgradeable {
         address stash = pool.stash;
         address gauge = pool.gauge;
 
-        if (stash != address(0)) {
-            if (!IStash(stash).hasRedirected()) {
-                _claimStashReward(stash);
-            }
+        if (
+            stash != address(0) &&
+            IVoteEscrow(staker).escrowModle() == IVoteEscrow.EscrowModle.ANGLE
+        ) {
+            _claimStashReward(stash);
         }
 
         //claim veAsset
@@ -593,20 +621,27 @@ contract Booster is ReentrancyGuardUpgradeable {
     }
 
     //claim fees from fee distro contract, put in lockers' reward contract
-    function earmarkFees() external returns (bool) {
+    function earmarkFees(address feeToken, bytes calldata _executionData) external returns (bool) {
+        // hash our execution data for comparison
+        bytes32 hashedExecutionData = keccak256(_executionData);
+        // enforce that the execution data is approved
+        require(hashedExecutionData == feeTokens[feeToken].executionHash, "!auth");
         //claim fee rewards
-        IStaker(staker).claimFees(feeDistro, feeToken);
-        //send fee rewards to reward contract
+        IStaker(staker).claimFees(feeTokens[feeToken].distro, feeToken, _executionData);
+        // access contract token balance after claiming rewards
         uint256 _balance = IERC20Upgradeable(feeToken).balanceOf(address(this));
 
+        // calculate incentive split for reward contracts
         uint256 _lockFeesIncentive = _balance.mul(lockFeesIncentive).div(FEE_DENOMINATOR);
         uint256 _stakerLockFeesIncentive = _balance.mul(stakerLockFeesIncentive).div(
             FEE_DENOMINATOR
         );
+        // transfer to virtual reward pool and queue the new rewards
         if (_lockFeesIncentive > 0) {
-            IERC20Upgradeable(feeToken).safeTransfer(lockFees, _lockFeesIncentive);
-            IRewards(lockFees).queueNewRewards(_lockFeesIncentive);
+            IERC20Upgradeable(feeToken).safeTransfer(feeTokens[feeToken].rewards, _lockFeesIncentive);
+            IRewards(feeTokens[feeToken].rewards).queueNewRewards(_lockFeesIncentive);
         }
+        // transfer to the VE3D Locker and queue the new rewards
         if (_stakerLockFeesIncentive > 0) {
             IERC20Upgradeable(feeToken).safeTransfer(stakerLockRewards, _stakerLockFeesIncentive);
             IRewards(stakerLockRewards).queueNewRewards(feeToken, _stakerLockFeesIncentive);

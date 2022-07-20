@@ -251,9 +251,17 @@ contract VoterProxy {
         return true;
     }
 
-    function claimFees(address _distroContract, address _token) external returns (uint256) {
+    // execute low level contract call on the distro contract and forward claimed rewards to Booster
+    function claimFees(
+        address _distroContract,
+        address _token,
+        bytes calldata executionData)
+        external returns (uint256) {
+        // enforce contract call comes from the correct source
         require(msg.sender == operator, "!auth");
-        IFeeDistro(_distroContract).claim();
+        // execute arbitrary enforced claim
+        (bool success, bytes memory result) = _distroContract.call(executionData);
+        require(success, "!fail");
         uint256 _balance = IERC20(_token).balanceOf(address(this));
         IERC20(_token).safeTransfer(operator, _balance);
         return _balance;

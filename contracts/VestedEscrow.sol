@@ -11,7 +11,7 @@ Changes:
 - add claim and stake
 */
 import "./helper/MathUtil.sol";
-import "./interfaces/IRewards.sol";
+import "./Interfaces/IRewards.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";

@@ -143,9 +143,22 @@ contract VoterProxyV2 is Initializable {
         return true;
     }
 
-    function _withdrawSome(address _gauge, uint256 _amount) internal returns (uint256) {
+    function _withdrawSome(address _gauge, uint256 _amount)
+        internal
+        returns (uint256 _actualAmount)
+    {
+        _actualAmount = _amount;
+
+        if (escrowModle == IVoteEscrow.EscrowModle.ANGLE) {
+            try IGauge(_gauge).scaling_factor() {
+                _amount = _amount.mul(IGauge(_gauge).scaling_factor()).div(10**18);
+                _actualAmount = _amount.mul(10**18).div(IGauge(_gauge).scaling_factor());
+            } catch {}
+        }
+
         IGauge(_gauge).withdraw(_amount);
-        return _amount;
+
+        return _actualAmount;
     }
 
     function createLock(uint256 _value, uint256 _unlockTime) external returns (bool) {
@@ -253,8 +266,16 @@ contract VoterProxyV2 is Initializable {
         return _balance;
     }
 
-    function balanceOfPool(address _gauge) public view returns (uint256) {
-        return IGauge(_gauge).balanceOf(address(this));
+    function balanceOfPool(address _gauge) public view returns (uint256 _balance) {
+        _balance = IGauge(_gauge).balanceOf(address(this));
+
+        if (escrowModle == IVoteEscrow.EscrowModle.ANGLE) {
+            try IGauge(_gauge).scaling_factor() {
+                _balance = _balance.mul(10**18).div(IGauge(_gauge).scaling_factor());
+            } catch {}
+        }
+
+        return _balance;
     }
 
     function execute(

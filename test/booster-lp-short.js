@@ -39,7 +39,6 @@ contract("Booster LP Stake", async (accounts) => {
   let veassetToken;
   let ve3dLocker;
   let escrow;
-  let feeDistro;
   let lpToken;
   let voterProxy;
   let booster;
@@ -57,6 +56,11 @@ contract("Booster LP Stake", async (accounts) => {
   let network;
   let uniExchangeRouterAddress = "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D";
   const sushiExchangeRouterAddress = "0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F";
+  let idleAddress = "0x875773784Af8135eA0ef43b5a374AaD105c5D39e";
+  let feeDistro = "0xbabb82456c013fd7e3f25857e0729de8207f80e2";
+  let executionInterface = {"name":"claim","outputs":[{"type":"uint256","name":""}],"inputs":[],"stateMutability":"nonpayable","type":"function"}
+  let executionData = web3.eth.abi.encodeFunctionCall(executionInterface, []);
+  let executionHash = web3.utils.keccak256(executionData);
 
   before("setup", async () => {
     network = await loadContracts();
@@ -77,7 +81,6 @@ contract("Booster LP Stake", async (accounts) => {
     ve3Token = await VE3Token.at(contractAddresseList[5]);
     veassetDepositer = await VeAssetDepositor.at(contractAddresseList[6]);
     ve3TokenRewardPool = await BaseRewardPool.at(contractAddresseList[7]);
-    feeDistro = await booster.feeDistro();
     uniExchange = new web3.eth.Contract(uniswapV2Router, uniExchangeRouterAddress);
     sushiExchange = new web3.eth.Contract(uniswapV2Router, sushiExchangeRouterAddress);
     ve3dLocker = await VE3DLocker.at(baseContractList.system.ve3dLocker);
@@ -829,7 +832,12 @@ contract("Booster LP Stake", async (accounts) => {
     //  });
 
     it("check setFeeInfo (try to set more than FEE_DENOMINATOR)", async () => {
-      await truffleAssert.reverts(booster.setFeeInfo(toBN(10001), toBN(0)), "status 0");
+      await truffleAssert.reverts(booster.setFeeInfo(
+      toBN(10001),
+      toBN(0),
+      idleAddress,
+      feeDistro,
+      executionHash), "!fee");
       // Seems not failing at all!
     });
 

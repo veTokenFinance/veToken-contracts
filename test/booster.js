@@ -50,6 +50,9 @@ contract("Booster", async (accounts) => {
   let feeToken;
   let stakerLockPool;
   let treasury;
+  let executionInterface;
+  let executionData;
+  let executionHash;
   const reverter = new Reverter(web3);
   const wei = web3.utils.toWei;
   const USER1 = accounts[0];
@@ -79,8 +82,13 @@ contract("Booster", async (accounts) => {
     ve3TokenRewardPool = await BaseRewardPool.at(contractAddresseList[7]);
     feeDistro = contractAddresseList[8];
     feeDistroAdmin = contractAddresseList[9];
-    feeToken = await IERC20.at(await booster.feeToken());
+    feeToken = await IERC20.at(await booster.allFeeTokens(0));
     treasury = accounts[2];
+
+    // execution interface and data for earmarkFees
+    executionInterface = {"name":"claim","outputs":[{"type":"uint256","name":""}],"inputs":[],"stateMutability":"nonpayable","type":"function"};
+    executionData = web3.eth.abi.encodeFunctionCall(executionInterface, []);
+    executionHash = web3.utils.keccak256(executionData);
 
     await reverter.snapshot();
   });
@@ -627,6 +635,13 @@ contract("Booster", async (accounts) => {
     it("earmarkFees full flow", async () => {
       await veassetDepositer.deposit(depositAmount, true, ve3TokenRewardPool.address);
 
+      await booster.setFeeInfo(
+      toBN(10000),
+      toBN(0),
+      feeToken.address,
+      feeDistro,
+      executionHash);
+
       //increase time
       await time.increaseTo(
         toBN(await time.latest())
@@ -634,8 +649,13 @@ contract("Booster", async (accounts) => {
           .toString()
       );
       await time.advanceBlock();
-
-      const lockFeesAddress = await booster.lockFees();
+      const claimableToken = await booster.allFeeTokens(0);
+      // log("claimable token address : " + claimableToken.toString());
+      // log("feeToken address : " + feeToken.address.toString());
+      const feeTokenData = await booster.feeTokens(claimableToken);
+      const lockFeesAddress = feeTokenData[0];
+      log("lockFees / distro address : " + lockFeesAddress.toString());
+      log("feeTokenData is active : " + feeTokenData[3]);
       const lockFees = await VirtualBalanceRewardPool.at(lockFeesAddress);
       const rewardBalBefore = (await feeToken.balanceOf(lockFeesAddress)).toString();
 
@@ -649,7 +669,7 @@ contract("Booster", async (accounts) => {
       await feeDistroContract.methods.checkpoint_token().send({ from: feeDistroAdmin, gas: 8000000 });
 
       // claim fee rewards
-      await booster.earmarkFees();
+      await booster.earmarkFees(feeToken.address, executionData);
 
       const rewardBalAfter = (await feeToken.balanceOf(lockFeesAddress)).toString();
       assert.isTrue(toBN(rewardBalAfter).gt(0));
@@ -698,7 +718,12 @@ contract("Booster", async (accounts) => {
       );
       await time.advanceBlock();
 
-      await booster.setFeeInfo(toBN(3000), toBN(7000));
+      await booster.setFeeInfo(
+      toBN(3000),
+      toBN(7000),
+      feeToken.address,
+      feeDistro,
+      executionHash);
       assert.equal((await booster.lockFeesIncentive()).toString(), toBN(3000));
       assert.equal((await booster.stakerLockFeesIncentive()).toString(), toBN(7000));
 
@@ -721,7 +746,7 @@ contract("Booster", async (accounts) => {
 
       console.log("distributes 30% of fee to the lock pool + 70% to xve3d reward pool");
       // claim fee rewards
-      await booster.earmarkFees();
+      await booster.earmarkFees(feeToken, executionData, 0);
 
       const lockFeesBalAfter = (await feeToken.balanceOf(lockFeesAddress)).toString();
       log("lockFees reward pool balance before earmarkFees", formatUnits(lockFeesBalBefore, unit));

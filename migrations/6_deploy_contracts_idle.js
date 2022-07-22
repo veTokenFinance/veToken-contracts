@@ -3,7 +3,8 @@ const { addContract, getContract } = require("./helper/addContracts");
 const escrowABI = require("./helper/escrowABI.json");
 const { deployProxy } = require("@openzeppelin/truffle-upgrades");
 
-const VoterProxyV2 = artifacts.require("VoterProxyV2");
+// const VoterProxyV2 = artifacts.require("VoterProxyV2");
+const VoterProxy = artifacts.require("VoterProxy");
 const VeTokenMinter = artifacts.require("VeTokenMinter");
 const RewardFactory = artifacts.require("RewardFactory");
 const VE3Token = artifacts.require("VE3Token");
@@ -26,7 +27,7 @@ function toBN(number) {
 module.exports = async function (deployer, network, accounts) {
   global.created = true;
   const contractList = getContract();
-  let executionInterface = {"name":"claim","outputs":[{"type":"uint256","name":""}],"inputs":[],"stateMutability":"nonpayable","type":"function"}
+  let executionInterface = {"name":"claim","outputs":[{"type":"uint256","name":""}],"inputs":[],"stateMutability":"nonpayable","type":"function"};
   let executionData = web3.eth.abi.encodeFunctionCall(executionInterface, []);
   let executionHash = web3.utils.keccak256(executionData);
   // the commented line below also works for function calls requiring no parameters
@@ -68,11 +69,7 @@ module.exports = async function (deployer, network, accounts) {
   await web3.eth.sendTransaction({ from: admin, to: stashRewardTokenUser, value: web3.utils.toWei("1") });
 
   // voter proxy
-  const voter = await deployProxy(
-    VoterProxyV2,
-    ["idleVoterProxy", idle.address, stkIDLE, gaugeController, idleMintr, 3],
-    { deployer, initializer: "__VoterProxyV2_init" }
-  );
+  const voter = await deployer.deploy(VoterProxy, "idleVoterProxy", idle.address, stkIDLE, gaugeController, idleMintr, 3);
 
   // whitelist the voter proxy
   const whitelist = await SmartWalletWhitelist.at(smartWalletWhitelistAddress);
@@ -168,8 +165,7 @@ module.exports = async function (deployer, network, accounts) {
       toBN(0),
       idleAddress,
       feeDistro,
-      executionHash,
-      0), "booster setFeeInfo");
+      executionHash), "booster setFeeInfo");
   //vetoken minter setup
   const vetokenMinter = await VeTokenMinter.at(contractList.system.vetokenMinter);
   logTransaction(

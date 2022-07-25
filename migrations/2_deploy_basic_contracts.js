@@ -1,4 +1,3 @@
-const { ether, balance, constants, time } = require("@openzeppelin/test-helpers");
 const { deployProxy } = require("@openzeppelin/truffle-upgrades");
 const RewardFactory = artifacts.require("RewardFactory");
 const TokenFactory = artifacts.require("TokenFactory");
@@ -70,7 +69,7 @@ module.exports = async function (deployer, network, accounts) {
 
   // VestedEscrow
   const TOTAL_TIME = 1.5 * 365 * 86400; // 1,5 years
-  const startTime = Number(await time.latest()) + 1000;
+  const startTime = Math.floor(Date.now() / 1000) + 1000; // start time is within 1000 seconds, can be configured here or be updated in the contract later
   const endTime = startTime + TOTAL_TIME;
   await deployer.deploy(VestedEscrow,
       veTokenAddress,

@@ -7,4 +7,6 @@ interface IStash {
     function processStash() external returns (bool);
 
     function claimRewards() external returns (bool);
+
+    function hasRedirected() external returns (bool);
 }

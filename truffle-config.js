@@ -81,7 +81,7 @@ module.exports = {
     },
     kovan: {
       provider: () =>
-        new HDWalletProvider([process.env.PRIVATE_KEY], `wss://kovan.infura.io/ws/v3/${secret.infuraKey}`),
+        new HDWalletProvider([process.env.PRIVATE_KEY], `wss://eth-mainnet.g.alchemy.com/v2/${secret.infuraKey}`),
       network_id: 42, // kovan's id
       gas: 3000000,
       gasPrice: 10000000000,
@@ -89,7 +89,7 @@ module.exports = {
     },
     rinkeby: {
       provider: () =>
-        new HDWalletProvider([process.env.PRIVATE_KEY], `wss://rinkeby.infura.io/ws/v3/${secret.infuraKey}`),
+        new HDWalletProvider([process.env.PRIVATE_KEY], `wss://eth-mainnet.g.alchemy.com/v2/${secret.infuraKey}`),
       network_id: 4, // kovan's id
       gas: 8000000,
       gasPrice: 10000000000,
@@ -97,7 +97,7 @@ module.exports = {
     },
     mainnet: {
       provider: () =>
-        new HDWalletProvider([process.env.PRIVATE_KEY], `wss://mainnet.infura.io/ws/v3/${secret.infuraKey}`),
+        new HDWalletProvider([process.env.PRIVATE_KEY], `wss://eth-mainnet.g.alchemy.com/v2/${secret.infuraKey}`),
       network_id: 1, // Mainnet's id
       gas: 8000000,
       gasPrice: 70000000000,

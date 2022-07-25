@@ -188,13 +188,16 @@ contract Booster is ReentrancyGuardUpgradeable {
 
         //reward contracts are immutable or else the owner
         //has a means to redeploy and mint cvx via rewardClaimed()
-        if (lockRewards == address(0) && _rewards != address(0)) {
+        if (lockRewards == address(0)) {
+            require(_rewards != address(0), "Not allowed!");
             lockRewards = _rewards;
         }
-        if (stakerRewards == address(0) && _stakerRewards != address(0)) {
+        if (stakerRewards == address(0)) {
+            require(_stakerRewards != address(0), "Not allowed!");
             stakerRewards = _stakerRewards;
         }
-        if (stakerLockRewards == address(0) && _stakerLockRewards != address(0)) {
+        if (stakerLockRewards == address(0)) {
+            require(_stakerLockRewards != address(0), "Not allowed!");
             stakerLockRewards = _stakerLockRewards;
         }
 
@@ -414,18 +417,18 @@ contract Booster is ReentrancyGuardUpgradeable {
         if (stash != address(0) && !isShutdown && !pool.shutdown) {
             IStash(stash).stashRewards();
         }
+        uint256 _actualAmount = _amount;
         // @dev handle staking factor for Angle ,
         // use try and catch as not all Angle gauges have scaling factor
         if (IVoteEscrow(staker).escrowModle() == IVoteEscrow.EscrowModle.ANGLE) {
-            try IGauge(gauge)._scaling_factor() {
-                _amount = (_amount * 10**18) / IGauge(gauge)._scaling_factor();
+            try IGauge(gauge).scaling_factor() {
+                _amount = _amount.mul(IGauge(gauge).scaling_factor()).div(10**18);
+                _actualAmount = _amount.mul(10**18).div(IGauge(gauge).scaling_factor());
             } catch {}
         }
+
         //return lp tokens
-        IERC20Upgradeable(lptoken).safeTransfer(
-            _to,
-            Math.min(_amount, IERC20Upgradeable(lptoken).balanceOf(address(this)))
-        );
+        IERC20Upgradeable(lptoken).safeTransfer(_to, _actualAmount);
 
         emit Withdrawn(_to, _pid, _amount);
     }
@@ -505,11 +508,10 @@ contract Booster is ReentrancyGuardUpgradeable {
         address stash = pool.stash;
         address gauge = pool.gauge;
 
-        if (
-            stash != address(0) &&
-            IVoteEscrow(staker).escrowModle() == IVoteEscrow.EscrowModle.ANGLE
-        ) {
-            _claimStashReward(stash);
+        if (stash != address(0)) {
+            if (!IStash(stash).hasRedirected()) {
+                _claimStashReward(stash);
+            }
         }
 
         //claim veAsset
@@ -634,14 +636,14 @@ contract Booster is ReentrancyGuardUpgradeable {
         require(msg.sender == owner, "!Auth");
         address rewardContract = poolInfo[_pid].veAssetRewards;
         if (rewardContract != address(0)) {
-            IRewards(rewardContract).recoverUnuserReward(owner);
+            IRewards(rewardContract).recoverUnusedReward(owner);
         }
     }
 
     function recoverUnusedRewardFromLockPool() external {
         require(msg.sender == owner, "!Auth");
 
-        IRewards(lockRewards).recoverUnuserReward(owner);
+        IRewards(lockRewards).recoverUnusedReward(owner);
     }
 
     function recoverUnusedClaimedReward(address _token, address _destination) external {

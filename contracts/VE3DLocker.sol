@@ -884,7 +884,7 @@ contract VE3DLocker is ReentrancyGuardUpgradeable, OwnableUpgradeable {
             block.timestamp > rewardData[_tokenAddress].periodFinish,
             "Cannot withdraw active reward"
         );
-        uint256 _amount = IERC20Upgradeable(_tokenAddress).balanceOf(address(this));
+        uint256 _amount = rewardData[_tokenAddress].queuedRewards;
         if (_amount > 0) {
             IERC20Upgradeable(_tokenAddress).safeTransfer(owner(), _amount);
             emit Recovered(_tokenAddress, _amount);

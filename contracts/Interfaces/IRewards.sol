@@ -35,5 +35,5 @@ interface IRewards {
 
     function earned(address account) external view returns (uint256);
 
-    function recoverUnuserReward(address _destination) external;
+    function recoverUnusedReward(address _destination) external;
 }

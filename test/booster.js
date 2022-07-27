@@ -82,10 +82,10 @@ contract("Booster", async (accounts) => {
     feeToken = await IERC20.at(await booster.feeToken());
     treasury = accounts[2];
 
-    await reverter.snapshot();
+    //await reverter.snapshot();
   });
 
-  afterEach("revert", reverter.revert);
+  //afterEach("revert", reverter.revert);
 
   describe("deposit", async () => {
     let depositAmount;
@@ -570,6 +570,96 @@ contract("Booster", async (accounts) => {
           .toString(),
         "lp reward pool 80%"
       );
+    });
+
+    it.only("earmarkRewards - multiple times", async () => {
+      await booster.setFees(toBN(1000), toBN(450), toBN(300), toBN(50), toBN(200));
+      stakerLockIncentive = toBN((await booster.stakerLockIncentive()).toString());
+      platformFee = toBN((await booster.platformFee()).toString());
+      await booster.setTreasury(treasury);
+
+      assert.equal((await booster.lockIncentive()).toString(), toBN(1000));
+      assert.equal((await booster.stakerIncentive()).toString(), toBN(450));
+      assert.equal((await booster.stakerLockIncentive()).toString(), toBN(300));
+      assert.equal((await booster.earmarkIncentive()).toString(), toBN(50));
+      assert.equal((await booster.platformFee()).toString(), toBN(200));
+      assert.equal(await booster.treasury(), treasury);
+
+      await booster.deposit(poolId, depositAmount, true);
+
+      // increase time
+      await time.increase(86400 * 3);
+      await time.advanceBlock();
+
+      const callerBalBefore = (await veassetToken.balanceOf(USER2)).toString();
+
+      const lpRewardPoolBalBefore = (await veassetToken.balanceOf(rewardPool.address)).toString();
+
+      const baseRewardPoolBalBefore = (await veassetToken.balanceOf(ve3TokenRewardPool.address)).toString();
+
+      const ve3dRewardPoolBalBefore = (await veassetToken.balanceOf(vetokenRewards.address)).toString();
+
+      const stakerLockPoolBalBefore = (await veassetToken.balanceOf(stakerLockPool.address)).toString();
+
+      const treasuryBalBefore = (await veassetToken.balanceOf(treasury)).toString();
+
+      // claim rewards 1
+      await booster.earmarkRewards(poolId, { from: USER2 });
+
+      const callerBalAfter = (await veassetToken.balanceOf(USER2)).toString();
+
+      const lpRewardPoolBalAfter = (await veassetToken.balanceOf(rewardPool.address)).toString();
+
+      const baseRewardPoolBalAfter = (await veassetToken.balanceOf(ve3TokenRewardPool.address)).toString();
+
+      const ve3dRewardPoolBalAfter = (await veassetToken.balanceOf(vetokenRewards.address)).toString();
+
+      const stakerLockPoolBalAfter = (await veassetToken.balanceOf(stakerLockPool.address)).toString();
+
+      const treasuryBalAfter = (await veassetToken.balanceOf(treasury)).toString();
+
+      const totalRewards = toBN(toBN(callerBalAfter).minus(callerBalBefore))
+        .plus(toBN(lpRewardPoolBalAfter).minus(lpRewardPoolBalBefore))
+        .plus(toBN(baseRewardPoolBalAfter).minus(baseRewardPoolBalBefore))
+        .plus(toBN(ve3dRewardPoolBalAfter).minus(ve3dRewardPoolBalBefore))
+        .plus(toBN(stakerLockPoolBalAfter).minus(stakerLockPoolBalBefore))
+        .plus(toBN(treasuryBalAfter).minus(treasuryBalBefore))
+        .toString();
+      assert.isTrue(toBN(totalRewards).gt(0));
+      log("total reward 1", formatEther(totalRewards));
+
+      // increase time
+      await time.increase(86400 * 4);
+      await time.advanceBlock();
+
+      // claim rewards 2
+      const tx = await booster.earmarkRewards(poolId, { from: USER2 });
+      console.log(tx.tx);
+
+      const callerBalAfter2 = (await veassetToken.balanceOf(USER2)).toString();
+
+      const lpRewardPoolBalAfter2 = (await veassetToken.balanceOf(rewardPool.address)).toString();
+
+      const baseRewardPoolBalAfter2 = (await veassetToken.balanceOf(ve3TokenRewardPool.address)).toString();
+
+      const ve3dRewardPoolBalAfter2 = (await veassetToken.balanceOf(vetokenRewards.address)).toString();
+
+      const stakerLockPoolBalAfter2 = (await veassetToken.balanceOf(stakerLockPool.address)).toString();
+
+      const treasuryBalAfter2 = (await veassetToken.balanceOf(treasury)).toString();
+
+      console.log(lpRewardPoolBalAfter.toString());
+      console.log(lpRewardPoolBalAfter2.toString());
+      return;
+      const totalRewards2 = toBN(toBN(callerBalAfter2).minus(callerBalAfter))
+        .plus(toBN(lpRewardPoolBalAfter2).minus(lpRewardPoolBalAfter))
+        .plus(toBN(baseRewardPoolBalAfter2).minus(baseRewardPoolBalAfter))
+        .plus(toBN(ve3dRewardPoolBalAfter2).minus(ve3dRewardPoolBalAfter))
+        .plus(toBN(stakerLockPoolBalAfter2).minus(stakerLockPoolBalAfter))
+        .plus(toBN(treasuryBalAfter2).minus(treasuryBalAfter))
+        .toString();
+      assert.isTrue(toBN(totalRewards2).gt(0));
+      log("total reward 2", formatEther(totalRewards2));
     });
 
     it("earmarkRewards - claim extra reward (stashing) - idle", async function () {

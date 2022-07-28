@@ -588,7 +588,7 @@ contract("Booster", async (accounts) => {
       await booster.deposit(poolId, depositAmount, true);
 
       // increase time
-      await time.increase(86400 * 3);
+      await time.increase(86400);
       await time.advanceBlock();
 
       const callerBalBefore = (await veassetToken.balanceOf(USER2)).toString();
@@ -629,7 +629,7 @@ contract("Booster", async (accounts) => {
       log("total reward 1", formatEther(totalRewards));
 
       // increase time
-      await time.increase(86400 * 4);
+      await time.increase(86400 * 10);
       await time.advanceBlock();
 
       // claim rewards 2
@@ -650,7 +650,6 @@ contract("Booster", async (accounts) => {
 
       console.log(lpRewardPoolBalAfter.toString());
       console.log(lpRewardPoolBalAfter2.toString());
-      return;
       const totalRewards2 = toBN(toBN(callerBalAfter2).minus(callerBalAfter))
         .plus(toBN(lpRewardPoolBalAfter2).minus(lpRewardPoolBalAfter))
         .plus(toBN(baseRewardPoolBalAfter2).minus(baseRewardPoolBalAfter))

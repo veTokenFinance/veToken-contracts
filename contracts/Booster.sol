@@ -508,21 +508,20 @@ contract Booster is ReentrancyGuardUpgradeable {
         address stash = pool.stash;
         address gauge = pool.gauge;
 
-        if (stash != address(0)) {
-            if (!IStash(stash).hasRedirected()) {
+        if (
+            IVoteEscrow(staker).escrowModle() == IVoteEscrow.EscrowModle.ANGLE &&
+            stash != address(0)
+        ) {
+            _claimStashReward(stash);
+        } else {
+            //claim veAsset
+            IStaker(staker).claimVeAsset(gauge);
+
+            //check if there are extra rewards
+            if (stash != address(0)) {
                 _claimStashReward(stash);
             }
         }
-
-        //claim veAsset
-        IStaker(staker).claimVeAsset(gauge);
-
-        //check if there are extra rewards
-
-        if (stash != address(0)) {
-            _claimStashReward(stash);
-        }
-
         //veAsset balance
         uint256 veAssetBal = IERC20Upgradeable(veAsset).balanceOf(address(this));
 

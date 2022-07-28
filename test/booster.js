@@ -82,10 +82,10 @@ contract("Booster", async (accounts) => {
     feeToken = await IERC20.at(await booster.feeToken());
     treasury = accounts[2];
 
-    //await reverter.snapshot();
+    await reverter.snapshot();
   });
 
-  //afterEach("revert", reverter.revert);
+  afterEach("revert", reverter.revert);
 
   describe("deposit", async () => {
     let depositAmount;
@@ -572,7 +572,7 @@ contract("Booster", async (accounts) => {
       );
     });
 
-    it.only("earmarkRewards - multiple times", async () => {
+    it("earmarkRewards - multiple times", async () => {
       await booster.setFees(toBN(1000), toBN(450), toBN(300), toBN(50), toBN(200));
       stakerLockIncentive = toBN((await booster.stakerLockIncentive()).toString());
       platformFee = toBN((await booster.platformFee()).toString());
@@ -588,7 +588,7 @@ contract("Booster", async (accounts) => {
       await booster.deposit(poolId, depositAmount, true);
 
       // increase time
-      await time.increase(86400 * 3);
+      await time.increase(86400);
       await time.advanceBlock();
 
       const callerBalBefore = (await veassetToken.balanceOf(USER2)).toString();
@@ -629,12 +629,11 @@ contract("Booster", async (accounts) => {
       log("total reward 1", formatEther(totalRewards));
 
       // increase time
-      await time.increase(86400 * 4);
+      await time.increase(86400 * 10);
       await time.advanceBlock();
 
       // claim rewards 2
-      const tx = await booster.earmarkRewards(poolId, { from: USER2 });
-      console.log(tx.tx);
+      await booster.earmarkRewards(poolId, { from: USER2 });
 
       const callerBalAfter2 = (await veassetToken.balanceOf(USER2)).toString();
 
@@ -648,9 +647,6 @@ contract("Booster", async (accounts) => {
 
       const treasuryBalAfter2 = (await veassetToken.balanceOf(treasury)).toString();
 
-      console.log(lpRewardPoolBalAfter.toString());
-      console.log(lpRewardPoolBalAfter2.toString());
-      return;
       const totalRewards2 = toBN(toBN(callerBalAfter2).minus(callerBalAfter))
         .plus(toBN(lpRewardPoolBalAfter2).minus(lpRewardPoolBalAfter))
         .plus(toBN(baseRewardPoolBalAfter2).minus(baseRewardPoolBalAfter))

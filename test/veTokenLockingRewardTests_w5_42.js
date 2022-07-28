@@ -8,7 +8,7 @@ const BigNumber = require("bignumber.js");
 
 const Booster = artifacts.require("Booster");
 const VoterProxy = artifacts.require("VoterProxy");
-const ExtraRewardStashV2 = artifacts.require("ExtraRewardStashV2");
+const ExtraRewardStashV3 = artifacts.require("ExtraRewardStashV3");
 const BaseRewardPool = artifacts.require("BaseRewardPool");
 const VirtualBalanceRewardPool = artifacts.require("VirtualBalanceRewardPool");
 const VE3Token = artifacts.require("VE3Token");
@@ -77,7 +77,7 @@ contract("veToken Locking Reward Test", async (accounts) => {
     const userB = accounts[1];
     const userC = accounts[2];
     const poolId = 0;
-
+    await booster.setFees(toBN(1000), toBN(0), toBN(1000), toBN(0), toBN(0));
     // deposit lpToken
     const poolInfo = JSON.stringify(await booster.poolInfo(poolId));
     const parsedPoolInfo = JSON.parse(poolInfo);
@@ -89,7 +89,7 @@ contract("veToken Locking Reward Test", async (accounts) => {
     console.log("deposit all lp token user A has...");
 
     // advance time
-    await time.increase(10 * 86400);
+    await time.increase(86400);
     await time.advanceBlock();
 
     const advanceTime = async (secondsElaspse) => {
@@ -114,13 +114,11 @@ contract("veToken Locking Reward Test", async (accounts) => {
       .then((a) => console.log("user A veToken balance init: " + formatEther(a.toString())));
 
     // get lp token rewards
-    await time.increase(86400 * 7);
-    await time.advanceBlock();
     console.log("userB veAssetToken balance:" + (await veassetToken.balanceOf(userB)).toString());
     await booster.earmarkRewards(poolId, { from: userB });
     console.log("get lp token rewards by earmarkRewards() called by user B...");
 
-    await time.increase(86400 * 7);
+    await time.increase(86400);
     await time.advanceBlock();
     const earned = (await rewardPool.earned(userA)).toString();
     console.log("userA rewardPool earning: " + earned);
@@ -139,7 +137,7 @@ contract("veToken Locking Reward Test", async (accounts) => {
     expect(Number(stakingVetokenAmount.toString())).to.greaterThan(0);
 
     // set up locker reward (addReward, addOperator - done in migration scripts)
-    await booster.setFees(toBN(1000), toBN(450), toBN(300), toBN(50), toBN(200));
+
     await veTokenLocker.setApprovals();
     var firstTime = await time.latest();
     //epoch length 604800
@@ -211,25 +209,25 @@ contract("veToken Locking Reward Test", async (accounts) => {
         );
       await veTokenLocker.balances(_user).then((a) => console.log("\t   nextunlockIndex: " + a.nextUnlockIndex));
 
-      const userRewards=  await veTokenLocker.claimableRewards(_user);
-      for ( i = 0; i < userRewards.length; i++) {
-       console.log( "reward Token " + i +  ":address :" +  userRewards[i].token);
-       console.log("reward Token " + i +  ":amount: " +  userRewards[i].amount);
+      const userRewards = await veTokenLocker.claimableRewards(_user);
+      for (i = 0; i < userRewards.length; i++) {
+        console.log("reward Token " + i + ":address :" + userRewards[i].token);
+        console.log("reward Token " + i + ":amount: " + userRewards[i].amount);
       }
 
       await veassetToken.balanceOf(_user).then((a) => console.log("\t  veAsset balance: " + a));
       await vetoken.balanceOf(_user).then((a) => console.log("\t   veToken balance: " + a));
       await vetokenRewards.balanceOf(_user).then((a) => console.log("\t   staked veToken balance: " + a));
       var epochs = await veTokenLocker.epochCount();
-      for(var i = 0; i < epochs; i++){
+      for (var i = 0; i < epochs; i++) {
         var balAtE = await veTokenLocker.balanceAtEpochOf(i, _user);
         var pendingAtE = await veTokenLocker.pendingLockAtEpochOf(i, _user);
-        console.log("\t   voteBalanceAtEpochOf("+i+") " +balAtE +", pendingLockAtEpoch: " +pendingAtE);
+        console.log("\t   voteBalanceAtEpochOf(" + i + ") " + balAtE + ", pendingLockAtEpoch: " + pendingAtE);
 
-     // this check is a bit annoying if you dont checkpointEpoch..
-     //    if(i==epochs-2){
-     //      assert(balAtE.toString()==bal.toString(),"balanceOf should be equal in value to the current epoch (" +i +")");
-     //    }
+        // this check is a bit annoying if you dont checkpointEpoch..
+        //    if(i==epochs-2){
+        //      assert(balAtE.toString()==bal.toString(),"balanceOf should be equal in value to the current epoch (" +i +")");
+        //    }
       }
       console.log("\t----- user info end-----");
     };
@@ -261,12 +259,15 @@ contract("veToken Locking Reward Test", async (accounts) => {
     console.log("\n\n\n\n##### check user rewards...\n");
     // only rewards from lp pools will be distributed to ve3dlocker (stakerLockIncentive)
     const veAssetTokenForLockerBeforeRewards = await veassetToken.balanceOf(veTokenLocker.address);
-    await time.increase(86400 * 14);
+    await time.increase(86400 * 9);
     await time.advanceBlock();
-    await booster.earmarkRewards(poolId, { from: userA });
-    const veAssetTokenForLockerAfterRewards  =await veassetToken.balanceOf(veTokenLocker.address);
-    expect(Number(veAssetTokenForLockerAfterRewards.toString())-Number(veAssetTokenForLockerBeforeRewards.toString())).to.greaterThan(0);
+    // console.log("my check", (await veassetToken.balanceOf(stashPool.address)).toString());
+    await booster.earmarkRewards(poolId, { from: userB });
+    const veAssetTokenForLockerAfterRewards = await veassetToken.balanceOf(veTokenLocker.address);
 
+    expect(
+      Number(veAssetTokenForLockerAfterRewards.toString()) - Number(veAssetTokenForLockerBeforeRewards.toString())
+    ).to.greaterThan(0);
 
     // check lock expired
     const veAssetTokenForUserBBeforeRewards = await veassetToken.balanceOf(userB);
@@ -285,7 +286,6 @@ contract("veToken Locking Reward Test", async (accounts) => {
     await veTokenLocker.getReward(userB);
     console.log("\n\n\n\n##### check userB claimable rewards after get reward.\n");
     userInfo(userB);
-
 
     // check relock
     console.log("\n ->> relock then lock, relock to current and lock to next.");

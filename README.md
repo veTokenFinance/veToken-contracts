@@ -86,6 +86,7 @@ Each voting proxy has the voting power for corresponding projects. And it delega
 ### set up
 
 node version 16
+delete .openzeppelin if you have it from previous run
 
 `npm ci`
 

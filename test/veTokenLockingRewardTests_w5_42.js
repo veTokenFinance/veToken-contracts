@@ -208,7 +208,6 @@ contract("veToken Locking Reward Test", async (accounts) => {
           )
         );
       await veTokenLocker.balances(_user).then((a) => console.log("\t   nextunlockIndex: " + a.nextUnlockIndex));
-
       const userRewards = await veTokenLocker.claimableRewards(_user);
       for (i = 0; i < userRewards.length; i++) {
         console.log("reward Token " + i + ":address :" + userRewards[i].token);
@@ -301,5 +300,44 @@ contract("veToken Locking Reward Test", async (accounts) => {
     console.log("locked for user B, gas: " + tx.receipt.gasUsed);
     await userInfo(userB);
     await lockerInfo();
-  });
+
+
+    //remove reward tokens
+    const userRewardsBefore = await veTokenLocker.claimableRewards(userB);
+    let removedTokenCount = 0;
+    for (i = 0; i < userRewardsBefore.length; i++) {
+      //remove token by address
+      const nowEpochTime = await currentEpoch();
+      const token = await veTokenLocker.rewardData(userRewardsBefore[i].token);
+      //todo : in the VE3DLocker contract, line  173
+      //the periodFinish is the time of creation
+      //rewardData[_rewardsToken].periodFinish = uint40(block.timestamp);
+      // which means when remove it, it will always be identified as not active?
+      // line 199 to 202 will always be true?
+      const tokenPeriodFinish = token.periodFinish.toNumber();
+     if(nowEpochTime > tokenPeriodFinish) {
+       await veTokenLocker.removeReward(userRewardsBefore[i].token);
+       removedTokenCount = removedTokenCount + 1;
+     }
+    }
+    const expectedRemovedTokenCounts = userRewardsBefore.length - removedTokenCount;
+    const userRewardsAfter = await veTokenLocker.claimableRewards(userB);
+    console.log("reward token number after removeRewards: ", userRewardsAfter.length)
+    assert.equal(userRewardsAfter.length, expectedRemovedTokenCounts);
+
+    // todo: after been removed, the token info is not cleaned in rewardData, thus can't be added again
+    const addedAngle_sanUSDC_EUR = await veTokenLocker.rewardData("0x9C215206Da4bf108aE5aEEf9dA7caD3352A36Dad");
+    console.log(addedAngle_sanUSDC_EUR.lastUpdateTime.toNumber());
+     // reverted due to lastUpdateTime !=0, Transaction: 0xa4c4488389a44656212aecdcdd126e6433d719e1d9625879d53cd1824f45f755 exited with an error (status 0). Reason given: Already added.
+    //add additional 6 decimal reward token
+    const angle_sanUSDC_EUR = await IERC20.at("0x9C215206Da4bf108aE5aEEf9dA7caD3352A36Dad");
+    await veTokenLocker.addReward(angle_sanUSDC_EUR.address,
+      veassetDepositer.address,
+      ve3Token.address,
+      ve3TokenRewardPool.address,
+      booster.address,
+      false );
+
+
+    });
 });

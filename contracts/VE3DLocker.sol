@@ -202,6 +202,7 @@ contract VE3DLocker is ReentrancyGuardUpgradeable, OwnableUpgradeable {
         );
 
         rewardTokens.remove(_rewardToken);
+        delete rewardData[_rewardToken];
         emit RewardTokenRemoved(_rewardToken);
     }
 

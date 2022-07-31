@@ -112,5 +112,3 @@ delete .openzeppelin if you have it from previous run
 `npm run test-no-deploy-angle`
 
 > **Note:** all deployed addresses will be in contracts.json file
-
-> **Note:** please remove generated files under .openzeppelin folder before run the migration scripts

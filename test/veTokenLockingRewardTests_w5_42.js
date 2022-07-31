@@ -262,8 +262,9 @@ contract("veToken Locking Reward Test", async (accounts) => {
     await time.advanceBlock();
     // console.log("my check", (await veassetToken.balanceOf(stashPool.address)).toString());
     await booster.earmarkRewards(poolId, { from: userB });
-    const veAssetTokenForLockerAfterRewards = await veassetToken.balanceOf(veTokenLocker.address);
-
+    const veAssetTokenForLockerAfterRewards = await veassetToken.balanceOf(veTokenLocker.address)
+    console.log("check user balance after get rewards...");
+    userInfo(userB)
     expect(
       Number(veAssetTokenForLockerAfterRewards.toString()) - Number(veAssetTokenForLockerBeforeRewards.toString())
     ).to.greaterThan(0);
@@ -309,11 +310,6 @@ contract("veToken Locking Reward Test", async (accounts) => {
       //remove token by address
       const nowEpochTime = await currentEpoch();
       const token = await veTokenLocker.rewardData(userRewardsBefore[i].token);
-      //todo : in the VE3DLocker contract, line  173
-      //the periodFinish is the time of creation
-      //rewardData[_rewardsToken].periodFinish = uint40(block.timestamp);
-      // which means when remove it, it will always be identified as not active?
-      // line 199 to 202 will always be true?
       const tokenPeriodFinish = token.periodFinish.toNumber();
      if(nowEpochTime > tokenPeriodFinish) {
        await veTokenLocker.removeReward(userRewardsBefore[i].token);
@@ -325,19 +321,35 @@ contract("veToken Locking Reward Test", async (accounts) => {
     console.log("reward token number after removeRewards: ", userRewardsAfter.length)
     assert.equal(userRewardsAfter.length, expectedRemovedTokenCounts);
 
-    // todo: after been removed, the token info is not cleaned in rewardData, thus can't be added again
-    const addedAngle_sanUSDC_EUR = await veTokenLocker.rewardData("0x9C215206Da4bf108aE5aEEf9dA7caD3352A36Dad");
-    console.log(addedAngle_sanUSDC_EUR.lastUpdateTime.toNumber());
-     // reverted due to lastUpdateTime !=0, Transaction: 0xa4c4488389a44656212aecdcdd126e6433d719e1d9625879d53cd1824f45f755 exited with an error (status 0). Reason given: Already added.
-    //add additional 6 decimal reward token
-    const angle_sanUSDC_EUR = await IERC20.at("0x9C215206Da4bf108aE5aEEf9dA7caD3352A36Dad");
+
+    //add additional 6 decimal reward token and test rewards
+    const angle_sanUSDC_EUR_address = "0x9C215206Da4bf108aE5aEEf9dA7caD3352A36Dad"
+    const angle_sanUSDC_EUR = await IERC20.at(angle_sanUSDC_EUR_address);
     await veTokenLocker.addReward(angle_sanUSDC_EUR.address,
       veassetDepositer.address,
       ve3Token.address,
       ve3TokenRewardPool.address,
       booster.address,
       false );
+    const addedAngle_sanUSDC_EUR = await veTokenLocker.rewardData(angle_sanUSDC_EUR_address);
+    assert.equal(addedAngle_sanUSDC_EUR.tokenDecimals.toNumber(), 6);
+    console.log("Queued 6 decimal reward amount before:", addedAngle_sanUSDC_EUR.queuedRewards.toNumber());
+    console.log("Queued 6 decimal reward lastUpdateTime before:",addedAngle_sanUSDC_EUR.lastUpdateTime.toNumber());
+    console.log("Queued 6 decimal reward periodFinish before:", addedAngle_sanUSDC_EUR.periodFinish.toNumber());
+    console.log("Queued 6 decimal reward rewardRate before:", addedAngle_sanUSDC_EUR.rewardRate.toNumber());
+
+    // mock reward distributed to ve3DLocker
+    const angle_sanUSDC_EUR_holder = '0xea51ccb352aea7641ff4d88536f0f06fd052ef8f';
+    await angle_sanUSDC_EUR.transfer(veTokenLocker.address, web3.utils.toWei("1000", "wei"), { from: angle_sanUSDC_EUR_holder });
+
+    await veTokenLocker.approveRewardDistributor(angle_sanUSDC_EUR_address,userA, true);
+    await veTokenLocker.queueNewRewards(angle_sanUSDC_EUR_address, web3.utils.toBN('1000'));
+    // todo: the 6 demical token has no reward added?
+    console.log("Queued 6 decimal reward amount after:", addedAngle_sanUSDC_EUR.queuedRewards.toNumber());
+    console.log("Queued 6 decimal reward lastUpdateTime after:",addedAngle_sanUSDC_EUR.lastUpdateTime.toNumber());
+    console.log("Queued 6 decimal reward periodFinish after:", addedAngle_sanUSDC_EUR.periodFinish.toNumber());
+    console.log("Queued 6 decimal reward rewardRate after:", addedAngle_sanUSDC_EUR.rewardRate.toNumber());
 
 
-    });
+  });
 });

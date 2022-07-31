@@ -21,7 +21,7 @@ const { parseEther, formatEther, parseUnits } = require("@ethersproject/units");
 var jsonfile = require("jsonfile");
 var baseContractList = jsonfile.readFileSync("contracts.json");
 const Reverter = require("./helper/reverter");
-const BigNumber = require("bignumber.js");
+
 
 contract("VeAssetDepositor", async (accounts) => {
   let vetokenMinter;
@@ -43,7 +43,6 @@ contract("VeAssetDepositor", async (accounts) => {
   const reverter = new Reverter(web3);
   const wei = web3.utils.toWei;
   const USER1 = accounts[0];
-  const USER2 = accounts[1];
   const FEE_DENOMINATOR = 10000;
 
   before("setup", async () => {
@@ -79,10 +78,6 @@ contract("VeAssetDepositor", async (accounts) => {
     });
   });
 
-  describe("lockVeAsset", async () => {
-    it("test", async () => {});
-  });
-
   describe("Fees", async () => {
     it("setFeeManager", async () => {});
     it("setFees", async () => {});
@@ -105,6 +100,40 @@ contract("VeAssetDepositor", async (accounts) => {
       assert.equal((await veassetToken.balanceOf(USER1)).toString(), depositAmount.toFixed());
       assert.equal((await veassetToken.balanceOf(veassetDepositer.address)).toString(), depositAmount.toFixed());
       assert.equal((await ve3Token.balanceOf(USER1)).toString(), toBN(depositAmount).minus(callIncentive).toFixed());
+    });
+
+    it("if when new unlock time calculated during depositing - last recorded unlock time <= 2 weeks ,remain existing one", async () => {
+      const existing_unlockTime =  await veassetDepositer.unlockTime();
+      console.log("existing unlockTime", existing_unlockTime.toString());
+      await time.increase(86400 * 2);
+      await veassetDepositer.deposit(depositAmount, true);
+      const new_unlockTime =  await veassetDepositer.unlockTime();
+      console.log("new unlockTime", new_unlockTime.toString());
+      assert.equal(Number(existing_unlockTime.toString()),Number(new_unlockTime.toString()));
+    });
+
+    it("if when new unlock time calculated during depositing - " +
+      "last recorded unlock time > 2 weeks", async () => {
+      const existing_unlockTime =  await veassetDepositer.unlockTime();
+      console.log("existing unlockTime", existing_unlockTime.toString());
+      await time.increase(86400 * 40);
+      await veassetDepositer.deposit(depositAmount, true);
+      const new_unlockTime =  await veassetDepositer.unlockTime();
+      console.log("new unlockTime", new_unlockTime.toString());
+      expect(Number(new_unlockTime.toString())-Number(existing_unlockTime.toString())).to.greaterThan(0);
+    })
+
+    it("set new maxTime, and check new unlock time", async () => {
+      const new_max_time = 28 * 86400 //4 weeks
+      await veassetDepositer.setLockMaxTime(new_max_time);
+      const existing_unlockTime =  await veassetDepositer.unlockTime();
+      console.log("existing unlockTime", existing_unlockTime.toString());
+      await time.increase(86400 * 28);
+      // todo: get error when deposit now Transaction: 0x427f3a610aee77e703e705475de7259640d090d24bb7541acb95469fe900c532 exited with an error (status 0).
+      //      Please check that the transaction:
+      await veassetDepositer.deposit(depositAmount, true);
+      // const new_unlockTime =  await veassetDepositer.unlockTime();
+      // console.log("new unlockTime", new_unlockTime.toString());
     });
 
     it("deposit only with lock", async () => {});

@@ -142,6 +142,8 @@ contract VE3DRewardPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             "Cannot remove active reward"
         );
         rewardTokens.remove(_rewardToken);
+        delete rewardTokenInfo[_rewardToken];
+
         emit RewardTokenRemoved(_rewardToken);
     }
 
@@ -498,6 +500,7 @@ contract VE3DRewardPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
                 owner(),
                 rewardTokenInfo[_rewardToken].queuedRewards
             );
+            rewardTokenInfo[_rewardToken].queuedRewards = 0;
         }
     }
 }

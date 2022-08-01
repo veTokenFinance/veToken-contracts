@@ -262,9 +262,9 @@ contract("veToken Locking Reward Test", async (accounts) => {
     await time.advanceBlock();
     // console.log("my check", (await veassetToken.balanceOf(stashPool.address)).toString());
     await booster.earmarkRewards(poolId, { from: userB });
-    const veAssetTokenForLockerAfterRewards = await veassetToken.balanceOf(veTokenLocker.address)
+    const veAssetTokenForLockerAfterRewards = await veassetToken.balanceOf(veTokenLocker.address);
     console.log("check user balance after get rewards...");
-    userInfo(userB)
+    userInfo(userB);
     expect(
       Number(veAssetTokenForLockerAfterRewards.toString()) - Number(veAssetTokenForLockerBeforeRewards.toString())
     ).to.greaterThan(0);
@@ -302,7 +302,6 @@ contract("veToken Locking Reward Test", async (accounts) => {
     await userInfo(userB);
     await lockerInfo();
 
-
     //remove reward tokens
     const userRewardsBefore = await veTokenLocker.claimableRewards(userB);
     let removedTokenCount = 0;
@@ -311,45 +310,51 @@ contract("veToken Locking Reward Test", async (accounts) => {
       const nowEpochTime = await currentEpoch();
       const token = await veTokenLocker.rewardData(userRewardsBefore[i].token);
       const tokenPeriodFinish = token.periodFinish.toNumber();
-     if(nowEpochTime > tokenPeriodFinish) {
-       await veTokenLocker.removeReward(userRewardsBefore[i].token);
-       removedTokenCount = removedTokenCount + 1;
-     }
+      if (nowEpochTime > tokenPeriodFinish) {
+        await veTokenLocker.removeReward(userRewardsBefore[i].token);
+        removedTokenCount = removedTokenCount + 1;
+      }
     }
     const expectedRemovedTokenCounts = userRewardsBefore.length - removedTokenCount;
     const userRewardsAfter = await veTokenLocker.claimableRewards(userB);
-    console.log("reward token number after removeRewards: ", userRewardsAfter.length)
+    console.log("reward token number after removeRewards: ", userRewardsAfter.length);
     assert.equal(userRewardsAfter.length, expectedRemovedTokenCounts);
 
-
     //add additional 6 decimal reward token and test rewards
-    const angle_sanUSDC_EUR_address = "0x9C215206Da4bf108aE5aEEf9dA7caD3352A36Dad"
+    const angle_sanUSDC_EUR_address = "0x9C215206Da4bf108aE5aEEf9dA7caD3352A36Dad";
     const angle_sanUSDC_EUR = await IERC20.at(angle_sanUSDC_EUR_address);
-    await veTokenLocker.addReward(angle_sanUSDC_EUR.address,
+    await veTokenLocker.addReward(
+      angle_sanUSDC_EUR.address,
       veassetDepositer.address,
       ve3Token.address,
       ve3TokenRewardPool.address,
       booster.address,
-      false );
-    const addedAngle_sanUSDC_EUR = await veTokenLocker.rewardData(angle_sanUSDC_EUR_address);
+      false
+    );
+    let addedAngle_sanUSDC_EUR = await veTokenLocker.rewardData(angle_sanUSDC_EUR_address);
     assert.equal(addedAngle_sanUSDC_EUR.tokenDecimals.toNumber(), 6);
     console.log("Queued 6 decimal reward amount before:", addedAngle_sanUSDC_EUR.queuedRewards.toNumber());
-    console.log("Queued 6 decimal reward lastUpdateTime before:",addedAngle_sanUSDC_EUR.lastUpdateTime.toNumber());
+    console.log("Queued 6 decimal reward lastUpdateTime before:", addedAngle_sanUSDC_EUR.lastUpdateTime.toNumber());
     console.log("Queued 6 decimal reward periodFinish before:", addedAngle_sanUSDC_EUR.periodFinish.toNumber());
     console.log("Queued 6 decimal reward rewardRate before:", addedAngle_sanUSDC_EUR.rewardRate.toNumber());
 
     // mock reward distributed to ve3DLocker
-    const angle_sanUSDC_EUR_holder = '0xea51ccb352aea7641ff4d88536f0f06fd052ef8f';
-    await angle_sanUSDC_EUR.transfer(veTokenLocker.address, web3.utils.toWei("1000", "wei"), { from: angle_sanUSDC_EUR_holder });
+    const angle_sanUSDC_EUR_holder = "0xea51ccb352aea7641ff4d88536f0f06fd052ef8f";
+    await angle_sanUSDC_EUR.transfer(veTokenLocker.address, web3.utils.toWei("1000", "mwei"), {
+      from: angle_sanUSDC_EUR_holder,
+    });
 
-    await veTokenLocker.approveRewardDistributor(angle_sanUSDC_EUR_address,userA, true);
-    await veTokenLocker.queueNewRewards(angle_sanUSDC_EUR_address, web3.utils.toBN('1000'));
+    await veTokenLocker.approveRewardDistributor(angle_sanUSDC_EUR_address, userA, true);
+    await veTokenLocker.queueNewRewards(angle_sanUSDC_EUR_address, web3.utils.toWei("1000", "mwei"));
     // todo: the 6 demical token has no reward added?
+    //answer: becasue wrong amount passed in transfer and queueNewRewards , updated and fixed
+    // also read the same reward info before the queueNewRewards
+    // this test will fail with idel please skip idle for this test to not fail
+
+    addedAngle_sanUSDC_EUR = await veTokenLocker.rewardData(angle_sanUSDC_EUR_address);
     console.log("Queued 6 decimal reward amount after:", addedAngle_sanUSDC_EUR.queuedRewards.toNumber());
-    console.log("Queued 6 decimal reward lastUpdateTime after:",addedAngle_sanUSDC_EUR.lastUpdateTime.toNumber());
+    console.log("Queued 6 decimal reward lastUpdateTime after:", addedAngle_sanUSDC_EUR.lastUpdateTime.toNumber());
     console.log("Queued 6 decimal reward periodFinish after:", addedAngle_sanUSDC_EUR.periodFinish.toNumber());
     console.log("Queued 6 decimal reward rewardRate after:", addedAngle_sanUSDC_EUR.rewardRate.toNumber());
-
-
   });
 });

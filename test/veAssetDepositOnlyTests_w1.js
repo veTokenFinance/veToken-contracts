@@ -96,6 +96,8 @@ contract("Deposit and Withdraw Test", async (accounts) => {
     const veTokenBalanceAfter = await vetoken.balanceOf(userA);
     const ve3DillRewardPoolBalanceOfUserAAfter = await ve3DillRewardPool.balanceOf(userA);
     //todo: should user get ve3Token if deposit only?
+    //answer: please refer to veasset_depositor.js unit test "deposit only without lock",
+    //it should take into account substract the lock incentive amount from minted ve3token
     const ve3TokenFromDepositing = (ve3TokenBalanceAfter - ve3TokenBalanceBefore).toString();
     console.log("ve3Token from depositing veAsset:", ve3TokenFromDepositing);
     expect(ve3TokenFromDepositing).to.equal(web3.utils.toWei("9.99"));

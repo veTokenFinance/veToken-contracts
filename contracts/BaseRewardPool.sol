@@ -381,6 +381,7 @@ contract BaseRewardPool is ReentrancyGuard {
 
         if (queuedRewards > 0) {
             rewardToken.safeTransfer(_destination, queuedRewards);
+            queuedRewards = 0;
         }
     }
 }

@@ -120,7 +120,6 @@ contract("Staking Reward Test", async (accounts) => {
     console.log("Our address " + userA + " was approved");
     await veassetDepositer.deposit(depositAmount, true, ve3DillRewardPool.address, { from: userA });
     const veAssetTokenBalanceBefore = await veassetToken.balanceOf(userA);
-    const feeTokenBalanceBefore = await feeToken.balanceOf(userA);
     const ve3DillRewardPoolBalanceOfUserAAfter = await ve3DillRewardPool.balanceOf(userA);
 
     console.log("ve3DillRewardPoolBalanceOfUserA Before: " + formatEther(lpRewardOfUserABefore.toString()) + "\n");
@@ -254,5 +253,22 @@ contract("Staking Reward Test", async (accounts) => {
     const veTokenEarned = toBN(vetokenClaimed2).minus(veTokenBalanceBefore);
     console.log("userA earned vetoken:", veTokenEarned.toString());
     assert.isAbove(Number(veTokenEarned), 0);
+
+    // test donate and token decimals. e.g. Angle lockFeeToken is 6 decimal, not 18 decimal
+    const donationAmount = 10;
+    const lockRewardTokenDecimal = await ve3DillLockRewardPool.tokenDecimals();
+    console.log("VirtualBalanceRewardPool Decimal", lockRewardTokenDecimal.toNumber());
+    await feeToken.approve(ve3DillLockRewardPool.address, donationAmount, { from: userA });
+    const queuedRewardsBeforeDonation = await ve3DillLockRewardPool.queuedRewards();
+    await ve3DillLockRewardPool.donate(donationAmount);
+    const queuedRewardsAfterDonation = await ve3DillLockRewardPool.queuedRewards();
+    const actualDonation = queuedRewardsAfterDonation.toString() - queuedRewardsBeforeDonation.toString();
+    const donationTokenStoredIn18Decimal = Number(actualDonation) / 10**18;
+    const tokenConversion = 10 ** Number(lockRewardTokenDecimal.toString());
+    const distributableRewardInOriginalUnit = donationTokenStoredIn18Decimal * tokenConversion
+    console.log("actual donation",distributableRewardInOriginalUnit);
+    // this will be converted back to token decimals when distribute reward to user in getReward();
+    assert.equal(donationAmount,distributableRewardInOriginalUnit);
+
   });
 });

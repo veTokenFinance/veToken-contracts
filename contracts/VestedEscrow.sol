@@ -3,7 +3,7 @@ pragma solidity 0.8.7;
 
 /*
 Rewrite of Curve Finance's Vested Escrow
-found at https://github.com/curvefi/curve-dao-contracts/blob/master/contracts/VestingEscrow.vy
+found at https://github.com/curvefi/curve-dao-contracts/blob/master/contracts/vests/VestingEscrow.vy
 
 Changes:
 - no disable methods
@@ -75,6 +75,7 @@ contract VestedEscrow is ReentrancyGuard {
 
     function setStartTime(uint64 _startTime) external {
         require(msg.sender == admin, "!auth");
+        require(_startTime > block.timestamp, "vesting already started");
         require(_startTime >= block.timestamp, "start must be future");
         startTime = _startTime;
         endTime = startTime + totalTime;
@@ -114,7 +115,7 @@ contract VestedEscrow is ReentrancyGuard {
 
         _claim(_recipient);
 
-        uint256 delta = this.lockedOf(_recipient);
+        uint256 delta = lockedOf(_recipient);
 
         if (delta != 0) {
             rewardToken.safeTransfer(admin, delta);
@@ -161,12 +162,12 @@ contract VestedEscrow is ReentrancyGuard {
         return vested.sub(totalClaimed[_recipient]);
     }
 
-    function lockedOf(address _recipient) external view returns (uint256){
+    function lockedOf(address _recipient) public view returns (uint256){
         uint256 vested = _totalVestedOf(_recipient, block.timestamp);
         return initialLocked[_recipient].sub(vested);
     }
 
-    function claim(address _recipient) public nonReentrant {
+    function claimFor(address _recipient) public nonReentrant {
         _claim(_recipient);
     }
 
@@ -181,7 +182,7 @@ contract VestedEscrow is ReentrancyGuard {
     }
 
     function claim() external {
-        claim(msg.sender);
+        claimFor(msg.sender);
     }
 
     function claimAndStake(address _recipient) internal nonReentrant {

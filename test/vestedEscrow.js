@@ -11,7 +11,7 @@ function toBN(number) {
   return new BigNumber(number);
 }
 
-contract('VestedEscrow', async (accounts) => {
+contract.only('VestedEscrow', async (accounts) => {
   let ve3d;
   let vestedEscrow;
   let startTime;
@@ -207,7 +207,7 @@ contract('VestedEscrow', async (accounts) => {
       it('it claims pending reward', async () => {
         await time.increase('2000');
 
-        await vestedEscrow.claim(userA, {
+        await vestedEscrow.claimFor(userA, {
           from: userA,
         });
 
@@ -224,7 +224,7 @@ contract('VestedEscrow', async (accounts) => {
       it('it updates totalClaimed for recipient', async () => {
         await time.increase('2000');
 
-        await vestedEscrow.claim(userA, {
+        await vestedEscrow.claimFor(userA, {
           from: userA,
         });
 
@@ -244,7 +244,7 @@ contract('VestedEscrow', async (accounts) => {
       it('it claims maximum allocation after vesting ends', async () => {
         await time.increase((TOTAL_TIME + 2000).toString());
 
-        await vestedEscrow.claim(userA, {
+        await vestedEscrow.claimFor(userA, {
           from: userA,
         });
 
@@ -254,7 +254,7 @@ contract('VestedEscrow', async (accounts) => {
       it('it emits event', async () => {
         await time.increase('2000');
 
-        const tx = await vestedEscrow.claim(userA, {
+        const tx = await vestedEscrow.claimFor(userA, {
           from: userA,
         });
 
@@ -322,7 +322,7 @@ contract('VestedEscrow', async (accounts) => {
       it('it claims and stakes maximum allocation after vesting ends', async () => {
         await time.increase((TOTAL_TIME + 2000).toString());
 
-        await vestedEscrow.claim(userA, {
+        await vestedEscrow.claimFor(userA, {
           from: userA,
         });
 
@@ -447,7 +447,7 @@ contract('VestedEscrow', async (accounts) => {
           blockTime = await time.latest();
         }
 
-        await vestedEscrow.claim(userA);
+        await vestedEscrow.claimFor(userA);
         await ve3d.balanceOf(userA).then(a=>console.log("User A ve3d in wallet: " +a))
 
         await vestedEscrow.claimAndStake({from:userB})

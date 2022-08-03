@@ -11,7 +11,7 @@ function toBN(number) {
   return new BigNumber(number);
 }
 
-contract.only('VestedEscrow', async (accounts) => {
+contract('VestedEscrow', async (accounts) => {
   let ve3d;
   let vestedEscrow;
   let startTime;

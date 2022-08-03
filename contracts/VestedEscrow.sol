@@ -75,8 +75,8 @@ contract VestedEscrow is ReentrancyGuard {
 
     function setStartTime(uint64 _startTime) external {
         require(msg.sender == admin, "!auth");
-        require(_startTime > block.timestamp, "vesting already started");
         require(_startTime >= block.timestamp, "start must be future");
+        require(_startTime > block.timestamp, "vesting already started");
         startTime = _startTime;
         endTime = startTime + totalTime;
     }

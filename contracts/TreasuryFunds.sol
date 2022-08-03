@@ -4,29 +4,18 @@ pragma solidity 0.8.7;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 //receive treasury funds. operator can withdraw
 //allow execute so that certain funds could be staked etc
 //allow treasury ownership to be transfered during the vesting stage
-contract TreasuryFunds{
+contract TreasuryFunds is Ownable{
     using SafeERC20 for IERC20;
     using Address for address;
 
-    address public operator;
     event WithdrawTo(address indexed user, uint256 amount);
 
-    constructor(address _operator){
-        operator = _operator;
-    }
-
-    function setOperator(address _op) external {
-        require(msg.sender == operator, "!auth");
-        operator = _op;
-    }
-
-    function withdrawTo(IERC20 _asset, uint256 _amount, address _to) external {
-        require(msg.sender == operator, "!auth");
-
+    function withdrawTo(IERC20 _asset, uint256 _amount, address _to) external onlyOwner{
         _asset.safeTransfer(_to, _amount);
         emit WithdrawTo(_to, _amount);
     }
@@ -35,8 +24,7 @@ contract TreasuryFunds{
         address _to,
         uint256 _value,
         bytes calldata _data
-    ) external returns (bool, bytes memory) {
-        require(msg.sender == operator,"!auth");
+    ) external onlyOwner returns (bool, bytes memory) {
 
         (bool success, bytes memory result) = _to.call{value:_value}(_data);
 

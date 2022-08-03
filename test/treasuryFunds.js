@@ -21,7 +21,7 @@ contract('TreasuryFunds', async (accounts) => {
     ve3d = await VeToken.new({from: admin});
     await ve3d.mint(admin, toWei('1000000'), {from: admin});
 
-    treasuryFunds = await TreasuryFunds.new(admin, {from: admin});
+    treasuryFunds = await TreasuryFunds.new({from: admin});
     await reverter.snapshot();
   });
 
@@ -31,15 +31,15 @@ contract('TreasuryFunds', async (accounts) => {
     describe('set operator', () => {
       it('it reverts if caller is not operator', async () => {
         await truffleAssert.reverts(
-            treasuryFunds.setOperator(userA, {from: userA}),
-            '!auth',
+            treasuryFunds.transferOwnership(userA, {from: userA}),
+            'Ownable: caller is not the owner',
         );
       });
 
       it('it sets new operator', async () => {
-        await treasuryFunds.setOperator(fundAdmin, {from: admin});
+        await treasuryFunds.transferOwnership(fundAdmin, {from: admin});
 
-        assert.equal(await treasuryFunds.operator(), fundAdmin);
+        assert.equal(await treasuryFunds.owner(), fundAdmin);
       });
     });
   });
@@ -53,7 +53,7 @@ contract('TreasuryFunds', async (accounts) => {
     it('reverts when someone other than the operator tries to withdraw funds', async () => {
       await truffleAssert.reverts(
           treasuryFunds.withdrawTo(ve3d.address, toWei('10'), userB, {from: userA}),
-          '!auth',
+          'Ownable: caller is not the owner',
       );
     });
 
@@ -87,7 +87,7 @@ contract('TreasuryFunds', async (accounts) => {
 
       await truffleAssert.reverts(
           treasuryFunds.execute(ve3d.address, 0, call, {from: userA}),
-          '!auth',
+          'Ownable: caller is not the owner',
       );
     });
 

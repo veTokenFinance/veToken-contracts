@@ -2,13 +2,12 @@
 pragma solidity 0.8.7;
 
 /*
-Rewrite of Curve Finance's Vested Escrow
-found at https://github.com/curvefi/curve-dao-contracts/blob/master/contracts/vests/VestingEscrow.vy
+Based on Convex Finance's Vested Escrow
+found at https://github.com/convex-eth/platform/blob/main/contracts/contracts/VestedEscrow.sol
 
 Changes:
-- no disable methods
-- only one fund admin
-- add claim and stake
+- add setStartTime function
+- add cancel function
 */
 import "./helper/MathUtil.sol";
 import "./Interfaces/IRewards.sol";

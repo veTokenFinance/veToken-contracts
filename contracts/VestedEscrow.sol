@@ -155,7 +155,7 @@ contract VestedEscrow is Ownable, ReentrancyGuard {
         return initialLocked[_recipient].sub(vested);
     }
 
-    function claimFor(address _recipient) public nonReentrant {
+    function claim(address _recipient) public nonReentrant {
         _claim(_recipient);
     }
 
@@ -170,7 +170,7 @@ contract VestedEscrow is Ownable, ReentrancyGuard {
     }
 
     function claim() external {
-        claimFor(msg.sender);
+        claim(msg.sender);
     }
 
     function claimAndStake(address _recipient) internal nonReentrant {

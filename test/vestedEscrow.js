@@ -54,22 +54,22 @@ contract('VestedEscrow', async (accounts) => {
     describe('#setAdmin', () => {
       it('it reverts if caller is not admin', async () => {
         await truffleAssert.reverts(
-            vestedEscrow.setAdmin(userA, {from: userA}),
-            '!auth',
+            vestedEscrow.transferOwnership(userA, {from: userA}),
+            'Ownable: caller is not the owner',
         );
       });
 
       it('it reverts if new admin is address(0)', async () => {
         await truffleAssert.reverts(
-            vestedEscrow.setAdmin(constants.ZERO_ADDRESS, {from: admin}),
-            '!zero address',
+            vestedEscrow.transferOwnership(constants.ZERO_ADDRESS, {from: admin}),
+            'Ownable: new owner is the zero address',
         );
       });
 
       it('it sets new admin', async () => {
-        await vestedEscrow.setAdmin(userA, {from: admin});
+        await vestedEscrow.transferOwnership(userA, {from: admin});
 
-        assert.equal(await vestedEscrow.admin(), userA);
+        assert.equal(await vestedEscrow.owner(), userA);
       });
     });
 
@@ -77,7 +77,7 @@ contract('VestedEscrow', async (accounts) => {
       it('it reverts if caller is not admin', async () => {
         await truffleAssert.reverts(
             vestedEscrow.setFundAdmin(userA, {from: userA}),
-            '!auth',
+            'Ownable: caller is not the owner',
         );
       });
 
@@ -99,7 +99,7 @@ contract('VestedEscrow', async (accounts) => {
       it('it reverts if caller is not admin', async () => {
         await truffleAssert.reverts(
             vestedEscrow.setStartTime(startTime + 100, {from: userA}),
-            '!auth',
+            'Ownable: caller is not the owner',
         );
       });
 

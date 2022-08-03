@@ -16,14 +16,14 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 
-contract VestedEscrow is ReentrancyGuard {
+contract VestedEscrow is Ownable, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
     IERC20 public rewardToken;
-    address public admin;
     address public fundAdmin;
     address public stakeContract;
 
@@ -55,41 +55,30 @@ contract VestedEscrow is ReentrancyGuard {
         startTime = starttime_;
         endTime = endtime_;
         totalTime = endTime.sub(startTime);
-        admin = msg.sender;
         fundAdmin = fundAdmin_;
         stakeContract = stakeContract_;
     }
 
-    function setAdmin(address _admin) external {
-        require(msg.sender == admin, "!auth");
-        require(_admin != address(0), "!zero address");
-        admin = _admin;
-    }
-
-    function setFundAdmin(address _fundadmin) external {
-        require(msg.sender == admin, "!auth");
+    function setFundAdmin(address _fundadmin) external onlyOwner {
         require(_fundadmin != address(0), "!zero address");
         fundAdmin = _fundadmin;
     }
 
-    function setStartTime(uint64 _startTime) external {
-        require(msg.sender == admin, "!auth");
+    function setStartTime(uint64 _startTime) external onlyOwner{
         require(_startTime >= block.timestamp, "start must be future");
         require(startTime > block.timestamp, "vesting already started");
         startTime = _startTime;
         endTime = startTime + totalTime;
     }
 
-    function addTokens(uint256 _amount) external returns (bool){
-        require(msg.sender == admin, "!auth");
-
+    function addTokens(uint256 _amount) external onlyOwner returns (bool){
         rewardToken.safeTransferFrom(msg.sender, address(this), _amount);
         unallocatedSupply = unallocatedSupply.add(_amount);
         return true;
     }
 
     function fund(address[] calldata _recipient, uint256[] calldata _amount) external nonReentrant returns (bool){
-        require(msg.sender == fundAdmin || msg.sender == admin, "!auth");
+        require(msg.sender == owner() || msg.sender == fundAdmin, "!auth");
         require(_recipient.length == _amount.length && _recipient.length != 0 && _amount.length != 0, "!arr");
 
         uint256 totalAmount = 0;
@@ -109,7 +98,7 @@ contract VestedEscrow is ReentrancyGuard {
     }
 
     function cancel(address _recipient) external nonReentrant {
-        require(msg.sender == admin || msg.sender == fundAdmin, "!auth");
+        require(msg.sender == owner() || msg.sender == fundAdmin, "!auth");
         require(initialLocked[_recipient] != 0, "!funding");
 
         _claim(_recipient);
@@ -117,7 +106,7 @@ contract VestedEscrow is ReentrancyGuard {
         uint256 delta = lockedOf(_recipient);
 
         if (delta != 0) {
-            rewardToken.safeTransfer(admin, delta);
+            rewardToken.safeTransfer(owner(), delta);
         }
 
         initialLocked[_recipient] = 0;

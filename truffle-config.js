@@ -26,6 +26,7 @@
 const HDWalletProvider = require("@truffle/hdwallet-provider");
 
 const dotenv = require("dotenv");
+const Web3 = require("web3");
 dotenv.config();
 
 module.exports = {
@@ -72,12 +73,15 @@ module.exports = {
       skipDryRun: true,
     },
     server_fork: {
+      provider: () => new Web3.providers.HttpProvider("http://66.29.155.152:8545"),
       host: "66.29.155.152",
       port: 8545,
       network_id: "1",
       gas: 8000000,
-      gasPrice: 50000000000,
+      gasPrice: 100000000000,
       skipDryRun: true,
+      networkCheckTimeout: 10000,
+      timeoutBlocks: 200,
     },
     kovan: {
       provider: () =>

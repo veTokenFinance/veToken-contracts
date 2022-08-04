@@ -121,24 +121,5 @@ contract("VeAssetDepositor", async (accounts) => {
       expect(Number(new_unlockTime.toString()) - Number(existing_unlockTime.toString())).to.greaterThan(0);
     });
 
-    it.only("set new maxTime, and check new unlock time", async () => {
-      const new_max_time = 28 * 86400; //4 weeks
-      await veassetDepositer.setLockMaxTime(new_max_time);
-      const existing_unlockTime = await veassetDepositer.unlockTime();
-      console.log("existing unlockTime", existing_unlockTime.toString());
-      await time.increase(86400 * 28);
-      // todo: get error when deposit now Transaction: 0x427f3a610aee77e703e705475de7259640d090d24bb7541acb95469fe900c532 exited with an error (status 0).
-      // Please check that the transaction:
-      // answer: we should not update max time after is initialized, thank you I added this require to the function
-      // so in order to set it you need to deploy a new instance in your test becuase it set in migration script
-      await veassetDepositer.deposit(depositAmount, true);
-      // const new_unlockTime =  await veassetDepositer.unlockTime();
-      // console.log("new unlockTime", new_unlockTime.toString());
-    });
-
-    it("deposit only with lock", async () => {});
-    it("deposit and stake with lock", async () => {});
-    it("deposit and stake without lock", async () => {});
-    it("depositAll", async () => {});
   });
 });

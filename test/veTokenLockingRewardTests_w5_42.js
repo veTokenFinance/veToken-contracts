@@ -346,10 +346,6 @@ contract("veToken Locking Reward Test", async (accounts) => {
 
     await veTokenLocker.approveRewardDistributor(angle_sanUSDC_EUR_address, userA, true);
     await veTokenLocker.queueNewRewards(angle_sanUSDC_EUR_address, web3.utils.toWei("1000", "mwei"));
-    // todo: the 6 demical token has no reward added?
-    //answer: becasue wrong amount passed in transfer and queueNewRewards , updated and fixed
-    // also read the same reward info before the queueNewRewards
-    // this test will fail with idel please skip idle for this test to not fail
 
     addedAngle_sanUSDC_EUR = await veTokenLocker.rewardData(angle_sanUSDC_EUR_address);
     console.log("Queued 6 decimal reward amount after:", addedAngle_sanUSDC_EUR.queuedRewards.toNumber());

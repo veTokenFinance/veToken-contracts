@@ -154,6 +154,29 @@ contract("Ve3tokenMultipleRewards", async (accounts) => {
       if (network != Networks.none) {
         this.skip();
       }
+
+      const veTokenMinterCalculation = async (amount, veTokenBoosterAddress) => {
+        console.log("\t==== veTokenMinter info =====");
+        const veTokenWeight_booster = await vetokenMinter.veAssetWeights(veTokenBoosterAddress);
+        const veTokenTotalWeight = await vetokenMinter.totalWeight();
+        const veTokenTotalSupply = await vetokenMinter.totalSupply();
+        const veTokenTotalCliffs = await vetokenMinter.totalCliffs();
+        log("veTokenTotalSupply", veTokenTotalSupply);
+        const veTokenReductionPerCliff = await vetokenMinter.reductionPerCliff();
+        log("veTokenReductionPerCliff", veTokenReductionPerCliff);
+        const cliff = veTokenTotalSupply/veTokenReductionPerCliff;
+        log(" current Cliff", cliff);
+        const reduction = veTokenTotalCliffs - cliff;
+        log(" current reduction", reduction);
+        //getReward() in reward contract call booster.rewardClaimed
+        const mint_input = toBN(amount).multipliedBy(toBN(veTokenWeight_booster)).div(toBN(veTokenTotalWeight));
+        log(" input amount for mint function", mint_input);
+        //vetokenMinter.mint()
+        const expected_minted = mint_input.multipliedBy(toBN(reduction)).div(toBN(veTokenTotalCliffs));
+        return expected_minted;
+        console.log("\t==== veTokenMinter info End =====");
+      }
+
       await booster_idle.deposit(poolId, depositAmount_idle, true);
       await booster_angle.deposit(poolId, depositAmount_angle, true);
 
@@ -170,8 +193,38 @@ contract("Ve3tokenMultipleRewards", async (accounts) => {
       await time.advanceBlock();
 
       // user claim rewards
+      const userVetokenBeforeAnyReward = await vetoken.balanceOf(USER1);
+      //await veTokenMinterInfo();
+
+      const rewardEarned_idle = await rewardPool_idle.earned(USER1);
+
+      const veTokenTotalSupplyBefore = await vetokenMinter.totalSupply();
+
+      // 1. get rewards from idle pool
       await rewardPool_idle.getReward();
+
+
+      const veTokenTotalSupplyAfter = await vetokenMinter.totalSupply();
+      const expectedVeToken_idle =await veTokenMinterCalculation(rewardEarned_idle, booster_idle.address);
+      //todo: expectedVeToken minted is different from actual minted(actual minted more?), and actual minted is not fully transferred to user?
+      log("expectedVeToken via idle minted",expectedVeToken_idle.toString());
+      // check total supply added or via balance
+      const actualVeTokenMintedforIdle = toBN(veTokenTotalSupplyAfter).minus(toBN(veTokenTotalSupplyBefore));
+      log("actualVeToken via idle minted",actualVeTokenMintedforIdle.toString());
+      //assert.equal(actualVeTokenMintedForIdle.toString(),expectedVeToken_idle.toString());
+      const userVetokenFromIdlePool = await vetoken.balanceOf(USER1);
+      log("veToken minted from idle pool and transferred to user",(userVetokenFromIdlePool-userVetokenBeforeAnyReward).toString());
+      //assert.equal((userVetokenFromIdlePool-userVetokenBeforeAnyReward).toString(), actualVeTokenMinted.toString());
+
+      // 2. get rewards from angle pool
+      const rewardEarned_angle = await rewardPool_angle.earned(USER1);
       await rewardPool_angle.getReward();
+      const expectedVeToken_angle = await veTokenMinterCalculation(rewardEarned_angle, booster_angle.address);
+      log("expectedVeToken angle minted",expectedVeToken_angle.toString());
+      const userVetokenFromAnglePool = await vetoken.balanceOf(USER1);
+      const actualVeTokenMintedForAngle = toBN(userVetokenFromAnglePool).minus(toBN(userVetokenFromIdlePool));
+      log("actual veToken minted from angle pool",actualVeTokenMintedForAngle );
+      //assert.equal(actualVeTokenMintedForAngle.toString(),expectedVeToken_angle.toString());
       const userVetokenBalAfter = (await vetoken.balanceOf(USER1)).toString();
       console.log("stake vetoken balance");
 
@@ -181,6 +234,7 @@ contract("Ve3tokenMultipleRewards", async (accounts) => {
 
       const ve3TokenEarnedBefore_idle = (await vetokenRewards.earned(veasset_idle.address, USER1)).toString();
       const ve3TokenEarnedBefore_angle = (await vetokenRewards.earned(veasset_angle.address, USER1)).toString();
+
 
       await time.increase(86400);
       await time.advanceBlock();

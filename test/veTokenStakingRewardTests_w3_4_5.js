@@ -154,8 +154,6 @@ contract("veToken Staking Reward Test", async (accounts) => {
     await vetokenRewards.stake(stakingVetokenAmount, { from: userC });
 
     await booster.earmarkRewards(poolId, { from: userB });
-    //todo: all parameters in RewardTokenInfo as 0, should be updated?
-    //answer: await
     await checkRewardInfo();
 
     console.log("userC veToken balance after staking:" + (await vetoken.balanceOf(userC)).toString());
@@ -211,26 +209,17 @@ contract("veToken Staking Reward Test", async (accounts) => {
     const ownerBalanceDifference = toBN(ownerBalanceAfterRecoverReward).minus(ownerBalanceBeforeRecoverReward);
     console.log("actual recovered reward:" + ownerBalanceDifference.toString());
 
-    //todo: actual recovered rewards is not all queued rewards? gas fee?
-    //answer: wrong subtraction
+
     assert.equal(Number(ownerBalanceDifference), Number(veAssetRewardInfoBeforeRecover.queuedRewards));
-    //todo: need to update state RewardTokenInfo.queuedRewards to 0 after transfer to owner
-    //answer: good catch ,done
     const veAssetRewardInfoAfterRecover = await vetokenRewards.rewardTokenInfo(veassetToken.address);
     console.log("queued rewards after recover:", veAssetRewardInfoAfterRecover.queuedRewards.toNumber());
     assert.equal(veAssetRewardInfoAfterRecover.queuedRewards.toNumber(), 0);
 
-    //remove reward tokens, the veAssetToken is added as a reward in ve3RewardPool in migration script
-    // todo: when remove reward, no logic to distribute remaining queued logic in it? these rewards will be lost?, should add recoverUnusedReward inside?
-    //answer: yes we can recover it by recover function
     await vetokenRewards.removeReward(veassetToken.address);
 
     const veAssetRewardInfoAfter = await vetokenRewards.rewardTokenInfo(veassetToken.address);
     console.log(veAssetRewardInfoAfter);
 
-    // add reward veassetToken back
-    //todo: same logic as ve3dlocker, missing delete in removeReward(), clearExtraRewards(), Transaction: 0xab33271a22bf2cf106e84cca76ab68b2bd07eed8a95b55e3c9f9bc6ae4146c7f exited with an error (status 0). Reason given: Already added.
-    //answer:done for ve3dRewardpool but what for clear extra token nothing we need to add?
     await vetokenRewards.addReward(
       veassetToken.address,
       veassetDepositer.address,

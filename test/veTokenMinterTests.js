@@ -162,7 +162,7 @@ contract("Ve3tokenMultipleRewards", async (accounts) => {
         log("veTokenTotalSupply", veTokenTotalSupply);
         const veTokenReductionPerCliff = await vetokenMinter.reductionPerCliff();
         log("veTokenReductionPerCliff", veTokenReductionPerCliff);
-        const cliff = veTokenTotalSupply/veTokenReductionPerCliff;
+        const cliff = veTokenTotalSupply / veTokenReductionPerCliff;
         log(" current Cliff", cliff);
         const reduction = veTokenTotalCliffs - cliff;
         log(" current reduction", reduction);
@@ -170,17 +170,16 @@ contract("Ve3tokenMultipleRewards", async (accounts) => {
         const veTokenTotalAddedSupply = await vetokenMinter.totalSupply();
         return veTokenTotalAddedSupply;
         console.log("\t==== veTokenMinter info End =====");
-      }
-
+      };
 
       await vetokenMinter.removeOperator(booster_angle.address);
-      await  vetokenMinter.removeOperator(booster_idle.address);
+      await vetokenMinter.removeOperator(booster_idle.address);
       const totalWeightAfterRemoveOperator = await vetokenMinter.totalWeight();
-      assert.equal(0,totalWeightAfterRemoveOperator.toString());
+      assert.equal(0, totalWeightAfterRemoveOperator.toString());
 
       await vetokenMinter.addOperator(booster_angle.address, toBN(10).pow(25).times(5));
       const totalWeightAfterAddOperator = await vetokenMinter.totalWeight();
-      assert.equal(10**25*5 ,totalWeightAfterAddOperator.toString());
+      assert.equal(10 ** 25 * 5, totalWeightAfterAddOperator.toString());
 
       const veTokenBalanceBefore = await vetoken.balanceOf(USER2);
       await vetokenMinter.withdraw(USER2, 10);
@@ -190,21 +189,23 @@ contract("Ve3tokenMultipleRewards", async (accounts) => {
       // add dummy operator
       await vetokenMinter.addOperator(USER1, toBN(10).pow(25).times(1));
       const mintedTotalVeTokens = [];
-      for(let i = 0; i < 10; i++){
+      for (let i = 0; i < 10; i++) {
         const mintedVeToken = await veTokenMinterCalculation(USER2, web3.utils.toWei("2", "mwei"));
         console.log("minted VeToken", mintedVeToken.toString());
         mintedTotalVeTokens.push(toBN(mintedVeToken));
       }
 
       const mintedVeTokens = [];
-      for (var i=1; i < mintedTotalVeTokens.length; i++ ){
-        const minted = mintedTotalVeTokens[i] - mintedTotalVeTokens[i-1];
+      for (var i = 1; i < mintedTotalVeTokens.length; i++) {
+        const minted = mintedTotalVeTokens[i] - mintedTotalVeTokens[i - 1];
         mintedVeTokens.push(minted);
       }
       //todo: check the log, the current cliff is always too small, will never reach 1000 even if we reach max supply 30 million
       // the minted amount never reduce until we reach max supply.
       // looks like we need to remove 1e18. wrong unit.
-      mintedVeTokens.forEach(item => console.log(item.toString()));
+      //answer: make sense , here is the orignal contract https://github.com/convex-eth/platform/blob/main/contracts/contracts/Cvx.sol
+      // it might need to change the totalCliffs according to our max supply??
+      mintedVeTokens.forEach((item) => console.log(item.toString()));
     });
   });
 });

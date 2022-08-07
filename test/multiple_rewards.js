@@ -163,16 +163,16 @@ contract("Ve3tokenMultipleRewards", async (accounts) => {
         const veTokenTotalCliffs = await vetokenMinter.totalCliffs();
         log("veTokenTotalSupply", veTokenTotalSupply);
         const veTokenReductionPerCliff = await vetokenMinter.reductionPerCliff();
-        log("veTokenReductionPerCliff", veTokenReductionPerCliff);
-        const cliff = veTokenTotalSupply / veTokenReductionPerCliff;
-        log(" current Cliff", cliff);
-        const reduction = veTokenTotalCliffs - cliff;
+        log("veTokenReductionPerCliff", veTokenReductionPerCliff.toString());
+        const cliff = toBN(veTokenTotalSupply).div(toBN(veTokenReductionPerCliff));
+        log(" current Cliff", cliff.toString());
+        const reduction = toBN(veTokenTotalCliffs).minus(cliff);
         log(" current reduction", reduction);
         //getReward() in reward contract call booster.rewardClaimed
         const mint_input = toBN(amount).multipliedBy(toBN(veTokenWeight_booster)).div(toBN(veTokenTotalWeight));
         log(" input amount for mint function", mint_input);
         //vetokenMinter.mint()
-        const expected_minted = mint_input.multipliedBy(toBN(reduction)).div(toBN(veTokenTotalCliffs));
+        const expected_minted = mint_input.multipliedBy(toBN(reduction)).div(toBN(veTokenTotalCliffs)).div(10**18);
         return expected_minted;
         console.log("\t==== veTokenMinter info End =====");
       };
@@ -206,36 +206,53 @@ contract("Ve3tokenMultipleRewards", async (accounts) => {
       const veTokenTotalSupplyAfter = await vetokenMinter.totalSupply();
       console.log("earned ", rewardEarned_idle.toString());
       const expectedVeToken_idle = await veTokenMinterCalculation(rewardEarned_idle, booster_idle.address);
-      //todo: expectedVeToken minted is different from actual minted(actual minted more?), and actual minted is not fully transferred to user?
-      //answer: please use bignumber math instead of + -, and the contract calc seems correct
-      // user earned 295854667438537400 * 0.4 = 118341866975414960, first mint amount will be equal to the amount and it is
-      // second mint nearly the same , this is decimals different
 
       log("expectedVeToken via idle minted", expectedVeToken_idle.toString());
       // check total supply added or via balance
-      const actualVeTokenMintedforIdle = toBN(veTokenTotalSupplyAfter).minus(toBN(veTokenTotalSupplyBefore));
+      const actualVeTokenMintedforIdle = toBN(veTokenTotalSupplyAfter).minus(toBN(veTokenTotalSupplyBefore)).div(10**18);
       log("actualVeToken via idle minted", actualVeTokenMintedforIdle.toString());
-      //assert.equal(actualVeTokenMintedForIdle.toString(),expectedVeToken_idle.toString());
+
+      assert.closeTo(
+        expectedVeToken_idle.toNumber(),
+        actualVeTokenMintedforIdle.toNumber(),
+        0.00001,
+        "check minted veToken for idle"
+      );
       const userVetokenFromIdlePool = await vetoken.balanceOf(USER1);
       log(
         "veToken minted from idle pool and transferred to user",
         toBN(userVetokenFromIdlePool).minus(userVetokenBeforeAnyReward).toString()
       );
-      //assert.equal((userVetokenFromIdlePool-userVetokenBeforeAnyReward).toString(), actualVeTokenMinted.toString());
+
+      assert.equal(
+        toBN(userVetokenFromIdlePool).minus(userVetokenBeforeAnyReward).div(10**18).toNumber(),
+        actualVeTokenMintedforIdle.toNumber()
+      );
 
       // 2. get rewards from angle pool
       const rewardEarned_angle = await rewardPool_angle.earned(USER1);
       console.log("earned ", rewardEarned_angle.toString());
       await rewardPool_angle.getReward();
+      const veTokenTotalSupplyAfter2= await vetokenMinter.totalSupply();
 
       const expectedVeToken_angle = await veTokenMinterCalculation(rewardEarned_angle, booster_angle.address);
       log("expectedVeToken angle minted", expectedVeToken_angle.toString());
-      const userVetokenFromAnglePool = await vetoken.balanceOf(USER1);
-      const actualVeTokenMintedForAngle = toBN(userVetokenFromAnglePool).minus(toBN(userVetokenFromIdlePool));
+      const actualVeTokenMintedForAngle = toBN(veTokenTotalSupplyAfter2).minus(toBN(veTokenTotalSupplyAfter)).div(10**18);
+      assert.closeTo(
+        expectedVeToken_angle.toNumber(),
+        actualVeTokenMintedForAngle.toNumber(),
+        0.00001,
+        "check minted veToken for angle"
+      );
       log("actual veToken minted from angle pool", actualVeTokenMintedForAngle);
-      //assert.equal(actualVeTokenMintedForAngle.toString(),expectedVeToken_angle.toString());
       const userVetokenBalAfter = (await vetoken.balanceOf(USER1)).toString();
-      console.log("stake vetoken balance");
+      log(
+        "veToken minted from angle pool and transferred to user",
+        toBN(userVetokenBalAfter).minus(toBN(userVetokenFromIdlePool)).toString()
+      );
+      assert.equal(
+        toBN(userVetokenBalAfter).minus(toBN(userVetokenFromIdlePool)).div(10**18).toNumber(),
+        actualVeTokenMintedForAngle.toNumber());
 
       //stake vetoken
       await vetoken.approve(vetokenRewards.address, userVetokenBalAfter);

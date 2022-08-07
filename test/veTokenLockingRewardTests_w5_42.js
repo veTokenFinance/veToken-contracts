@@ -320,7 +320,7 @@ contract("veToken Locking Reward Test", async (accounts) => {
     console.log("reward token number after removeRewards: ", userRewardsAfter.length);
     assert.equal(userRewardsAfter.length, expectedRemovedTokenCounts);
 
-    //add additional 6 decimal reward token and test rewards
+    //add additional 6 decimal reward token and test rewards, additional setup needed at migration step for testing for each veToken
     const angle_sanUSDC_EUR_address = "0x9C215206Da4bf108aE5aEEf9dA7caD3352A36Dad";
     const angle_sanUSDC_EUR = await IERC20.at(angle_sanUSDC_EUR_address);
     await veTokenLocker.addReward(
@@ -338,8 +338,12 @@ contract("veToken Locking Reward Test", async (accounts) => {
     console.log("Queued 6 decimal reward periodFinish before:", addedAngle_sanUSDC_EUR.periodFinish.toNumber());
     console.log("Queued 6 decimal reward rewardRate before:", addedAngle_sanUSDC_EUR.rewardRate.toNumber());
 
+    assert.equal(addedAngle_sanUSDC_EUR.queuedRewards.toNumber(), 0);
     // mock reward distributed to ve3DLocker
     const angle_sanUSDC_EUR_holder = "0xea51ccb352aea7641ff4d88536f0f06fd052ef8f";
+    await web3.eth.sendTransaction({ from: USER1, to: angle_sanUSDC_EUR_holder, value: web3.utils.toWei("1") });
+    const balanceOfHolder = await angle_sanUSDC_EUR.balanceOf(angle_sanUSDC_EUR_holder);
+    console.log(balanceOfHolder.toString());
     await angle_sanUSDC_EUR.transfer(veTokenLocker.address, web3.utils.toWei("1000", "mwei"), {
       from: angle_sanUSDC_EUR_holder,
     });
@@ -347,10 +351,12 @@ contract("veToken Locking Reward Test", async (accounts) => {
     await veTokenLocker.approveRewardDistributor(angle_sanUSDC_EUR_address, userA, true);
     await veTokenLocker.queueNewRewards(angle_sanUSDC_EUR_address, web3.utils.toWei("1000", "mwei"));
 
-    addedAngle_sanUSDC_EUR = await veTokenLocker.rewardData(angle_sanUSDC_EUR_address);
-    console.log("Queued 6 decimal reward amount after:", addedAngle_sanUSDC_EUR.queuedRewards.toNumber());
-    console.log("Queued 6 decimal reward lastUpdateTime after:", addedAngle_sanUSDC_EUR.lastUpdateTime.toNumber());
-    console.log("Queued 6 decimal reward periodFinish after:", addedAngle_sanUSDC_EUR.periodFinish.toNumber());
-    console.log("Queued 6 decimal reward rewardRate after:", addedAngle_sanUSDC_EUR.rewardRate.toNumber());
+    let addedAngle_sanUSDC_EURAfter = await veTokenLocker.rewardData(angle_sanUSDC_EUR_address);
+    console.log("Queued 6 decimal reward amount after:", addedAngle_sanUSDC_EURAfter.queuedRewards.toNumber());
+    console.log("Queued 6 decimal reward lastUpdateTime after:", addedAngle_sanUSDC_EURAfter.lastUpdateTime.toNumber());
+    console.log("Queued 6 decimal reward periodFinish after:", addedAngle_sanUSDC_EURAfter.periodFinish.toNumber());
+    console.log("Queued 6 decimal reward rewardRate after:", addedAngle_sanUSDC_EURAfter.rewardRate.toNumber());
+
+    assert.isAbove(Number(toBN(addedAngle_sanUSDC_EURAfter.queuedRewards).minus(toBN(addedAngle_sanUSDC_EUR.queuedRewards))), 0);
   });
 });

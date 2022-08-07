@@ -109,11 +109,14 @@ delete .openzeppelin, contracts.json if you have them from previous run
 ### test
 
 `npm run test-no-deploy-idle`
+
 `npm run test-no-deploy-angle`
 
 ### local setup, deploy and test multiple rewards
 `npm run fork-mainnet`
+
 `npm run deploy-basic-contract && npm run deploy-local`
+
 `npm run test-no-deploy-custom`
 
 > **Note:** all deployed addresses will be in contracts.json file

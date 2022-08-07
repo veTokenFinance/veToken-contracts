@@ -104,6 +104,8 @@ contract Booster is ReentrancyGuardUpgradeable {
     event PoolShuttedDown(uint256 indexed pid);
     event SystemShuttedDown();
     event Voted(uint256 indexed voteId, address indexed votingAddress, bool support);
+    event EarmarkedRewards(uint256 rewardAmount);
+    event EarmarkedFees(uint256 feeAmount);
 
     function __Booster_init(
         address _staker,
@@ -575,6 +577,7 @@ contract Booster is ReentrancyGuardUpgradeable {
                 IRewards(stakerLockRewards).queueNewRewards(veAsset, _stakerLockIncentive);
             }
         }
+        emit EarmarkedRewards(veAssetBal);
     }
 
     function _claimStashReward(address stash) internal {
@@ -609,6 +612,8 @@ contract Booster is ReentrancyGuardUpgradeable {
             IERC20Upgradeable(feeToken).safeTransfer(stakerLockRewards, _stakerLockFeesIncentive);
             IRewards(stakerLockRewards).queueNewRewards(feeToken, _stakerLockFeesIncentive);
         }
+
+        emit EarmarkedFees(_balance);
         return true;
     }
 

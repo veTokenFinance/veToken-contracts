@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.7;
 
-pragma experimental ABIEncoderV2;
-
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 /// @notice the intention of this library is to be able to easily convert

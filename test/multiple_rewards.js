@@ -154,6 +154,29 @@ contract("Ve3tokenMultipleRewards", async (accounts) => {
       if (network != Networks.none) {
         this.skip();
       }
+
+      const veTokenMinterCalculation = async (amount, veTokenBoosterAddress) => {
+        console.log("\t==== veTokenMinter info =====");
+        const veTokenWeight_booster = await vetokenMinter.veAssetWeights(veTokenBoosterAddress);
+        const veTokenTotalWeight = await vetokenMinter.totalWeight();
+        const veTokenTotalSupply = await vetokenMinter.totalSupply();
+        const veTokenTotalCliffs = await vetokenMinter.totalCliffs();
+        log("veTokenTotalSupply", veTokenTotalSupply);
+        const veTokenReductionPerCliff = await vetokenMinter.reductionPerCliff();
+        log("veTokenReductionPerCliff", veTokenReductionPerCliff.toString());
+        const cliff = toBN(veTokenTotalSupply).div(toBN(veTokenReductionPerCliff));
+        log(" current Cliff", cliff.toString());
+        const reduction = toBN(veTokenTotalCliffs).minus(cliff);
+        log(" current reduction", reduction);
+        //getReward() in reward contract call booster.rewardClaimed
+        const mint_input = toBN(amount).multipliedBy(toBN(veTokenWeight_booster)).div(toBN(veTokenTotalWeight));
+        log(" input amount for mint function", mint_input);
+        //vetokenMinter.mint()
+        const expected_minted = mint_input.multipliedBy(toBN(reduction)).div(toBN(veTokenTotalCliffs)).div(10**18);
+        return expected_minted;
+        console.log("\t==== veTokenMinter info End =====");
+      };
+
       await booster_idle.deposit(poolId, depositAmount_idle, true);
       await booster_angle.deposit(poolId, depositAmount_angle, true);
 
@@ -170,10 +193,66 @@ contract("Ve3tokenMultipleRewards", async (accounts) => {
       await time.advanceBlock();
 
       // user claim rewards
+      const userVetokenBeforeAnyReward = await vetoken.balanceOf(USER1);
+      //await veTokenMinterInfo();
+
+      const rewardEarned_idle = await rewardPool_idle.earned(USER1);
+
+      const veTokenTotalSupplyBefore = await vetokenMinter.totalSupply();
+
+      // 1. get rewards from idle pool
       await rewardPool_idle.getReward();
+
+      const veTokenTotalSupplyAfter = await vetokenMinter.totalSupply();
+      console.log("earned ", rewardEarned_idle.toString());
+      const expectedVeToken_idle = await veTokenMinterCalculation(rewardEarned_idle, booster_idle.address);
+
+      log("expectedVeToken via idle minted", expectedVeToken_idle.toString());
+      // check total supply added or via balance
+      const actualVeTokenMintedforIdle = toBN(veTokenTotalSupplyAfter).minus(toBN(veTokenTotalSupplyBefore)).div(10**18);
+      log("actualVeToken via idle minted", actualVeTokenMintedforIdle.toString());
+
+      assert.closeTo(
+        expectedVeToken_idle.toNumber(),
+        actualVeTokenMintedforIdle.toNumber(),
+        0.00001,
+        "check minted veToken for idle"
+      );
+      const userVetokenFromIdlePool = await vetoken.balanceOf(USER1);
+      log(
+        "veToken minted from idle pool and transferred to user",
+        toBN(userVetokenFromIdlePool).minus(userVetokenBeforeAnyReward).toString()
+      );
+
+      assert.equal(
+        toBN(userVetokenFromIdlePool).minus(userVetokenBeforeAnyReward).div(10**18).toNumber(),
+        actualVeTokenMintedforIdle.toNumber()
+      );
+
+      // 2. get rewards from angle pool
+      const rewardEarned_angle = await rewardPool_angle.earned(USER1);
+      console.log("earned ", rewardEarned_angle.toString());
       await rewardPool_angle.getReward();
+      const veTokenTotalSupplyAfter2= await vetokenMinter.totalSupply();
+
+      const expectedVeToken_angle = await veTokenMinterCalculation(rewardEarned_angle, booster_angle.address);
+      log("expectedVeToken angle minted", expectedVeToken_angle.toString());
+      const actualVeTokenMintedForAngle = toBN(veTokenTotalSupplyAfter2).minus(toBN(veTokenTotalSupplyAfter)).div(10**18);
+      assert.closeTo(
+        expectedVeToken_angle.toNumber(),
+        actualVeTokenMintedForAngle.toNumber(),
+        0.00001,
+        "check minted veToken for angle"
+      );
+      log("actual veToken minted from angle pool", actualVeTokenMintedForAngle);
       const userVetokenBalAfter = (await vetoken.balanceOf(USER1)).toString();
-      console.log("stake vetoken balance");
+      log(
+        "veToken minted from angle pool and transferred to user",
+        toBN(userVetokenBalAfter).minus(toBN(userVetokenFromIdlePool)).toString()
+      );
+      assert.equal(
+        toBN(userVetokenBalAfter).minus(toBN(userVetokenFromIdlePool)).div(10**18).toNumber(),
+        actualVeTokenMintedForAngle.toNumber());
 
       //stake vetoken
       await vetoken.approve(vetokenRewards.address, userVetokenBalAfter);

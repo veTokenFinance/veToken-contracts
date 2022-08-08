@@ -86,6 +86,7 @@ Each voting proxy has the voting power for corresponding projects. And it delega
 ### set up
 
 node version 16
+delete .openzeppelin, contracts.json if you have them from previous run
 
 `npm ci`
 
@@ -108,8 +109,14 @@ node version 16
 ### test
 
 `npm run test-no-deploy-idle`
+
 `npm run test-no-deploy-angle`
 
-> **Note:** all deployed addresses will be in contracts.json file
+### local setup, deploy and test multiple rewards
+`npm run fork-mainnet`
 
-> **Note:** please remove generated files under .openzeppelin folder before run the migration scripts
+`npm run deploy-basic-contract && npm run deploy-local`
+
+`npm run test-no-deploy-custom`
+
+> **Note:** all deployed addresses will be in contracts.json file

@@ -95,7 +95,6 @@ contract("Deposit and Withdraw Test", async (accounts) => {
     const ve3TokenBalanceAfter = await ve3Token.balanceOf(userA);
     const veTokenBalanceAfter = await vetoken.balanceOf(userA);
     const ve3DillRewardPoolBalanceOfUserAAfter = await ve3DillRewardPool.balanceOf(userA);
-    //todo: should user get ve3Token if deposit only?
     const ve3TokenFromDepositing = (ve3TokenBalanceAfter - ve3TokenBalanceBefore).toString();
     console.log("ve3Token from depositing veAsset:", ve3TokenFromDepositing);
     expect(ve3TokenFromDepositing).to.equal(web3.utils.toWei("9.99"));

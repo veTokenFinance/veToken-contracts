@@ -76,10 +76,10 @@ contract("veToken Staking Reward Test", async (accounts) => {
     const checkRewardInfo = async () => {
       currentEpoch();
       const veAssetRewardInfo = await vetokenRewards.rewardTokenInfo(veassetToken.address);
-      console.log(" reward amount :", veAssetRewardInfo.queuedRewards.toNumber());
-      console.log(" reward lastUpdateTime :", veAssetRewardInfo.lastUpdateTime.toNumber());
-      console.log(" reward periodFinish :", veAssetRewardInfo.periodFinish.toNumber());
-      console.log(" rewardRate:", veAssetRewardInfo.rewardRate.toNumber());
+      console.log(" reward amount :", veAssetRewardInfo.queuedRewards.toString());
+      console.log(" reward lastUpdateTime :", veAssetRewardInfo.lastUpdateTime.toString());
+      console.log(" reward periodFinish :", veAssetRewardInfo.periodFinish.toString());
+      console.log(" rewardRate:", veAssetRewardInfo.rewardRate.toString());
     };
 
     // deposit lpToken

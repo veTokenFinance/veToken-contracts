@@ -22,7 +22,7 @@
 // const infuraKey = "fj4jll3k.....";
 //
 // const fs = require('fs');
-// const mnemonic = fs.readFileSync(".secret").toString().trim();
+
 const HDWalletProvider = require("@truffle/hdwallet-provider");
 
 const dotenv = require("dotenv");
@@ -85,7 +85,7 @@ module.exports = {
     },
     kovan: {
       provider: () =>
-        new HDWalletProvider([process.env.PRIVATE_KEY], `wss://eth-mainnet.g.alchemy.com/v2/${secret.infuraKey}`),
+        new HDWalletProvider([process.env.PRIVATE_KEY], `wss://eth-kovan.g.alchemy.com/v2/${process.env.PROJECT_ID}`),
       network_id: 42, // kovan's id
       gas: 3000000,
       gasPrice: 10000000000,
@@ -93,7 +93,7 @@ module.exports = {
     },
     rinkeby: {
       provider: () =>
-        new HDWalletProvider([process.env.PRIVATE_KEY], `wss://eth-mainnet.g.alchemy.com/v2/${secret.infuraKey}`),
+        new HDWalletProvider([process.env.PRIVATE_KEY], `wss://eth-rinkeby.g.alchemy.com/v2/${process.env.PROJECT_ID}`),
       network_id: 4, // kovan's id
       gas: 8000000,
       gasPrice: 10000000000,
@@ -101,10 +101,10 @@ module.exports = {
     },
     mainnet: {
       provider: () =>
-        new HDWalletProvider([process.env.PRIVATE_KEY], `wss://eth-mainnet.g.alchemy.com/v2/${secret.infuraKey}`),
+        new HDWalletProvider([process.env.PRIVATE_KEY], `wss://eth-mainnet.g.alchemy.com/v2/${process.env.PROJECT_ID}`),
       network_id: 1, // Mainnet's id
       gas: 8000000,
-      gasPrice: 70000000000,
+      gasPrice: 7000000000,
       skipDryRun: true,
     },
     avalanche_testnet: {

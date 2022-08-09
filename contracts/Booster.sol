@@ -636,6 +636,27 @@ contract Booster is ReentrancyGuardUpgradeable {
         return true;
     }
 
+    function VE3DEarned(address _account) external view returns (uint256 _amount) {
+        _amount = _VE3DEarned(_account, lockRewards);
+    }
+
+    function VE3DEarned(address _account, uint256 _pid) external view returns (uint256 _amount) {
+        address rewardContract = poolInfo[_pid].veAssetRewards;
+        if (rewardContract != address(0)) {
+            _amount = _VE3DEarned(_account, rewardContract);
+        }
+    }
+
+    function _VE3DEarned(address _account, address _rewardPool) internal view returns (uint256) {
+        uint256 _amount = IRewards(_rewardPool).earned(_account);
+        ITokenMinter veTokenMinter = ITokenMinter(minter);
+        //calc the amount of veAssetEarned
+        uint256 _veAssetEarned = _amount.mul(veTokenMinter.veAssetWeights(address(this))).div(
+            veTokenMinter.totalWeight()
+        );
+        return ITokenMinter(minter).earned(_veAssetEarned);
+    }
+
     function recoverUnusedRewardFromPools(uint256 _pid) external {
         require(msg.sender == owner, "!Auth");
         address rewardContract = poolInfo[_pid].veAssetRewards;

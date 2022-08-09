@@ -12,13 +12,14 @@ contract VeTokenMinter is OwnableUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     uint256 public constant maxSupply = 30 * 1000000 * 1e18; //30mil
+    uint256 public constant totalWeight = 100 * 10**25;
+
     IERC20Upgradeable public veToken;
     EnumerableSet.AddressSet internal operators;
     uint256 public totalCliffs;
     uint256 public reductionPerCliff;
     uint256 public totalSupply;
     mapping(address => uint256) public veAssetWeights;
-    uint256 public totalWeight;
 
     event Withdraw(address destination, uint256 amount);
 
@@ -33,13 +34,10 @@ contract VeTokenMinter is OwnableUpgradeable {
     function addOperator(address _newOperator, uint256 _newWeight) public onlyOwner {
         require(_newWeight > 0 && _newWeight <= 100 * 10**25, "Invalid weight");
         operators.add(_newOperator);
-        totalWeight = totalWeight.sub(veAssetWeights[_newOperator]);
         veAssetWeights[_newOperator] = _newWeight;
-        totalWeight = totalWeight.add(_newWeight);
     }
 
     function removeOperator(address _operator) public onlyOwner {
-        totalWeight = totalWeight.sub(veAssetWeights[_operator]);
         veAssetWeights[_operator] = 0;
         operators.remove(_operator);
     }
@@ -70,6 +68,26 @@ contract VeTokenMinter is OwnableUpgradeable {
             //mint
             veToken.safeTransfer(_to, _amount);
             totalSupply = totalSupply.add(_amount);
+        }
+    }
+
+    function earned(uint256 _amount) external view returns (uint256 _earned) {
+        require(operators.contains(_msgSender()), "not an operator");
+
+        uint256 supply = totalSupply;
+
+        uint256 cliff = supply.div(reductionPerCliff);
+
+        if (cliff < totalCliffs) {
+            uint256 reduction = totalCliffs.sub(cliff);
+
+            _amount = _amount.mul(reduction).div(totalCliffs);
+
+            uint256 amtTillMax = maxSupply.sub(supply);
+            if (_amount > amtTillMax) {
+                _amount = amtTillMax;
+            }
+            _earned = _amount;
         }
     }
 

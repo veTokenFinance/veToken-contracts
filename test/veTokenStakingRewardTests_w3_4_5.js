@@ -60,7 +60,7 @@ contract("veToken Staking Reward Test", async (accounts) => {
 
   afterEach("revert", reverter.revert);
 
-  it("Deposit lpToken, get veToken Rewards, then stake veToken to get rewards", async () => {
+  it.only("Deposit lpToken, get veToken Rewards, then stake veToken to get rewards", async () => {
     const userA = accounts[0];
     const userB = accounts[1];
     const userC = accounts[2];
@@ -74,7 +74,7 @@ contract("veToken Staking Reward Test", async (accounts) => {
     };
 
     const checkRewardInfo = async () => {
-      currentEpoch();
+      await currentEpoch();
       const veAssetRewardInfo = await vetokenRewards.rewardTokenInfo(veassetToken.address);
       console.log(" reward amount :", veAssetRewardInfo.queuedRewards.toString());
       console.log(" reward lastUpdateTime :", veAssetRewardInfo.lastUpdateTime.toString());
@@ -141,8 +141,9 @@ contract("veToken Staking Reward Test", async (accounts) => {
     await vetoken.balanceOf(userA).then((a) => console.log("userA veToken balance: " + formatEther(a.toString())));
 
     const vetokenBalance = await vetoken.balanceOf(userA);
+    console.log(vetokenBalance.toString());
     await vetoken.approve(userC, vetokenBalance, { from: userA });
-    await vetoken.transfer(userC, toBN(vetokenBalance).div(2));
+    await vetoken.transfer(userC, toBN(vetokenBalance).div(2).toString());
     const stakingVetokenAmount = await vetoken.balanceOf(userC);
     console.log("userC veToken balance init after getting from userA: " + formatEther(stakingVetokenAmount.toString()));
     expect(Number(stakingVetokenAmount.toString())).to.greaterThan(0);
@@ -208,7 +209,6 @@ contract("veToken Staking Reward Test", async (accounts) => {
     console.log("queuedRewards:" + veAssetRewardInfoBeforeRecover.queuedRewards.toString());
     const ownerBalanceDifference = toBN(ownerBalanceAfterRecoverReward).minus(ownerBalanceBeforeRecoverReward);
     console.log("actual recovered reward:" + ownerBalanceDifference.toString());
-
 
     assert.equal(Number(ownerBalanceDifference), Number(veAssetRewardInfoBeforeRecover.queuedRewards));
     const veAssetRewardInfoAfterRecover = await vetokenRewards.rewardTokenInfo(veassetToken.address);

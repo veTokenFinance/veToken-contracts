@@ -27,7 +27,7 @@ module.exports = async function (deployer, network, accounts) {
   global.created = true;
   //mint vetoke to minter contract
   const vetoken = await VeToken.at(veTokenAddress);
-  const vetokenMinterContract = await VetokenMinter.at(vetokenMinter.address);
+  const vetokenMinterContract = await VeTokenMinter.at(vetokenMinter.address);
   await vetoken.mint(vetokenMinter.address, web3.utils.toWei("95249999"), { from: vetokenOperator });
   await vetokenMinterContract.deposit(web3.utils.toWei("95249999"));
   addContract("system", "vetoken", veTokenAddress);

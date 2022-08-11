@@ -4,8 +4,8 @@ const TokenFactory = artifacts.require("TokenFactory");
 const StashFactory = artifacts.require("StashFactory");
 const VeTokenMinter = artifacts.require("VeTokenMinter");
 const PoolManager = artifacts.require("PoolManager");
-const VestedEscrow = artifacts.require('VestedEscrow');
-const TreasuryFunds = artifacts.require('TreasuryFunds');
+const VestedEscrow = artifacts.require("VestedEscrow");
+const TreasuryFunds = artifacts.require("TreasuryFunds");
 const VeToken = artifacts.require("VeToken");
 const VE3DRewardPool = artifacts.require("VE3DRewardPool");
 const { addContract } = require("./helper/addContracts");
@@ -27,7 +27,9 @@ module.exports = async function (deployer, network, accounts) {
   global.created = true;
   //mint vetoke to minter contract
   const vetoken = await VeToken.at(veTokenAddress);
-  await vetoken.mint(vetokenMinter.address, web3.utils.toWei("30000000"), { from: vetokenOperator });
+  const vetokenMinterContract = await VetokenMinter.at(vetokenMinter.address);
+  await vetoken.mint(vetokenMinter.address, web3.utils.toWei("95249999"), { from: vetokenOperator });
+  await vetokenMinterContract.deposit(web3.utils.toWei("95249999"));
   addContract("system", "vetoken", veTokenAddress);
 
   // reward factory
@@ -71,13 +73,7 @@ module.exports = async function (deployer, network, accounts) {
   const TOTAL_TIME = 1.5 * 365 * 86400; // 1,5 years
   const startTime = Math.floor(Date.now() / 1000) + 1000; // start time is within 1000 seconds, can be configured here or be updated in the contract later
   const endTime = startTime + TOTAL_TIME;
-  await deployer.deploy(VestedEscrow,
-      veTokenAddress,
-      startTime,
-      endTime,
-      ve3dRewardPool.address,
-      vetokenOperator,
-  );
+  await deployer.deploy(VestedEscrow, veTokenAddress, startTime, endTime, ve3dRewardPool.address, vetokenOperator);
   const vestedEscrow = await VestedEscrow.deployed();
   addContract("system", "vestedEscrow", vestedEscrow.address);
 

@@ -239,7 +239,7 @@ contract VE3DRewardPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
                 .add(rewardTokenInfo[_rewardToken].rewards[account]);
     }
 
-    function _earned(address _rewardToken, address account) internal view returns (uint256) {
+    function earned(address _rewardToken, address account) public view returns (uint256) {
         uint256 depositFeeRate = IVeAssetDeposit(rewardTokenInfo[_rewardToken].veAssetDeposits)
             .lockIncentive();
 
@@ -261,7 +261,7 @@ contract VE3DRewardPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         for (uint256 i = 0; i < userRewards.length; i++) {
             address token = rewardTokens.at(i);
             userRewards[i].token = token;
-            userRewards[i].amount = _earned(token, _account);
+            userRewards[i].amount = earned(token, _account);
         }
         return userRewards;
     }

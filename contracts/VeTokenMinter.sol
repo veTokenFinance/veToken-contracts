@@ -101,7 +101,7 @@ contract VeTokenMinter is OwnableUpgradeable {
     }
 
     function withdraw(address _destination, uint256 _amount) external onlyOwner {
-        require(totalSupply >= _amount, "Not enough liquidity");
+        require(maxSupply.sub(totalSupply) >= _amount, "Not enough liquidity");
 
         maxSupply = maxSupply.sub(_amount);
 

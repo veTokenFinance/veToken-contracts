@@ -94,7 +94,7 @@ contract("Voting Test", async (accounts) => {
     await veassetToken.approve(veassetDepositor.address, veAssetBalanceBefore, {
       from: userA,
     });
-    await veassetDepositor.deposit(toBN(veAssetBalanceBefore).div(2), true, ve3TokenRewardPool.address, {
+    await veassetDepositor.deposit(toBN(veAssetBalanceBefore).idiv(2), true, ve3TokenRewardPool.address, {
       from: userA,
     });
 

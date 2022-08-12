@@ -143,7 +143,7 @@ contract("veToken Staking Reward Test", async (accounts) => {
     const vetokenBalance = await vetoken.balanceOf(userA);
 
     await vetoken.approve(userC, vetokenBalance, { from: userA });
-    await vetoken.transfer(userC, toBN(vetokenBalance).div(2).integerValue().toString());
+    await vetoken.transfer(userC, toBN(vetokenBalance).idiv(2).toString());
     const stakingVetokenAmount = await vetoken.balanceOf(userC);
     console.log("userC veToken balance init after getting from userA: " + formatEther(stakingVetokenAmount.toString()));
     expect(Number(stakingVetokenAmount.toString())).to.greaterThan(0);

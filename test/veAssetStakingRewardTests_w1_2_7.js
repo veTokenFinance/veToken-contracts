@@ -147,7 +147,7 @@ contract("Staking Reward Test", async (accounts) => {
 
     // mock veAsset project distributes reward in feeDistro
     const feeTokenBal = await feeToken.balanceOf(userA);
-    await feeToken.transfer(feeDistro, toBN(feeTokenBal).div(2), { from: userA });
+    await feeToken.transfer(feeDistro, toBN(feeTokenBal).idiv(2), { from: userA });
     const feeDistroContract = new web3.eth.Contract(feeDisrtroABI, feeDistro);
     await feeDistroContract.methods.checkpoint_token().send({ from: feeDistroAdmin, gas: 8000000 });
     const feeDistroBalance = await feeToken.balanceOf(feeDistro);

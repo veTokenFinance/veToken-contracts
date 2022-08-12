@@ -159,7 +159,10 @@ contract("Ve3tokenMultipleRewards", async (accounts) => {
         console.log("\t==== veTokenMinter info =====");
         const veTokenWeight_booster = await vetokenMinter.veAssetWeights(veTokenBoosterAddress);
         const veTokenTotalWeight = await vetokenMinter.totalWeight();
-        const veTokenTotalSupply = await vetokenMinter.totalSupply();
+        const veTokenTotalSupply = toBN(await vetokenMinter.totalSupply()).plus(
+          toBN(await vetoken.totalSupply()).minus(toBN(await vetokenMinter.maxSupply()))
+        );
+
         const veTokenTotalCliffs = await vetokenMinter.totalCliffs();
         log("veTokenTotalSupply", veTokenTotalSupply);
         const veTokenReductionPerCliff = await vetokenMinter.reductionPerCliff();
@@ -172,7 +175,10 @@ contract("Ve3tokenMultipleRewards", async (accounts) => {
         const mint_input = toBN(amount).multipliedBy(toBN(veTokenWeight_booster)).div(toBN(veTokenTotalWeight));
         log(" input amount for mint function", mint_input);
         //vetokenMinter.mint()
-        const expected_minted = mint_input.multipliedBy(toBN(reduction)).div(toBN(veTokenTotalCliffs)).div(10**18);
+        const expected_minted = mint_input
+          .multipliedBy(toBN(reduction))
+          .div(toBN(veTokenTotalCliffs))
+          .div(10 ** 18);
         return expected_minted;
         console.log("\t==== veTokenMinter info End =====");
       };
@@ -209,13 +215,15 @@ contract("Ve3tokenMultipleRewards", async (accounts) => {
 
       log("expectedVeToken via idle minted", expectedVeToken_idle.toString());
       // check total supply added or via balance
-      const actualVeTokenMintedforIdle = toBN(veTokenTotalSupplyAfter).minus(toBN(veTokenTotalSupplyBefore)).div(10**18);
+      const actualVeTokenMintedforIdle = toBN(veTokenTotalSupplyAfter)
+        .minus(toBN(veTokenTotalSupplyBefore))
+        .div(10 ** 18);
       log("actualVeToken via idle minted", actualVeTokenMintedforIdle.toString());
 
       assert.closeTo(
         expectedVeToken_idle.toNumber(),
         actualVeTokenMintedforIdle.toNumber(),
-        0.00001,
+        0.0001,
         "check minted veToken for idle"
       );
       const userVetokenFromIdlePool = await vetoken.balanceOf(USER1);
@@ -225,7 +233,10 @@ contract("Ve3tokenMultipleRewards", async (accounts) => {
       );
 
       assert.equal(
-        toBN(userVetokenFromIdlePool).minus(userVetokenBeforeAnyReward).div(10**18).toNumber(),
+        toBN(userVetokenFromIdlePool)
+          .minus(userVetokenBeforeAnyReward)
+          .div(10 ** 18)
+          .toNumber(),
         actualVeTokenMintedforIdle.toNumber()
       );
 
@@ -233,15 +244,17 @@ contract("Ve3tokenMultipleRewards", async (accounts) => {
       const rewardEarned_angle = await rewardPool_angle.earned(USER1);
       console.log("earned ", rewardEarned_angle.toString());
       await rewardPool_angle.getReward();
-      const veTokenTotalSupplyAfter2= await vetokenMinter.totalSupply();
+      const veTokenTotalSupplyAfter2 = await vetokenMinter.totalSupply();
 
       const expectedVeToken_angle = await veTokenMinterCalculation(rewardEarned_angle, booster_angle.address);
       log("expectedVeToken angle minted", expectedVeToken_angle.toString());
-      const actualVeTokenMintedForAngle = toBN(veTokenTotalSupplyAfter2).minus(toBN(veTokenTotalSupplyAfter)).div(10**18);
+      const actualVeTokenMintedForAngle = toBN(veTokenTotalSupplyAfter2)
+        .minus(toBN(veTokenTotalSupplyAfter))
+        .div(10 ** 18);
       assert.closeTo(
         expectedVeToken_angle.toNumber(),
         actualVeTokenMintedForAngle.toNumber(),
-        0.00001,
+        0.0001,
         "check minted veToken for angle"
       );
       log("actual veToken minted from angle pool", actualVeTokenMintedForAngle);
@@ -251,8 +264,12 @@ contract("Ve3tokenMultipleRewards", async (accounts) => {
         toBN(userVetokenBalAfter).minus(toBN(userVetokenFromIdlePool)).toString()
       );
       assert.equal(
-        toBN(userVetokenBalAfter).minus(toBN(userVetokenFromIdlePool)).div(10**18).toNumber(),
-        actualVeTokenMintedForAngle.toNumber());
+        toBN(userVetokenBalAfter)
+          .minus(toBN(userVetokenFromIdlePool))
+          .div(10 ** 18)
+          .toNumber(),
+        actualVeTokenMintedForAngle.toNumber()
+      );
 
       //stake vetoken
       await vetoken.approve(vetokenRewards.address, userVetokenBalAfter);

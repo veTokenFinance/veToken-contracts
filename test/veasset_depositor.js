@@ -120,6 +120,5 @@ contract("VeAssetDepositor", async (accounts) => {
       console.log("new unlockTime", new_unlockTime.toString());
       expect(Number(new_unlockTime.toString()) - Number(existing_unlockTime.toString())).to.greaterThan(0);
     });
-
   });
 });

@@ -263,12 +263,11 @@ contract("Staking Reward Test", async (accounts) => {
     await ve3DillLockRewardPool.donate(donationAmount);
     const queuedRewardsAfterDonation = await ve3DillLockRewardPool.queuedRewards();
     const actualDonation = queuedRewardsAfterDonation.toString() - queuedRewardsBeforeDonation.toString();
-    const donationTokenStoredIn18Decimal = Number(actualDonation) / 10**18;
+    const donationTokenStoredIn18Decimal = Number(actualDonation) / 10 ** 18;
     const tokenConversion = 10 ** Number(lockRewardTokenDecimal.toString());
-    const distributableRewardInOriginalUnit = donationTokenStoredIn18Decimal * tokenConversion
-    console.log("actual donation",distributableRewardInOriginalUnit);
+    const distributableRewardInOriginalUnit = donationTokenStoredIn18Decimal * tokenConversion;
+    console.log("actual donation", distributableRewardInOriginalUnit);
     // this will be converted back to token decimals when distribute reward to user in getReward();
-    assert.equal(donationAmount,distributableRewardInOriginalUnit);
-
+    assert.equal(donationAmount, distributableRewardInOriginalUnit);
   });
 });

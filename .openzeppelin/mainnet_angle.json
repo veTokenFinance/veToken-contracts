@@ -1,25 +1,20 @@
 {
   "manifestVersion": "3.2",
   "admin": {
-    "address": "0xC52320e31346F1e88f532fa790d6817DbE532efd",
-    "txHash": "0xdfb77399cfe332e502f124ade62515f0162483cb400a3a19c2fe7e28467a3478"
+    "address": "0x4237f8A9dFC6528a36532E6b57f3F5722C35F9eB",
+    "txHash": "0xdd515eaef457cd7b28eae99ffa81bb65f93d0726b73704a974027d974fef40de"
   },
   "proxies": [
     {
-      "address": "0xA9c7B33ecDf7BB4b91809AFA316fdf09BFA9beC4",
-      "txHash": "0x69a20507083c170455a98d9bb1e008d64047107a1aa7eb517502d315009d6646",
-      "kind": "transparent"
-    },
-    {
-      "address": "0xE09a9a2a836B35cA6516A65540984B66569f9eA7",
-      "txHash": "0xd225341ffd7372f553b5836fbcfda132460a00538e6aa33e6ed1dbb4bbe70112",
+      "address": "0x9f598a12d57AB1aFc393CDF3a93bcE86Abf466bD",
+      "txHash": "0xfc8c11d54f45a419eb9567b76f477edc8fe952b544b19f8a3309c6d417e7cf44",
       "kind": "transparent"
     }
   ],
   "impls": {
     "9deb2610f2f2f7c6c0deb54ada11ecec23b896614d17d49b05f2bd4bf676aa16": {
-      "address": "0x360784Af4a08154De16f1241009836C618dE6855",
-      "txHash": "0x7435f1d1b9a2c3533a0576a879b7c297ee431e1b153dd18ea42d7dad7483dce8",
+      "address": "0x4925e950Ed96B17D476b6F793C932a1D20624dE3",
+      "txHash": "0x92424e6fe96c872ca8c3907d4a9150b4e58183487dd27e4dcaa578432e0552f6",
       "layout": {
         "storage": [
           {
@@ -86,7 +81,7 @@
           {
             "contract": "VoterProxyV2",
             "label": "escrowModle",
-            "type": "t_enum(EscrowModle)9616",
+            "type": "t_enum(EscrowModle)9725",
             "src": "..\\project:\\contracts\\VoterProxyV2.sol:30"
           },
           {
@@ -115,7 +110,7 @@
           "t_string_storage": {
             "label": "string"
           },
-          "t_enum(EscrowModle)9616": {
+          "t_enum(EscrowModle)9725": {
             "label": "enum IVoteEscrow.EscrowModle",
             "members": [
               "PICKLE",

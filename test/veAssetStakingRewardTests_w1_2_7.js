@@ -147,7 +147,7 @@ contract("Staking Reward Test", async (accounts) => {
 
     // mock veAsset project distributes reward in feeDistro
     const feeTokenBal = await feeToken.balanceOf(userA);
-    await feeToken.transfer(feeDistro, toBN(feeTokenBal).div(2), { from: userA });
+    await feeToken.transfer(feeDistro, toBN(feeTokenBal).idiv(2), { from: userA });
     const feeDistroContract = new web3.eth.Contract(feeDisrtroABI, feeDistro);
     await feeDistroContract.methods.checkpoint_token().send({ from: feeDistroAdmin, gas: 8000000 });
     const feeDistroBalance = await feeToken.balanceOf(feeDistro);
@@ -263,12 +263,11 @@ contract("Staking Reward Test", async (accounts) => {
     await ve3DillLockRewardPool.donate(donationAmount);
     const queuedRewardsAfterDonation = await ve3DillLockRewardPool.queuedRewards();
     const actualDonation = queuedRewardsAfterDonation.toString() - queuedRewardsBeforeDonation.toString();
-    const donationTokenStoredIn18Decimal = Number(actualDonation) / 10**18;
+    const donationTokenStoredIn18Decimal = Number(actualDonation) / 10 ** 18;
     const tokenConversion = 10 ** Number(lockRewardTokenDecimal.toString());
-    const distributableRewardInOriginalUnit = donationTokenStoredIn18Decimal * tokenConversion
-    console.log("actual donation",distributableRewardInOriginalUnit);
+    const distributableRewardInOriginalUnit = donationTokenStoredIn18Decimal * tokenConversion;
+    console.log("actual donation", distributableRewardInOriginalUnit);
     // this will be converted back to token decimals when distribute reward to user in getReward();
-    assert.equal(donationAmount,distributableRewardInOriginalUnit);
-
+    assert.equal(donationAmount, distributableRewardInOriginalUnit);
   });
 });

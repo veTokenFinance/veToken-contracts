@@ -1,0 +1,143 @@
+{
+  "manifestVersion": "3.2",
+  "admin": {
+    "address": "0xb849f71e009cA5998f4c03D66213540c74D400CF",
+    "txHash": "0x8b2f0cdac2d6a65620552474f4095e4cf6fd548d3dbb8f1a463fcf44bfa841bc"
+  },
+  "proxies": [
+    {
+      "address": "0x8DD68417b2e9369610b808A0c1FDC16782AF88BC",
+      "txHash": "0xd511556e69d1781efa402b9d17417cbdffe789c9e1a9eb78add5b2d2e55a4739",
+      "kind": "transparent"
+    }
+  ],
+  "impls": {
+    "9deb2610f2f2f7c6c0deb54ada11ecec23b896614d17d49b05f2bd4bf676aa16": {
+      "address": "0xe7EE6296a32D708327807676DdF58b1D099A870C",
+      "txHash": "0x3d28a6b7fc38aa3ecaf1c412de96fc0d250ddcdffd28d91a618f2fcbdb3fb0ba",
+      "layout": {
+        "storage": [
+          {
+            "contract": "Initializable",
+            "label": "_initialized",
+            "type": "t_uint8",
+            "src": "..\\@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:62",
+            "retypedFrom": "bool"
+          },
+          {
+            "contract": "Initializable",
+            "label": "_initializing",
+            "type": "t_bool",
+            "src": "..\\@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:67"
+          },
+          {
+            "contract": "VoterProxyV2",
+            "label": "veAsset",
+            "type": "t_address",
+            "src": "..\\project:\\contracts\\VoterProxyV2.sol:21"
+          },
+          {
+            "contract": "VoterProxyV2",
+            "label": "escrow",
+            "type": "t_address",
+            "src": "..\\project:\\contracts\\VoterProxyV2.sol:22"
+          },
+          {
+            "contract": "VoterProxyV2",
+            "label": "gaugeProxy",
+            "type": "t_address",
+            "src": "..\\project:\\contracts\\VoterProxyV2.sol:23"
+          },
+          {
+            "contract": "VoterProxyV2",
+            "label": "minter",
+            "type": "t_address",
+            "src": "..\\project:\\contracts\\VoterProxyV2.sol:24"
+          },
+          {
+            "contract": "VoterProxyV2",
+            "label": "owner",
+            "type": "t_address",
+            "src": "..\\project:\\contracts\\VoterProxyV2.sol:26"
+          },
+          {
+            "contract": "VoterProxyV2",
+            "label": "operator",
+            "type": "t_address",
+            "src": "..\\project:\\contracts\\VoterProxyV2.sol:27"
+          },
+          {
+            "contract": "VoterProxyV2",
+            "label": "depositor",
+            "type": "t_address",
+            "src": "..\\project:\\contracts\\VoterProxyV2.sol:28"
+          },
+          {
+            "contract": "VoterProxyV2",
+            "label": "name",
+            "type": "t_string_storage",
+            "src": "..\\project:\\contracts\\VoterProxyV2.sol:29"
+          },
+          {
+            "contract": "VoterProxyV2",
+            "label": "escrowModle",
+            "type": "t_enum(EscrowModle)9725",
+            "src": "..\\project:\\contracts\\VoterProxyV2.sol:30"
+          },
+          {
+            "contract": "VoterProxyV2",
+            "label": "protectedTokens",
+            "type": "t_mapping(t_address,t_bool)",
+            "src": "..\\project:\\contracts\\VoterProxyV2.sol:32"
+          },
+          {
+            "contract": "VoterProxyV2",
+            "label": "stashPool",
+            "type": "t_mapping(t_address,t_bool)",
+            "src": "..\\project:\\contracts\\VoterProxyV2.sol:33"
+          },
+          {
+            "contract": "VoterProxyV2",
+            "label": "votes",
+            "type": "t_mapping(t_bytes32,t_bool)",
+            "src": "..\\project:\\contracts\\VoterProxyV2.sol:34"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address"
+          },
+          "t_string_storage": {
+            "label": "string"
+          },
+          "t_enum(EscrowModle)9725": {
+            "label": "enum IVoteEscrow.EscrowModle",
+            "members": [
+              "PICKLE",
+              "CURVE",
+              "RIBBON",
+              "IDLE",
+              "ANGLE",
+              "BALANCER"
+            ]
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)"
+          },
+          "t_bool": {
+            "label": "bool"
+          },
+          "t_mapping(t_bytes32,t_bool)": {
+            "label": "mapping(bytes32 => bool)"
+          },
+          "t_bytes32": {
+            "label": "bytes32"
+          },
+          "t_uint8": {
+            "label": "uint8"
+          }
+        }
+      }
+    }
+  }
+}

@@ -131,7 +131,7 @@ contract("veToken Locking Reward Test", async (accounts) => {
 
     const vetokenBalance = await vetoken.balanceOf(userA);
     await vetoken.approve(userB, vetokenBalance, { from: userA });
-    await vetoken.transfer(userB, toBN(vetokenBalance).div(2));
+    await vetoken.transfer(userB, toBN(vetokenBalance).idiv(2).toString());
     const stakingVetokenAmount = await vetoken.balanceOf(userB);
     console.log("userB veToken balance init after getting from userA: " + formatEther(stakingVetokenAmount.toString()));
     expect(Number(stakingVetokenAmount.toString())).to.greaterThan(0);
@@ -293,7 +293,7 @@ contract("veToken Locking Reward Test", async (accounts) => {
     await veTokenLocker.processExpiredLocks(true, { from: userB });
     const vetokenBalance2 = await vetoken.balanceOf(userA);
     await vetoken.approve(userB, vetokenBalance2, { from: userA });
-    await vetoken.transfer(userB, toBN(vetokenBalance2).div(2));
+    await vetoken.transfer(userB, toBN(vetokenBalance2).idiv(2).toString());
     const veTokenUserBBalance2 = await vetoken.balanceOf(userB);
     console.log("veTokenUserB: " + veTokenUserBBalance2);
     await vetoken.approve(veTokenLocker.address, veTokenUserBBalance2, { from: userB });
@@ -357,6 +357,9 @@ contract("veToken Locking Reward Test", async (accounts) => {
     console.log("Queued 6 decimal reward periodFinish after:", addedAngle_sanUSDC_EURAfter.periodFinish.toNumber());
     console.log("Queued 6 decimal reward rewardRate after:", addedAngle_sanUSDC_EURAfter.rewardRate.toNumber());
 
-    assert.isAbove(Number(toBN(addedAngle_sanUSDC_EURAfter.queuedRewards).minus(toBN(addedAngle_sanUSDC_EUR.queuedRewards))), 0);
+    assert.isAbove(
+      Number(toBN(addedAngle_sanUSDC_EURAfter.queuedRewards).minus(toBN(addedAngle_sanUSDC_EUR.queuedRewards))),
+      0
+    );
   });
 });

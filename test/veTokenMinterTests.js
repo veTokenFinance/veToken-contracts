@@ -13,13 +13,12 @@ const PoolManager = artifacts.require("PoolManager");
 const VeToken = artifacts.require("VeToken");
 const IERC20 = artifacts.require("IERC20");
 
-const { loadContracts, contractAddresseList} = require("./helper/dumpAddresses");
+const { loadContracts, contractAddresseList } = require("./helper/dumpAddresses");
 const { toBN, log } = require("./helper/utils");
 
 var jsonfile = require("jsonfile");
 var baseContractList = jsonfile.readFileSync("contracts.json");
 const Reverter = require("./helper/reverter");
-
 
 contract("Ve3tokenMultipleRewards", async (accounts) => {
   let vetokenMinter;
@@ -47,7 +46,6 @@ contract("Ve3tokenMultipleRewards", async (accounts) => {
   const USER1 = accounts[0];
   const USER2 = accounts[1];
   const poolId = 0;
-
 
   before("setup", async function () {
     network = await loadContracts();
@@ -79,22 +77,16 @@ contract("Ve3tokenMultipleRewards", async (accounts) => {
   afterEach("revert", reverter.revert);
 
   describe("test veTokenMinter", async () => {
-
-
     let depositAmount;
     let rewardPool;
 
-
     beforeEach("setup", async function () {
-
       depositAmount = await lpToken.balanceOf(USER1);
       await lpToken.approve(booster.address, depositAmount);
       rewardPool = await BaseRewardPool.at((await booster.poolInfo(poolId))[3]);
     });
 
     it("remove operator and add operator", async function () {
-
-
       const veTokenMinterCalculation = async (to, amount) => {
         console.log("\t==== veTokenMinter info =====");
 
@@ -141,13 +133,15 @@ contract("Ve3tokenMultipleRewards", async (accounts) => {
         const minted = mintedTotalVeTokens[i] - mintedTotalVeTokens[i - 1];
         mintedVeTokens.push(minted);
       }
-       // minted veToken reduces as cliff changes by increased Total Supply
+      // minted veToken reduces as cliff changes by increased Total Supply
       for (var i = 1; i < mintedVeTokens.length; i++) {
-        console.log(toBN(mintedVeTokens[i]).div(10**18).toString());
-        assert.isAbove(Number(mintedVeTokens[i-1]-mintedVeTokens[i]), 0);
+        console.log(
+          toBN(mintedVeTokens[i])
+            .div(10 ** 18)
+            .toString()
+        );
+        assert.isAbove(Number(mintedVeTokens[i - 1] - mintedVeTokens[i]), 0);
       }
     });
-
-    });
   });
-
+});

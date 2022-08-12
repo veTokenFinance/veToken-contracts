@@ -111,3 +111,5 @@ contracts.json
 build/
 extracted
 .env
+# OpenZeppelin
+.openzeppelin/unknown-*.json

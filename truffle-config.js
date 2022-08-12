@@ -57,6 +57,7 @@ module.exports = {
       disableConfirmationListener: true,
     },
     idle: {
+      provider: () => new Web3.providers.HttpProvider("http://127.0.0.1:8549"),
       host: "127.0.0.1",
       port: 8549,
       network_id: "*",
@@ -65,6 +66,7 @@ module.exports = {
       skipDryRun: true,
     },
     angle: {
+      provider: () => new Web3.providers.HttpProvider("http://127.0.0.1:8550"),
       host: "127.0.0.1",
       port: 8550,
       network_id: "*",
@@ -104,7 +106,7 @@ module.exports = {
         new HDWalletProvider([process.env.PRIVATE_KEY], `wss://eth-mainnet.g.alchemy.com/v2/${process.env.PROJECT_ID}`),
       network_id: 1, // Mainnet's id
       gas: 8000000,
-      gasPrice: 7000000000,
+      gasPrice: 9000000000,
       skipDryRun: true,
     },
     avalanche_testnet: {

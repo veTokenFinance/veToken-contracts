@@ -76,26 +76,6 @@ contract VeTokenMinter is OwnableUpgradeable {
         }
     }
 
-    function earned(uint256 _amount) external view returns (uint256 _earned) {
-        require(operators.contains(_msgSender()), "not an operator");
-
-        uint256 supply = totalSupply.add(_getActualTotalSupply());
-
-        uint256 cliff = supply.div(reductionPerCliff);
-
-        if (cliff < totalCliffs) {
-            uint256 reduction = totalCliffs.sub(cliff);
-
-            _amount = _amount.mul(reduction).div(totalCliffs);
-
-            uint256 amtTillMax = maxTotalSupply.sub(supply);
-            if (_amount > amtTillMax) {
-                _amount = amtTillMax;
-            }
-            _earned = _amount;
-        }
-    }
-
     function _getActualTotalSupply() internal view returns (uint256) {
         return veToken.totalSupply().sub(maxSupply);
     }

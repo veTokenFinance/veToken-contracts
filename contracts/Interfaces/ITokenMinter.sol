@@ -6,8 +6,6 @@ interface ITokenMinter {
 
     function veAssetWeights(address) external view returns (uint256);
 
-    function earned(uint256 _amount) external view returns (uint256);
-
     function mint(address, uint256) external;
 
     function mint(address) external;

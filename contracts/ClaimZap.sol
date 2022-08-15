@@ -2,45 +2,19 @@
 pragma solidity 0.8.7;
 
 import "./helper/MathUtil.sol";
+import "./Interfaces/IBasicRewards.sol";
+import "./Interfaces/IVeTokenRewards.sol";
+import "./Interfaces/IVeAssetDeposit.sol";
+import "./Interfaces/ISwapExchange.sol";
+import "./Interfaces/IVe3dLocker.sol";
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '@openzeppelin/contracts/utils/math/SafeMath.sol';
-
-
-interface IBasicRewards{
-    function getReward(address _account, bool _claimExtras) external;
-    function getReward(address _account) external;
-    function getReward(address _account, address _token) external;
-    function stakeFor(address, uint256) external;
-}
-
-interface IVeTokenRewards {
-    function getReward(address _account, bool _claimExtras, bool _stake) external;
-}
 
 // ToDo: delete when we confirm it's obsolete
 //interface IChefRewards{
 //    function claim(uint256 _pid, address _account) external;
 //}
-
-interface IVe3TokenDeposit {
-    function deposit(uint256, bool) external;
-}
-
-interface ISwapExchange {
-
-    function exchange(
-        int128,
-        int128,
-        uint256,
-        uint256
-    ) external returns (uint256);
-}
-
-interface IVE3DLocker {
-    function getReward(address _account, bool _stake) external;
-    function lock(address _account, uint256 _amount) external;
-}
 
 contract ClaimZap{
     using SafeERC20 for IERC20;
@@ -52,10 +26,8 @@ contract ClaimZap{
     address public veAssetDeposit;
     address public ve3TokenRewards;
     address public ve3dRewards;
-
     address public exchange;
-
-    address public locker;
+    address public ve3dLocker;
 
     address public immutable owner;
 
@@ -87,7 +59,7 @@ contract ClaimZap{
         ve3TokenRewards = _ve3TokenRewards;
         ve3dRewards = _ve3dRewards;
         exchange = _exchange;
-        locker = _locker;
+        ve3dLocker = _locker;
         owner = msg.sender;
     }
 
@@ -108,8 +80,8 @@ contract ClaimZap{
         IERC20(ve3Token).safeApprove(ve3TokenRewards, 0);
         IERC20(ve3Token).safeApprove(ve3TokenRewards, type(uint256).max);
 
-        IERC20(veToken).safeApprove(locker, 0);
-        IERC20(veToken).safeApprove(locker, type(uint256).max);
+        IERC20(veToken).safeApprove(ve3dLocker, 0);
+        IERC20(veToken).safeApprove(ve3dLocker, type(uint256).max);
     }
 
     function CheckOption(uint256 _mask, uint256 _flag) internal pure returns(bool){
@@ -169,7 +141,7 @@ contract ClaimZap{
 
         //claim from locker
         if(CheckOption(options,uint256(Options.ClaimLockedVeToken))){
-            IVE3DLocker(locker).getReward(msg.sender,CheckOption(options,uint256(Options.ClaimLockedVeTokenStake)));
+            IVe3dLocker(ve3dLocker).getReward(msg.sender,CheckOption(options,uint256(Options.ClaimLockedVeTokenStake)));
         }
 
         //reset remove balances if we want to also stake/lock funds already in our wallet
@@ -190,7 +162,7 @@ contract ClaimZap{
                     ISwapExchange(exchange).exchange(0,1, veAssetBalance,minAmountOut);
                 }else{
                     //deposit
-                    IVe3TokenDeposit(veAssetDeposit).deposit(veAssetBalance,CheckOption(options,uint256(Options.LockVeAssetDeposit)));
+                    IVeAssetDeposit(veAssetDeposit).deposit(veAssetBalance,CheckOption(options,uint256(Options.LockVeAssetDeposit)));
                 }
                 //get ve3Token amount
                 uint256 ve3TokenBalance = IERC20(ve3Token).balanceOf(address(this));
@@ -207,7 +179,7 @@ contract ClaimZap{
                 //pull veToken
                 IERC20(veToken).safeTransferFrom(msg.sender, address(this), veTokenBalance);
                 if(CheckOption(options,uint256(Options.LockVeToken))){
-                    IVE3DLocker(locker).lock(msg.sender, veTokenBalance);
+                    IVe3dLocker(ve3dLocker).lock(msg.sender, veTokenBalance);
                 }else{
                     //stake for msg.sender
                     IBasicRewards(ve3dRewards).stakeFor(msg.sender, veTokenBalance);

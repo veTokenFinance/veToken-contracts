@@ -20,6 +20,9 @@ module.exports = async function (deployer) {
     }
   );
 
+  // for upgrader
+  // await prepareUpgrade(proxyaddress, VoterProxyV2, { deployer });
+
   logAddress("idle voter proxy", voter_idle.address);
 
   // change the owner addres to mulitsig wallet

@@ -96,7 +96,7 @@ module.exports = async function (deployer, network, accounts) {
   logTransaction(await voter.setOperator(booster.address), "voter setOperator");
 
   // VE3Token
-  await deployer.deploy(VE3Token, "VeToken Finance stkIDLE", "ve3RBN");
+  await deployer.deploy(VE3Token, "VeToken Finance stkIDLE", "ve3Idle");
   const ve3Token = await VE3Token.deployed();
   addContract("system", "ve3_idle", ve3Token.address);
 

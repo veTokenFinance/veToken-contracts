@@ -34,7 +34,7 @@ contract VeTokenMinter is OwnableUpgradeable {
 
     ///@dev weight is 10**25 precision
     function addOperator(address _newOperator, uint256 _newWeight) public onlyOwner {
-        require(_newWeight > 0 && _newWeight <= 100 * 10**25, "Invalid weight");
+        require(_newWeight > 0, "Invalid weight");
         operators.add(_newOperator);
         totalWeight = totalWeight.sub(veAssetWeights[_newOperator]);
         veAssetWeights[_newOperator] = _newWeight;

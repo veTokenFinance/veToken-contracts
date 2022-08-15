@@ -10,13 +10,14 @@ import "./Interfaces/IVe3dLocker.sol";
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '@openzeppelin/contracts/utils/math/SafeMath.sol';
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 // ToDo: delete when we confirm it's obsolete
 //interface IChefRewards{
 //    function claim(uint256 _pid, address _account) external;
 //}
 
-contract ClaimZap{
+contract ClaimZap is Ownable{
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
@@ -28,8 +29,6 @@ contract ClaimZap{
     address public ve3dRewards;
     address public exchange;
     address public ve3dLocker;
-
-    address public immutable owner;
 
     enum Options{
         ClaimVeToken, //1
@@ -60,15 +59,13 @@ contract ClaimZap{
         ve3dRewards = _ve3dRewards;
         exchange = _exchange;
         ve3dLocker = _locker;
-        owner = msg.sender;
     }
 
     function getName() external pure returns (string memory) {
         return "ClaimZap V2.0";
     }
 
-    function setApprovals() external {
-        require(msg.sender == owner, "!auth");
+    function setApprovals() external onlyOwner{
         IERC20(veAsset).safeApprove(veAssetDeposit, 0);
         IERC20(veAsset).safeApprove(veAssetDeposit, type(uint256).max);
         IERC20(veAsset).safeApprove(exchange, 0);

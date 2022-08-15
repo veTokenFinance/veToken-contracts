@@ -12,11 +12,6 @@ import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '@openzeppelin/contracts/utils/math/SafeMath.sol';
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-// ToDo: delete when we confirm it's obsolete
-//interface IChefRewards{
-//    function claim(uint256 _pid, address _account) external;
-//}
-
 contract ClaimZap is Ownable{
     using SafeERC20 for IERC20;
     using SafeMath for uint256;

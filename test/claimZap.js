@@ -164,7 +164,7 @@ contract('Test claim zap', async accounts => {
     await booster.earmarkRewards(0);
 
     let options = 1 + 4 + 8; // ClaimVetoken, ClaimVe3Token, ClaimLockedVeToken
-    await zap.claimRewards([lPRewardPool.address, ve3TokenRewardPool.address], [ve3TokenLockRewardPool.address], [], [], 0, 0, 0, options, {from: userA, gasPrice: 0});
+    await zap.claimRewards([lPRewardPool.address, ve3TokenRewardPool.address], [ve3TokenLockRewardPool.address], [], [], 0, 0, 0, options, {from: userA});
 
     console.log('get veAsset locking rewards:', lockRewardPerToken.toString(), stakeLockRewardPerToken.toString());
     console.log('user A rewards in ve3TokenLockRewardPool from locking', userARewardInlockRewardPool.toString());
@@ -200,7 +200,7 @@ contract('Test claim zap', async accounts => {
     console.log('user A new reward in RewardPool', userARewardInRewardPool3.toString());
     assert.isAbove(Number(userARewardInRewardPool3), 0);
 
-    await zap.claimRewards([lPRewardPool.address, ve3TokenRewardPool.address], [ve3TokenLockRewardPool.address], [], [],0, 0, 0, options, {from: userA, gasPrice: 0});
+    await zap.claimRewards([lPRewardPool.address, ve3TokenRewardPool.address], [ve3TokenLockRewardPool.address], [], [],0, 0, 0, options, {from: userA});
 
     const veAssetBalanceAfterRewardClaimed2 = await veAsset.balanceOf(userA);
     const veAssetEarned = toBN(veAssetBalanceAfterRewardClaimed2).minus(veAssetTokenBalanceBefore);

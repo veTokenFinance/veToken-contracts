@@ -80,6 +80,15 @@ contract ClaimZap is Ownable{
         return (_mask & (1<<_flag)) != 0;
     }
 
+    /// @notice Claim rewards from multiple reward pools in one transaction and allow passing options for staking, claiming locked balances etc.
+    /// @param rewardContracts Array of contract addresses to claim rewards from
+    /// @param extraRewardContracts Array of contract addresses to claim extra rewards from
+    /// @param tokenRewardContracts Array of contract addresses to claim multiple reward tokens from
+    /// @param tokenRewardTokens Array of token addresses to claim in multiple token reward contracts
+    /// @param depositVeAssetMaxAmount Maximum amount of VeAsset to lock and stake
+    /// @param minAmountOut Minimum amount to swap in exchange
+    /// @param depositVeTokenMaxAmount Maximum amount of VeToken to stake
+    /// @param options number that represents the options for claiming extras
     function claimRewards(
         address[] calldata rewardContracts,
         address[] calldata extraRewardContracts,
@@ -93,7 +102,7 @@ contract ClaimZap is Ownable{
         uint256 veAssetBalance = IERC20(veAsset).balanceOf(msg.sender);
         uint256 veTokenBalance = IERC20(veToken).balanceOf(msg.sender);
 
-        //claim from main curve LP pools
+        //claim from main LP pools
         for(uint256 i = 0; i < rewardContracts.length; i++){
             IBasicRewards(rewardContracts[i]).getReward(msg.sender,true);
         }
@@ -110,6 +119,13 @@ contract ClaimZap is Ownable{
         _claimExtras(depositVeAssetMaxAmount,minAmountOut, depositVeTokenMaxAmount, veAssetBalance, veTokenBalance,options);
     }
 
+    /// @notice Claim and stake, veToken rewards, claim from ve3Token rewards, claim from locker, lock upto given amount of veAsset and stake (and swap if needed), stake up to given amount of veToken.
+    /// @param depositVeAssetMaxAmount Maximum amount of VeAsset to lock and stake
+    /// @param minAmountOut Minimum amount to swap in exchange
+    /// @param depositVeTokenMaxAmount Maximum amount of VeToken to stake
+    /// @param removeVeAssetBalance Amount of veAsset to remove (balance), used when depositing veAsset
+    /// @param removeVeTokenBalance Amount of veToken to remove (balance), used when depositing veToken
+    /// @param options number that represents the options for claiming extras
     function _claimExtras(
         uint256 depositVeAssetMaxAmount,
         uint256 minAmountOut,

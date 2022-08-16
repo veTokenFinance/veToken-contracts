@@ -92,10 +92,10 @@ module.exports = async function (deployer, network, accounts) {
   // fund voter proxy angle token
   logTransaction(await angle.transfer(voter.address, web3.utils.toWei("1000"), { from: admin }), "fund voter angle");
   // fund fee token to admin
-  logTransaction(
-    await feeToken.transfer(admin, web3.utils.toWei("10000", "mwei"), { from: feeTokenHolder }),
-    "fund admin fee token"
-  );
+  // logTransaction(
+  //   await feeToken.transfer(admin, web3.utils.toWei("10000", "mwei"), { from: feeTokenHolder }),
+  //   "fund admin fee token"
+  // );
   // vetoken
   addContract("system", "angle_address", angle.address);
   addContract("system", "angle_escrow", veANGLE);
@@ -183,11 +183,11 @@ module.exports = async function (deployer, network, accounts) {
   let exchangeAddress = await sushiV2Factory.methods.getPair(angle.address, ve3Token.address).call();
 
   if(exchangeAddress === constants.ZERO_ADDRESS){
-    let newExchangeResult = await sushiV2Factory.methods.createPair(angle.address, ve3Token.address).send({from: angleAdmin});
-    exchangeAddress = newExchangeResult.logs[0].args.pair;
+    const createPairTx = sushiV2Factory.methods.createPair(angle.address, ve3Token.address);
+    const gasUsed = await createPairTx.estimateGas();
+    let newExchangeResult = await createPairTx.send({ from: angleAdmin, gas: gasUsed });
+    exchangeAddress = newExchangeResult.events.PairCreated.returnValues.pair;
   }
-
-  console.log("exchangeAddress", exchangeAddress);
 
   // ClaimZap setup
   await deployer.deploy(ClaimZap, angle.address, contractList.system.vetoken, ve3Token.address, depositor.address, ve3TokenRewardPool.address, ve3dRewardPool.address, exchangeAddress, ve3dLocker.address);

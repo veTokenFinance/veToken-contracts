@@ -3,12 +3,25 @@
 	"inputs": [
 	  {
 		"internalType": "address",
-		"name": "_feeToSetter",
+		"name": "tokenA",
+		"type": "address"
+	  },
+	  {
+		"internalType": "address",
+		"name": "tokenB",
+		"type": "address"
+	  }
+	],
+	"name": "createPair",
+	"outputs": [
+	  {
+		"internalType": "address",
+		"name": "pair",
 		"type": "address"
 	  }
 	],
 	"stateMutability": "nonpayable",
-	"type": "constructor"
+	"type": "function"
   },
   {
 	"anonymous": false,
@@ -53,7 +66,7 @@
 	"outputs": [
 	  {
 		"internalType": "address",
-		"name": "",
+		"name": "pair",
 		"type": "address"
 	  }
 	],
@@ -71,30 +84,6 @@
 	  }
 	],
 	"stateMutability": "view",
-	"type": "function"
-  },
-  {
-	"inputs": [
-	  {
-		"internalType": "address",
-		"name": "tokenA",
-		"type": "address"
-	  },
-	  {
-		"internalType": "address",
-		"name": "tokenB",
-		"type": "address"
-	  }
-	],
-	"name": "createPair",
-	"outputs": [
-	  {
-		"internalType": "address",
-		"name": "pair",
-		"type": "address"
-	  }
-	],
-	"stateMutability": "nonpayable",
 	"type": "function"
   },
   {
@@ -127,12 +116,12 @@
 	"inputs": [
 	  {
 		"internalType": "address",
-		"name": "",
+		"name": "tokenA",
 		"type": "address"
 	  },
 	  {
 		"internalType": "address",
-		"name": "",
+		"name": "tokenB",
 		"type": "address"
 	  }
 	],
@@ -140,76 +129,11 @@
 	"outputs": [
 	  {
 		"internalType": "address",
-		"name": "",
+		"name": "pair",
 		"type": "address"
 	  }
 	],
 	"stateMutability": "view",
-	"type": "function"
-  },
-  {
-	"inputs": [],
-	"name": "migrator",
-	"outputs": [
-	  {
-		"internalType": "address",
-		"name": "",
-		"type": "address"
-	  }
-	],
-	"stateMutability": "view",
-	"type": "function"
-  },
-  {
-	"inputs": [],
-	"name": "pairCodeHash",
-	"outputs": [
-	  {
-		"internalType": "bytes32",
-		"name": "",
-		"type": "bytes32"
-	  }
-	],
-	"stateMutability": "pure",
-	"type": "function"
-  },
-  {
-	"inputs": [
-	  {
-		"internalType": "address",
-		"name": "_feeTo",
-		"type": "address"
-	  }
-	],
-	"name": "setFeeTo",
-	"outputs": [],
-	"stateMutability": "nonpayable",
-	"type": "function"
-  },
-  {
-	"inputs": [
-	  {
-		"internalType": "address",
-		"name": "_feeToSetter",
-		"type": "address"
-	  }
-	],
-	"name": "setFeeToSetter",
-	"outputs": [],
-	"stateMutability": "nonpayable",
-	"type": "function"
-  },
-  {
-	"inputs": [
-	  {
-		"internalType": "address",
-		"name": "_migrator",
-		"type": "address"
-	  }
-	],
-	"name": "setMigrator",
-	"outputs": [],
-	"stateMutability": "nonpayable",
 	"type": "function"
   }
 ]

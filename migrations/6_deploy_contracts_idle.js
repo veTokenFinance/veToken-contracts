@@ -170,12 +170,11 @@ module.exports = async function (deployer, network, accounts) {
   let exchangeAddress = await sushiV2Factory.methods.getPair(idle.address, ve3Token.address).call();
 
   if(exchangeAddress === constants.ZERO_ADDRESS){
-    let newExchangeResult = await sushiV2Factory.methods.createPair(idle.address, ve3Token.address).send({from: idleAdmin});
-    console.log(newExchangeResult);
-    exchangeAddress = newExchangeResult.logs[0].args.pair;
+    const createPairTx = sushiV2Factory.methods.createPair(idle.address, ve3Token.address);
+    const gasUsed = await createPairTx.estimateGas();
+    let newExchangeResult = await createPairTx.send({ from: idleAdmin, gas: gasUsed });
+    exchangeAddress = newExchangeResult.events.PairCreated.returnValues.pair;
   }
-
-  console.log("exchangeAddress", exchangeAddress);
 
   // ClaimZap setup
   await deployer.deploy(ClaimZap, idle.address, contractList.system.vetoken, ve3Token.address, depositor.address, ve3TokenRewardPool.address, ve3dRewardPool.address, exchangeAddress, ve3dLocker.address);

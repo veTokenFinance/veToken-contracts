@@ -6,6 +6,10 @@ const Reverter = require('./helper/reverter');
 const {logTransaction} = require('../migrations/helper/logger');
 const {formatEther} = require('@ethersproject/units');
 var contractList = jsonfile.readFileSync('./contracts.json');
+const {
+  loadContracts,
+  contractAddresseList,
+} = require("./helper/dumpAddresses");
 
 const IERC20 = artifacts.require('IERC20');
 const IExchange = artifacts.require('IExchange');
@@ -58,17 +62,19 @@ async function logBalances() {
 
 contract('Test claim zap', async accounts => {
   before('setup', async () => {
+    await loadContracts();
+    console.log(contractAddresseList);
     veToken = await IERC20.at(contractList.system.vetoken);
-    ve3Token = await IERC20.at(contractList.system.ve3_idle);
-    veAsset = await IERC20.at(contractList.system.idle_address);
-    depositor = await VeAssetDepositor.at(contractList.system.idle_depositor);
+    ve3Token = await IERC20.at(contractAddresseList[5]);
+    veAsset = await IERC20.at(contractAddresseList[0]);
+    depositor = await VeAssetDepositor.at(contractAddresseList[6]);
     exchange = await IExchange.at('0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F');
     weth = await IERC20.at('0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2');
-    ve3TokenRewardPool = await BaseRewardPool.at(contractList.system.idle_ve3TokenRewardPool);
+    ve3TokenRewardPool = await BaseRewardPool.at(contractAddresseList[7]);
     ve3dRewardPool = await VE3DRewardPool.at(contractList.system.vetokenRewards);
     ve3dLocker = await VE3DLocker.at(contractList.system.ve3dLocker);
-    booster = await Booster.at(contractList.system.idle_booster);
-    lpToken = await IERC20.at(contractList.system.idle_lptoken);
+    booster = await Booster.at(contractAddresseList[4]);
+    lpToken = await IERC20.at(contractAddresseList[2]);
     feeToken = await IERC20.at(await booster.feeToken());
 
     userA = accounts[0];

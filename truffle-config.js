@@ -22,10 +22,12 @@
 // const infuraKey = "fj4jll3k.....";
 //
 // const fs = require('fs');
-// const mnemonic = fs.readFileSync(".secret").toString().trim();
+
 const HDWalletProvider = require("@truffle/hdwallet-provider");
 
-let secret = require("./secret.json");
+const dotenv = require("dotenv");
+const Web3 = require("web3");
+dotenv.config();
 
 module.exports = {
   /**
@@ -50,47 +52,72 @@ module.exports = {
       port: 8545,
       network_id: "*",
       gas: 8000000,
-      gasPrice: 50000000000,
+      gasPrice: 100000000000,
       skipDryRun: true,
+      disableConfirmationListener: true,
     },
-    server_fork: {
-      host: "66.29.155.152",
-      port: 8545,
-      network_id: "1",
+    idle: {
+      provider: () => new Web3.providers.HttpProvider("http://127.0.0.1:8549"),
+      host: "127.0.0.1",
+      port: 8549,
+      network_id: "*",
       gas: 8000000,
       gasPrice: 50000000000,
       skipDryRun: true,
     },
+    angle: {
+      provider: () => new Web3.providers.HttpProvider("http://127.0.0.1:8550"),
+      host: "127.0.0.1",
+      port: 8550,
+      network_id: "*",
+      gas: 8000000,
+      //gasPrice: 50000000000,
+      skipDryRun: true,
+    },
+    server_fork: {
+      provider: () => new Web3.providers.HttpProvider("http://66.29.155.152:8545"),
+      host: "66.29.155.152",
+      port: 8545,
+      network_id: "1",
+      gas: 8000000,
+      gasPrice: 100000000000,
+      skipDryRun: true,
+      networkCheckTimeout: 10000,
+      timeoutBlocks: 200,
+    },
     kovan: {
-      provider: () => new HDWalletProvider(secret.mnemonic, `wss://kovan.infura.io/ws/v3/${secret.infuraKey}`),
+      provider: () =>
+        new HDWalletProvider([process.env.PRIVATE_KEY], `wss://eth-kovan.g.alchemy.com/v2/${process.env.PROJECT_ID}`),
       network_id: 42, // kovan's id
       gas: 3000000,
       gasPrice: 10000000000,
       skipDryRun: true,
     },
     rinkeby: {
-      provider: () => new HDWalletProvider(secret.mnemonic, `wss://rinkeby.infura.io/ws/v3/${secret.infuraKey}`),
+      provider: () =>
+        new HDWalletProvider([process.env.PRIVATE_KEY], `wss://eth-rinkeby.g.alchemy.com/v2/${process.env.PROJECT_ID}`),
       network_id: 4, // kovan's id
       gas: 8000000,
       gasPrice: 10000000000,
       skipDryRun: true,
     },
     mainnet: {
-      provider: () => new HDWalletProvider(secret.mnemonic, `wss://mainnet.infura.io/ws/v3/${secret.infuraKey}`),
+      provider: () =>
+        new HDWalletProvider([process.env.PRIVATE_KEY], `wss://eth-mainnet.g.alchemy.com/v2/${process.env.PROJECT_ID}`),
       network_id: 1, // Mainnet's id
       gas: 8000000,
-      gasPrice: 70000000000,
+      gasPrice: 9000000000,
       skipDryRun: true,
     },
     avalanche_testnet: {
-      provider: () => new HDWalletProvider(secret.mnemonic, "https://api.avax-test.network/ext/bc/C/rpc"),
+      provider: () => new HDWalletProvider([process.env.PRIVATE_KEY], "https://api.avax-test.network/ext/bc/C/rpc"),
       network_id: 43113, // Mainnet's id
       gas: 8000000,
       gasPrice: 25000000000,
       skipDryRun: true,
     },
     avalanche_mainnet: {
-      provider: () => new HDWalletProvider(secret.mnemonic, "https://api.avax.network/ext/bc/C/rpc"),
+      provider: () => new HDWalletProvider([process.env.PRIVATE_KEY], "https://api.avax.network/ext/bc/C/rpc"),
       network_id: 43114, // Mainnet's id
       gas: 8000000,
       gasPrice: 30000000000,
@@ -104,8 +131,8 @@ module.exports = {
   },
   plugins: ["truffle-plugin-verify"],
   api_keys: {
-    etherscan: secret.etherScanKey,
-    snowtrace: secret.snowtraceKey,
+    etherscan: process.env.ETHERSCAN_KEY,
+    snowtrace: process.env.SNOWTRACE_KEY,
   },
 
   // Configure your compilers

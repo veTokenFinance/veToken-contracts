@@ -2,9 +2,10 @@
 pragma solidity 0.8.7;
 
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 import "./Interfaces/IFeeDistro.sol";
 import "./Interfaces/IRewardFactory.sol";
@@ -14,35 +15,37 @@ import "./Interfaces/IRewards.sol";
 import "./Interfaces/ITokenMinter.sol";
 import "./Interfaces/IStash.sol";
 import "./Interfaces/IStashFactory.sol";
+import "./Interfaces/IVoteEscrow.sol";
+import "./Interfaces/IGauge.sol";
 
-contract Booster {
-    using SafeERC20 for IERC20;
-    using Address for address;
+contract Booster is ReentrancyGuardUpgradeable {
+    using SafeERC20Upgradeable for IERC20Upgradeable;
+    using AddressUpgradeable for address;
     using SafeMath for uint256;
 
     // ve3Token reward pool
-    uint256 public lockIncentive = 1000; //incentive to veAsset stakers
+    uint256 public lockIncentive; //incentive to veAsset stakers
     // veToken reward pool
-    uint256 public stakerIncentive = 450; //incentive to native token stakers
+    uint256 public stakerIncentive; //incentive to native token stakers
     // veToken locking reward pool xVE3D
     uint256 public stakerLockIncentive;
     // caller reward
-    uint256 public earmarkIncentive = 50; //incentive to users who spend gas to make calls
+    uint256 public earmarkIncentive; //incentive to users who spend gas to make calls
     // platoform fee
     uint256 public platformFee; //possible fee to build treasury
     uint256 public constant MaxFees = 2000;
     uint256 public constant FEE_DENOMINATOR = 10000;
 
-    uint256 public lockFeesIncentive = 10000; //ve3Token veVeAsset fees percentage
+    uint256 public lockFeesIncentive; //ve3Token veVeAsset fees percentage
     uint256 public stakerLockFeesIncentive; //xVE3D veVeAsset fees percentage
 
     address public owner;
     address public feeManager;
     address public poolManager;
-    address public immutable staker;
-    address public immutable minter;
-    address public immutable veAsset;
-    address public immutable feeDistro;
+    address public staker;
+    address public minter;
+    address public veAsset;
+    address public feeDistro;
     address public rewardFactory;
     address public stashFactory;
     address public tokenFactory;
@@ -69,6 +72,7 @@ contract Booster {
     //index(pid) -> pool
     PoolInfo[] public poolInfo;
     mapping(address => bool) public gaugeMap;
+    mapping(address => bool) public gaugeTokenMap;
 
     event Deposited(address indexed user, uint256 indexed poolid, uint256 amount);
     event Withdrawn(address indexed user, uint256 indexed poolid, uint256 amount);
@@ -100,13 +104,15 @@ contract Booster {
     event PoolShuttedDown(uint256 indexed pid);
     event SystemShuttedDown();
     event Voted(uint256 indexed voteId, address indexed votingAddress, bool support);
+    event EarmarkedRewards(uint256 rewardAmount);
+    event EarmarkedFees(uint256 feeAmount);
 
-    constructor(
+    function __Booster_init(
         address _staker,
         address _minter,
         address _veAsset,
         address _feeDistro
-    ) {
+    ) external initializer {
         isShutdown = false;
         staker = _staker;
         owner = msg.sender;
@@ -116,6 +122,10 @@ contract Booster {
         minter = _minter;
         veAsset = _veAsset;
         feeDistro = _feeDistro;
+        lockIncentive = 1000;
+        stakerIncentive = 450;
+        earmarkIncentive = 50;
+        lockFeesIncentive = 10000;
     }
 
     /// SETTER SECTION ///
@@ -127,13 +137,13 @@ contract Booster {
     }
 
     function setFeeManager(address _feeM) external {
-        require(msg.sender == feeManager, "!auth");
+        require(msg.sender == owner, "!auth");
         feeManager = _feeM;
         emit FeeManagerUpdated(_feeM);
     }
 
     function setPoolManager(address _poolM) external {
-        require(msg.sender == poolManager, "!auth");
+        require(msg.sender == owner, "!auth");
         poolManager = _poolM;
         emit PoolManagerUpdated(_poolM);
     }
@@ -166,7 +176,7 @@ contract Booster {
     }
 
     function setVoteDelegate(address _voteDelegate) external {
-        require(msg.sender == voteDelegate, "!auth");
+        require(msg.sender == owner, "!auth");
         voteDelegate = _voteDelegate;
         emit VoteDelegateUpdated(_voteDelegate);
     }
@@ -181,8 +191,15 @@ contract Booster {
         //reward contracts are immutable or else the owner
         //has a means to redeploy and mint cvx via rewardClaimed()
         if (lockRewards == address(0)) {
+            require(_rewards != address(0), "Not allowed!");
             lockRewards = _rewards;
+        }
+        if (stakerRewards == address(0)) {
+            require(_stakerRewards != address(0), "Not allowed!");
             stakerRewards = _stakerRewards;
+        }
+        if (stakerLockRewards == address(0)) {
+            require(_stakerLockRewards != address(0), "Not allowed!");
             stakerLockRewards = _stakerLockRewards;
         }
 
@@ -192,6 +209,7 @@ contract Booster {
     // Set reward token and claim contract, get from Curve's registry
     function setFeeInfo(uint256 _lockFeesIncentive, uint256 _stakerLockFeesIncentive) external {
         require(msg.sender == feeManager, "!auth");
+        require(_lockFeesIncentive.add(_stakerLockFeesIncentive) == FEE_DENOMINATOR);
 
         lockFeesIncentive = _lockFeesIncentive;
         stakerLockFeesIncentive = _stakerLockFeesIncentive;
@@ -290,6 +308,7 @@ contract Booster {
             })
         );
         gaugeMap[_gauge] = true;
+        gaugeTokenMap[_lptoken] = true;
 
         //give stashes access to rewardfactory and voteproxy
         //   voteproxy so it can grab the incentive tokens off the contract after claiming rewards
@@ -314,31 +333,10 @@ contract Booster {
 
         pool.shutdown = true;
         gaugeMap[pool.gauge] = false;
+        gaugeTokenMap[pool.lptoken] = false;
 
         emit PoolShuttedDown(_pid);
         return true;
-    }
-
-    //shutdown this contract.
-    //  unstake and pull all lp tokens to this address
-    //  only allow withdrawals
-    function shutdownSystem() external {
-        require(msg.sender == owner, "!auth");
-        isShutdown = true;
-
-        for (uint256 i = 0; i < poolInfo.length; i++) {
-            PoolInfo storage pool = poolInfo[i];
-            if (pool.shutdown) continue;
-
-            address token = pool.lptoken;
-            address gauge = pool.gauge;
-
-            //withdraw from gauge
-            try IStaker(staker).withdrawAll(token, gauge) {
-                pool.shutdown = true;
-            } catch {}
-        }
-        emit SystemShuttedDown();
     }
 
     //deposit lp tokens and stake
@@ -346,14 +344,17 @@ contract Booster {
         uint256 _pid,
         uint256 _amount,
         bool _stake
-    ) public returns (bool) {
+    ) public nonReentrant returns (bool) {
         require(!isShutdown, "shutdown");
         PoolInfo storage pool = poolInfo[_pid];
         require(pool.shutdown == false, "pool is closed");
 
         //send to proxy to stake
         address lptoken = pool.lptoken;
-        IERC20(lptoken).safeTransferFrom(msg.sender, staker, _amount);
+        uint256 balanceBefore = IERC20Upgradeable(lptoken).balanceOf(address(staker));
+        IERC20Upgradeable(lptoken).safeTransferFrom(msg.sender, staker, _amount);
+        uint256 balanceAfter = IERC20Upgradeable(lptoken).balanceOf(address(staker));
+        _amount = balanceAfter.sub(balanceBefore);
 
         //stake
         address gauge = pool.gauge;
@@ -371,7 +372,8 @@ contract Booster {
             //mint here and send to rewards on user behalf
             ITokenMinter(token).mint(address(this), _amount);
             address rewardContract = pool.veAssetRewards;
-            IERC20(token).safeApprove(rewardContract, _amount);
+            IERC20Upgradeable(token).safeApprove(rewardContract, 0);
+            IERC20Upgradeable(token).safeApprove(rewardContract, _amount);
             IRewards(rewardContract).stakeFor(msg.sender, _amount);
         } else {
             //add user balance directly
@@ -385,7 +387,7 @@ contract Booster {
     //deposit all lp tokens and stake
     function depositAll(uint256 _pid, bool _stake) external returns (bool) {
         address lptoken = poolInfo[_pid].lptoken;
-        uint256 balance = IERC20(lptoken).balanceOf(msg.sender);
+        uint256 balance = IERC20Upgradeable(lptoken).balanceOf(msg.sender);
         deposit(_pid, balance, _stake);
         return true;
     }
@@ -396,7 +398,7 @@ contract Booster {
         uint256 _amount,
         address _from,
         address _to
-    ) internal {
+    ) internal nonReentrant {
         PoolInfo storage pool = poolInfo[_pid];
         address lptoken = pool.lptoken;
         address gauge = pool.gauge;
@@ -417,9 +419,18 @@ contract Booster {
         if (stash != address(0) && !isShutdown && !pool.shutdown) {
             IStash(stash).stashRewards();
         }
+        uint256 _actualAmount = _amount;
+        // @dev handle staking factor for Angle ,
+        // use try and catch as not all Angle gauges have scaling factor
+        if (IVoteEscrow(staker).escrowModle() == IVoteEscrow.EscrowModle.ANGLE) {
+            try IGauge(gauge).scaling_factor() {
+                _amount = _amount.mul(IGauge(gauge).scaling_factor()).div(10**18);
+                _actualAmount = _amount.mul(10**18).div(IGauge(gauge).scaling_factor());
+            } catch {}
+        }
 
         //return lp tokens
-        IERC20(lptoken).safeTransfer(_to, _amount);
+        IERC20Upgradeable(lptoken).safeTransfer(_to, _actualAmount);
 
         emit Withdrawn(_to, _pid, _amount);
     }
@@ -433,7 +444,7 @@ contract Booster {
     //withdraw all lp tokens
     function withdrawAll(uint256 _pid) public returns (bool) {
         address token = poolInfo[_pid].token;
-        uint256 userBal = IERC20(token).balanceOf(msg.sender);
+        uint256 userBal = IERC20Upgradeable(token).balanceOf(msg.sender);
         withdraw(_pid, userBal);
         return true;
     }
@@ -472,7 +483,7 @@ contract Booster {
         return true;
     }
 
-    function claimRewards(uint256 _pid, address _gauge) external returns (bool) {
+    function claimRewards(uint256 _pid, address _gauge) external nonReentrant returns (bool) {
         address stash = poolInfo[_pid].stash;
         require(msg.sender == stash, "!auth");
 
@@ -496,23 +507,25 @@ contract Booster {
     function _earmarkRewards(uint256 _pid) internal {
         PoolInfo storage pool = poolInfo[_pid];
         require(pool.shutdown == false, "pool is closed");
-
+        address stash = pool.stash;
         address gauge = pool.gauge;
 
-        //claim veAsset
-        IStaker(staker).claimVeAsset(gauge);
+        if (
+            IVoteEscrow(staker).escrowModle() == IVoteEscrow.EscrowModle.ANGLE &&
+            stash != address(0)
+        ) {
+            _claimStashReward(stash);
+        } else {
+            //claim veAsset
+            IStaker(staker).claimVeAsset(gauge);
 
-        //check if there are extra rewards
-        address stash = pool.stash;
-        if (stash != address(0)) {
-            //claim extra rewards
-            IStash(stash).claimRewards();
-            //process extra rewards
-            IStash(stash).processStash();
+            //check if there are extra rewards
+            if (stash != address(0)) {
+                _claimStashReward(stash);
+            }
         }
-
         //veAsset balance
-        uint256 veAssetBal = IERC20(veAsset).balanceOf(address(this));
+        uint256 veAssetBal = IERC20Upgradeable(veAsset).balanceOf(address(this));
 
         if (veAssetBal > 0) {
             uint256 _lockIncentive = veAssetBal.mul(lockIncentive).div(FEE_DENOMINATOR);
@@ -527,7 +540,7 @@ contract Booster {
                 //only subtract after address condition check
                 uint256 _platform = veAssetBal.mul(platformFee).div(FEE_DENOMINATOR);
                 veAssetBal = veAssetBal.sub(_platform);
-                IERC20(veAsset).safeTransfer(treasury, _platform);
+                IERC20Upgradeable(veAsset).safeTransfer(treasury, _platform);
             }
 
             //remove incentives from balance
@@ -539,31 +552,39 @@ contract Booster {
 
             //send incentives for calling
             if (_callIncentive > 0) {
-                IERC20(veAsset).safeTransfer(msg.sender, _callIncentive);
+                IERC20Upgradeable(veAsset).safeTransfer(msg.sender, _callIncentive);
             }
 
             //send veAsset to lp provider reward contract
             address rewardContract = pool.veAssetRewards;
-            IERC20(veAsset).safeTransfer(rewardContract, veAssetBal);
+            IERC20Upgradeable(veAsset).safeTransfer(rewardContract, veAssetBal);
             IRewards(rewardContract).queueNewRewards(veAssetBal);
 
             //send lockers' share of veAsset to reward contract
             if (_lockIncentive > 0) {
-                IERC20(veAsset).safeTransfer(lockRewards, _lockIncentive);
+                IERC20Upgradeable(veAsset).safeTransfer(lockRewards, _lockIncentive);
                 IRewards(lockRewards).queueNewRewards(_lockIncentive);
             }
             //send stakers's share of veAsset to VE3D reward contract
             if (_stakerIncentive > 0) {
-                IERC20(veAsset).safeTransfer(stakerRewards, _stakerIncentive);
+                IERC20Upgradeable(veAsset).safeTransfer(stakerRewards, _stakerIncentive);
                 IRewards(stakerRewards).queueNewRewards(veAsset, _stakerIncentive);
             }
 
             //send stakers's lock share of veAsset to VE3D locker reward contract
             if (_stakerLockIncentive > 0) {
-                IERC20(veAsset).safeTransfer(stakerLockRewards, _stakerLockIncentive);
+                IERC20Upgradeable(veAsset).safeTransfer(stakerLockRewards, _stakerLockIncentive);
                 IRewards(stakerLockRewards).queueNewRewards(veAsset, _stakerLockIncentive);
             }
         }
+        emit EarmarkedRewards(veAssetBal);
+    }
+
+    function _claimStashReward(address stash) internal {
+        //claim extra rewards
+        IStash(stash).claimRewards();
+        //process extra rewards
+        IStash(stash).processStash();
     }
 
     function earmarkRewards(uint256 _pid) external returns (bool) {
@@ -577,20 +598,22 @@ contract Booster {
         //claim fee rewards
         IStaker(staker).claimFees(feeDistro, feeToken);
         //send fee rewards to reward contract
-        uint256 _balance = IERC20(feeToken).balanceOf(address(this));
+        uint256 _balance = IERC20Upgradeable(feeToken).balanceOf(address(this));
 
         uint256 _lockFeesIncentive = _balance.mul(lockFeesIncentive).div(FEE_DENOMINATOR);
         uint256 _stakerLockFeesIncentive = _balance.mul(stakerLockFeesIncentive).div(
             FEE_DENOMINATOR
         );
         if (_lockFeesIncentive > 0) {
-            IERC20(feeToken).safeTransfer(lockFees, _lockFeesIncentive);
+            IERC20Upgradeable(feeToken).safeTransfer(lockFees, _lockFeesIncentive);
             IRewards(lockFees).queueNewRewards(_lockFeesIncentive);
         }
         if (_stakerLockFeesIncentive > 0) {
-            IERC20(feeToken).safeTransfer(stakerLockRewards, _stakerLockFeesIncentive);
+            IERC20Upgradeable(feeToken).safeTransfer(stakerLockRewards, _stakerLockFeesIncentive);
             IRewards(stakerLockRewards).queueNewRewards(feeToken, _stakerLockFeesIncentive);
         }
+
+        emit EarmarkedFees(_balance);
         return true;
     }
 
@@ -611,5 +634,28 @@ contract Booster {
         ITokenMinter(minter).mint(_address, _veAssetEarned);
 
         return true;
+    }
+
+    function recoverUnusedRewardFromPools(uint256 _pid) external {
+        require(msg.sender == owner, "!Auth");
+        address rewardContract = poolInfo[_pid].veAssetRewards;
+        if (rewardContract != address(0)) {
+            IRewards(rewardContract).recoverUnusedReward(owner);
+        }
+    }
+
+    function recoverUnusedRewardFromLockPool() external {
+        require(msg.sender == owner, "!Auth");
+
+        IRewards(lockRewards).recoverUnusedReward(owner);
+    }
+
+    function recoverUnusedClaimedReward(address _token, address _destination) external {
+        require(msg.sender == owner, "!Auth");
+
+        uint256 _amount = IERC20Upgradeable(_token).balanceOf(address(this));
+        if (_amount > 0) {
+            IERC20Upgradeable(_token).safeTransfer(_destination, _amount);
+        }
     }
 }

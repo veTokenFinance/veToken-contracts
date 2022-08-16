@@ -1,14 +1,5 @@
-const {
-  BN,
-  constants,
-  expectEvent,
-  expectRevert,
-  time,
-} = require("@openzeppelin/test-helpers");
-const {
-  loadContracts,
-  contractAddresseList,
-} = require("./helper/dumpAddresses");
+const { BN, constants, expectEvent, expectRevert, time } = require("@openzeppelin/test-helpers");
+const { loadContracts, contractAddresseList } = require("./helper/dumpAddresses");
 const jsonfile = require("jsonfile");
 var baseContractList = jsonfile.readFileSync("contracts.json");
 const { parseEther, formatEther, parseUnits } = require("@ethersproject/units");
@@ -55,10 +46,7 @@ contract("Shutdown Test", async (accounts) => {
     await time.latestBlock().then((a) => console.log("current block: " + a));
 
     const lpTokenbalance = await lpToken.balanceOf(userA);
-    console.log(
-      "Initial lp token balance of userA: " +
-        formatEther(lpTokenbalance.toString())
-    );
+    console.log("Initial lp token balance of userA: " + formatEther(lpTokenbalance.toString()));
     const userABalanceInRewardPoolBefore = await rewardPool.balanceOf(userA);
     await lpToken.approve(booster.address, lpTokenDepositAmount);
 
@@ -66,41 +54,21 @@ contract("Shutdown Test", async (accounts) => {
     await booster.deposit(0, lpTokenDepositAmount, true, { from: userA });
     await rewardPool
       .balanceOf(userA)
-      .then((a) =>
-        console.log(
-          "userA deposited lp in rewardPool: " + formatEther(a.toString())
-        )
-      );
+      .then((a) => console.log("userA deposited lp in rewardPool: " + formatEther(a.toString())));
     await rewardPool
       .earned(userA)
-      .then((a) =>
-        console.log(
-          "userA rewards earned(unclaimed): " + formatEther(a.toString())
-        )
-      );
+      .then((a) => console.log("userA rewards earned(unclaimed): " + formatEther(a.toString())));
 
     await lpToken
       .balanceOf(userA)
-      .then((a) =>
-        console.log(
-          "before shutdown, userA lptoken balance: " + formatEther(a.toString())
-        )
-      );
+      .then((a) => console.log("before shutdown, userA lptoken balance: " + formatEther(a.toString())));
     const userABalanceInRewardPoolAfter = await rewardPool.balanceOf(userA);
-    expect(
-      (
-        userABalanceInRewardPoolAfter - userABalanceInRewardPoolBefore
-      ).toString()
-    ).to.equal(lpTokenDepositAmount);
+    expect((userABalanceInRewardPoolAfter - userABalanceInRewardPoolBefore).toString()).to.equal(lpTokenDepositAmount);
 
-    const boosterlpTokenBalanceBeforeShutdown = await lpToken.balanceOf(
-      booster.address
-    );
+    const boosterlpTokenBalanceBeforeShutdown = await lpToken.balanceOf(booster.address);
     expect(boosterlpTokenBalanceBeforeShutdown.toString()).to.equal("0");
 
-    const gaugelpTokenBalance = await voterProxy.balanceOfPool(
-      parsedPoolInfo.gauge
-    );
+    const gaugelpTokenBalance = await voterProxy.balanceOfPool(parsedPoolInfo.gauge);
     expect(gaugelpTokenBalance.toString()).to.equal(lpTokenDepositAmount);
 
     // shutdown, funds move back to booster from gauge
@@ -109,25 +77,14 @@ contract("Shutdown Test", async (accounts) => {
     await poolManager.shutdownPool(booster.address, 0);
     await lpToken
       .balanceOf(userA)
-      .then((a) =>
-        console.log(
-          "after shutdown, userA lp token balance: " + formatEther(a.toString())
-        )
-      );
+      .then((a) => console.log("after shutdown, userA lp token balance: " + formatEther(a.toString())));
     await rewardPool
       .balanceOf(userA)
-      .then((a) =>
-        console.log(
-          "after shutdown, userA balance in reward pool: " +
-            formatEther(a.toString())
-        )
-      );
+      .then((a) => console.log("after shutdown, userA balance in reward pool: " + formatEther(a.toString())));
     const boostBalanceAfterShutdown = await lpToken.balanceOf(booster.address);
     expect(boostBalanceAfterShutdown.toString()).to.equal(lpTokenDepositAmount);
 
-    const gaugeBalanceAfterShutdown = await voterProxy.balanceOfPool(
-      parsedPoolInfo.gauge
-    );
+    const gaugeBalanceAfterShutdown = await voterProxy.balanceOfPool(parsedPoolInfo.gauge);
     expect(gaugeBalanceAfterShutdown.toString()).to.equal("0");
 
     // try to deposit while in shutdown state, will revert
@@ -141,25 +98,16 @@ contract("Shutdown Test", async (accounts) => {
     console.log("withdraw...");
     await rewardPool.withdrawAllAndUnwrap(true, { from: userA });
     const userlpTokenBalanceAfterWithdraw = await lpToken.balanceOf(userA);
-    expect(userlpTokenBalanceAfterWithdraw.toString()).to.equal(
-      lpTokenbalance.toString()
-    );
+    expect(userlpTokenBalanceAfterWithdraw.toString()).to.equal(lpTokenbalance.toString());
 
-    const userRewardPoolBalanceAfterWithdraw = await rewardPool.balanceOf(
-      userA
-    );
+    const userRewardPoolBalanceAfterWithdraw = await rewardPool.balanceOf(userA);
     expect(userRewardPoolBalanceAfterWithdraw.toString()).to.equal("0");
 
-    const boosterLpTokenBalanceAfterUserWithdraw = await lpToken.balanceOf(
-      booster.address
-    );
+    const boosterLpTokenBalanceAfterUserWithdraw = await lpToken.balanceOf(booster.address);
     expect(boosterLpTokenBalanceAfterUserWithdraw.toString()).to.equal("0");
 
     await voterProxy
       .balanceOfPool(parsedPoolInfo.gauge)
       .then((a) => console.log("gauge balance: " + formatEther(a.toString())));
-
-    await booster.shutdownSystem({ from: userA });
-    assert.equal(await booster.isShutdown(), true);
   });
 });

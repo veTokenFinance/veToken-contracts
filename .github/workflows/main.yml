@@ -1,0 +1,47 @@
+name: "CI"
+
+on:
+  push:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v2
+
+      - name: Setup node
+        uses: actions/setup-node@v1
+        with:
+          node-version: "16.x"
+
+      - name: Install packages
+        run: npm ci
+
+      - name: Run private network - Idle
+        run: npm run idle_network > /dev/null &
+
+      - name: Run migrations - Idle
+        run: npm run deploy-basic-contract-idle && npm run deploy-local-idle
+
+      - name: Run tests - Idle
+        run: npm run test-no-deploy-idle
+
+      - name: Run private network - Angle
+        run: npm run angle_network > /dev/null &
+
+      - name: Run migrations - Angle
+        run: npm run deploy-basic-contract-angle && npm run deploy-local-angle
+
+      - name: Run tests - Angle
+        run: npm run test-no-deploy-angle
+
+      - name: Run private network - All Networks
+        run: npm run fork-mainnet > /dev/null &
+
+      - name: Run migrations - All Networks
+        run: npm run deploy-basic-contract && npm run deploy-local
+
+      - name: Run tests - All Networks
+        run: npm run test-no-deploy-custom

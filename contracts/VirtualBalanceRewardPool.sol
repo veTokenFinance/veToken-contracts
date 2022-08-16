@@ -41,9 +41,12 @@ pragma solidity 0.8.7;
 
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+import "./helper/DecimalsConverter.sol";
 
 import "./Interfaces/IDeposit.sol";
 
@@ -67,6 +70,7 @@ contract VirtualBalanceRewardPool is VirtualBalanceWrapper {
     using SafeERC20 for IERC20;
 
     IERC20 public rewardToken;
+    uint256 public tokenDecimals;
     uint256 public constant duration = 7 days;
 
     address public operator;
@@ -94,6 +98,7 @@ contract VirtualBalanceRewardPool is VirtualBalanceWrapper {
     ) {
         deposits = IDeposit(deposit_);
         rewardToken = IERC20(reward_);
+        tokenDecimals = ERC20(reward_).decimals();
         operator = op_;
     }
 
@@ -149,6 +154,8 @@ contract VirtualBalanceRewardPool is VirtualBalanceWrapper {
         uint256 reward = earned(_account);
         if (reward > 0) {
             rewards[_account] = 0;
+            reward = DecimalsConverter.convertFrom18(reward, tokenDecimals);
+
             rewardToken.safeTransfer(_account, reward);
             emit RewardPaid(_account, reward);
         }
@@ -160,17 +167,17 @@ contract VirtualBalanceRewardPool is VirtualBalanceWrapper {
 
     function donate(uint256 _amount) external {
         IERC20(rewardToken).safeTransferFrom(msg.sender, address(this), _amount);
+        _amount = DecimalsConverter.convertTo18(_amount, tokenDecimals);
         queuedRewards = queuedRewards.add(_amount);
     }
 
     function queueNewRewards(uint256 _rewards) external {
         require(msg.sender == operator, "!authorized");
-
+        _rewards = DecimalsConverter.convertTo18(_rewards, tokenDecimals);
         _rewards = _rewards.add(queuedRewards);
 
         if (block.timestamp >= periodFinish) {
-            notifyRewardAmount(_rewards);
-            queuedRewards = 0;
+            queuedRewards = notifyRewardAmount(_rewards);
             return;
         }
 
@@ -180,14 +187,17 @@ contract VirtualBalanceRewardPool is VirtualBalanceWrapper {
         uint256 currentAtNow = rewardRate * elapsedTime;
         uint256 queuedRatio = currentAtNow.mul(1000).div(_rewards);
         if (queuedRatio < newRewardRatio) {
-            notifyRewardAmount(_rewards);
-            queuedRewards = 0;
+            queuedRewards = notifyRewardAmount(_rewards);
         } else {
             queuedRewards = _rewards;
         }
     }
 
-    function notifyRewardAmount(uint256 reward) internal updateReward(address(0)) {
+    function notifyRewardAmount(uint256 reward)
+        internal
+        updateReward(address(0))
+        returns (uint256 _extraAmount)
+    {
         historicalRewards = historicalRewards.add(reward);
         if (block.timestamp >= periodFinish) {
             rewardRate = reward.div(duration);
@@ -197,6 +207,18 @@ contract VirtualBalanceRewardPool is VirtualBalanceWrapper {
             reward = reward.add(leftover);
             rewardRate = reward.div(duration);
         }
+
+        uint256 _actualReward = rewardRate.mul(duration);
+        if (reward > _actualReward) {
+            _extraAmount = reward.sub(_actualReward);
+        }
+
+        uint256 balance = DecimalsConverter.convertTo18(
+            rewardToken.balanceOf(address(this)),
+            tokenDecimals
+        );
+        require(rewardRate <= balance.div(duration), "Provided reward too high");
+
         currentRewards = reward;
         lastUpdateTime = block.timestamp;
         periodFinish = block.timestamp.add(duration);

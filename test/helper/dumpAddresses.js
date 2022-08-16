@@ -9,10 +9,11 @@ const Networks = {
   idle: 3,
   angle: 4,
   balancer: 5,
+  none: 6,
 };
 
 async function loadContracts() {
-  networkId = await web3.eth.net.getId();
+  networkId = await web3.eth.getChainId();
   //pickle
   if (networkId == "80001") {
     contractAddresseList.push(contractList.system.pickle_address);
@@ -163,6 +164,8 @@ async function loadContracts() {
     contractAddresseList.push(contractList.system.balancer_feedistro);
     contractAddresseList.push(contractList.system.balancer_feedistro_admin);
     return Networks.balancer;
+  } else {
+    return Networks.none;
   }
 }
 

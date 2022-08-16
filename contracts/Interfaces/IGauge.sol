@@ -15,4 +15,6 @@ interface IGauge {
     function rewarded_token() external view returns (address); //v1
 
     function getReward() external;
+
+    function scaling_factor() external view returns (uint256);
 }

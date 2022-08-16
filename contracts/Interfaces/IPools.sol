@@ -28,5 +28,7 @@ interface IPools {
 
     function gaugeMap(address) external view returns (bool);
 
+    function gaugeTokenMap(address) external view returns (bool);
+
     function setPoolManager(address _poolM) external;
 }

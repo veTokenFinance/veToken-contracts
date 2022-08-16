@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.7;
-pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 import "./helper/MathUtil.sol";
 import "./helper/BoringMath.sol";
+import "./helper/DecimalsConverter.sol";
 
 import "./Interfaces/IVeAssetDeposit.sol";
 import "./Interfaces/IRewards.sol";
@@ -29,22 +29,26 @@ V2:
 - balanceAtEpoch and supplyAtEpoch return proper values for future epochs
 - do not allow relocking directly to a new address
 */
-contract VE3DLocker is ReentrancyGuard, Ownable {
+contract VE3DLocker is ReentrancyGuardUpgradeable, OwnableUpgradeable {
     using BoringMath for uint256;
     using BoringMath224 for uint224;
     using BoringMath112 for uint112;
     using BoringMath32 for uint32;
-    using SafeERC20 for IERC20;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
     using EnumerableSet for EnumerableSet.AddressSet;
+
+    uint256 constant MAX_REWARD_TOKEN = 8;
 
     /* ========== STATE VARIABLES ========== */
 
     struct Reward {
         bool isVeAsset;
+        uint256 tokenDecimals;
         uint40 periodFinish;
         uint208 rewardRate;
         uint40 lastUpdateTime;
         uint208 rewardPerTokenStored;
+        uint256 queuedRewards;
         address ve3Token;
         address ve3TokenStaking;
         address veAssetDeposits;
@@ -55,7 +59,7 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
     }
     struct LockedBalance {
         uint112 amount;
-        uint32 unlockTime;
+        uint64 unlockTime;
     }
     struct EarnedData {
         address token;
@@ -67,10 +71,10 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
     }
 
     //token
-    IERC20 public stakingToken; //VE3D
+    IERC20Upgradeable public stakingToken; //VE3D
 
     //rewards
-    address[] public rewardTokens;
+    EnumerableSet.AddressSet internal rewardTokens;
     mapping(address => Reward) public rewardData;
 
     EnumerableSet.AddressSet internal operators;
@@ -99,25 +103,31 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
     uint256 public constant denominator = 10000;
 
     //management
-    uint256 public kickRewardPerEpoch = 100;
-    uint256 public kickRewardEpochDelay = 4;
+    uint256 public kickRewardPerEpoch;
+    uint256 public kickRewardEpochDelay;
 
     //shutdown
-    bool public isShutdown = false;
+    bool public isShutdown;
 
     //erc20-like interface
     string private _name;
     string private _symbol;
-    uint8 private immutable _decimals;
+    uint8 private _decimals;
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(address _stakingToken) Ownable() {
+    function __VE3DLocker_init(address _stakingToken) external initializer {
+        __Ownable_init();
+
         _name = "Vote Locked Vetoken Token";
         _symbol = "xVE3D";
         _decimals = 18;
+        isShutdown = false;
 
-        stakingToken = IERC20(_stakingToken);
+        kickRewardPerEpoch = 100;
+        kickRewardEpochDelay = 4;
+
+        stakingToken = IERC20Upgradeable(_stakingToken);
 
         uint256 currentEpoch = block.timestamp.div(rewardsDuration).mul(rewardsDuration);
         epochs.push(Epoch({supply: 0, date: uint32(currentEpoch)}));
@@ -150,11 +160,15 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
         address _distributor,
         bool _isVeAsset
     ) external {
+        require(_rewardsToken != address(0) && _distributor != address(0), "Not allowed!");
+        require(address(stakingToken) != _rewardsToken, "Incorrect reward token");
         require(_msgSender() == owner() || operators.contains(_msgSender()), "!Auth");
-        require(rewardData[_rewardsToken].lastUpdateTime == 0);
+        require(rewardData[_rewardsToken].lastUpdateTime == 0, "Already added");
         require(_rewardsToken != address(stakingToken));
-        rewardTokens.push(_rewardsToken);
+        require(rewardTokens.length() < MAX_REWARD_TOKEN, "!max reward token exceed");
+        rewardTokens.add(_rewardsToken);
 
+        rewardData[_rewardsToken].tokenDecimals = ERC20Upgradeable(_rewardsToken).decimals();
         rewardData[_rewardsToken].lastUpdateTime = uint40(block.timestamp);
         rewardData[_rewardsToken].periodFinish = uint40(block.timestamp);
         rewardDistributors[_rewardsToken][_distributor] = true;
@@ -169,6 +183,26 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
             rewardData[_rewardsToken].ve3TokenStaking = _ve3TokenStaking;
             rewardData[_rewardsToken].veAssetDeposits = _veAssetDeposits;
         }
+
+        emit RewardTokenAdded(
+            _rewardsToken,
+            _veAssetDeposits,
+            _ve3Token,
+            _ve3TokenStaking,
+            _distributor,
+            _isVeAsset
+        );
+    }
+
+    function removeReward(address _rewardToken) external onlyOwner {
+        require(
+            block.timestamp > rewardData[_rewardToken].periodFinish,
+            "Cannot remove active reward"
+        );
+
+        rewardTokens.remove(_rewardToken);
+        delete rewardData[_rewardToken];
+        emit RewardTokenRemoved(_rewardToken);
     }
 
     // Modify approval for an address to call notifyRewardAmount
@@ -204,22 +238,25 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
 
     //set approvals for locking veAsset and staking VE3Token
     function setApprovals() external {
-        for (uint256 i; i < rewardTokens.length; i++) {
-            address _rewardsToken = rewardTokens[i];
+        for (uint256 i; i < rewardTokens.length(); i++) {
+            address _rewardsToken = rewardTokens.at(i);
             if (rewardData[_rewardsToken].isVeAsset) {
                 // set approve for staking VE3Token
-                IERC20(rewardData[_rewardsToken].ve3Token).safeApprove(
+                IERC20Upgradeable(rewardData[_rewardsToken].ve3Token).safeApprove(
                     rewardData[_rewardsToken].ve3TokenStaking,
                     0
                 );
-                IERC20(rewardData[_rewardsToken].ve3Token).safeApprove(
+                IERC20Upgradeable(rewardData[_rewardsToken].ve3Token).safeApprove(
                     rewardData[_rewardsToken].ve3TokenStaking,
                     type(uint256).max
                 );
 
                 // set approve for locking veAsset
-                IERC20(_rewardsToken).safeApprove(rewardData[_rewardsToken].veAssetDeposits, 0);
-                IERC20(_rewardsToken).safeApprove(
+                IERC20Upgradeable(_rewardsToken).safeApprove(
+                    rewardData[_rewardsToken].veAssetDeposits,
+                    0
+                );
+                IERC20Upgradeable(_rewardsToken).safeApprove(
                     rewardData[_rewardsToken].veAssetDeposits,
                     type(uint256).max
                 );
@@ -281,10 +318,10 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
         view
         returns (EarnedData[] memory userRewards)
     {
-        userRewards = new EarnedData[](rewardTokens.length);
+        userRewards = new EarnedData[](rewardTokens.length());
         Balances storage userBalance = balances[_account];
         for (uint256 i = 0; i < userRewards.length; i++) {
-            address token = rewardTokens[i];
+            address token = rewardTokens.at(i);
             userRewards[i].token = token;
             userRewards[i].amount = _earned(_account, token, userBalance.locked);
         }
@@ -312,12 +349,12 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
 
         //need to add up since the range could be in the middle somewhere
         //traverse inversely to make more current queries more gas efficient
-        for (uint256 i = locks.length - 1; i + 1 != 0; i--) {
-            uint256 lockEpoch = uint256(locks[i].unlockTime).sub(lockDuration);
+        for (uint256 i = locks.length; i > 0; i--) {
+            uint256 lockEpoch = uint256(locks[i - 1].unlockTime).sub(lockDuration);
             //lock epoch must be less or equal to the epoch we're basing from.
             if (lockEpoch <= epochTime) {
                 if (lockEpoch > cutoffEpoch) {
-                    amount = amount.add(locks[i].amount);
+                    amount = amount.add(locks[i - 1].amount);
                 } else {
                     //stop now as no futher checks matter
                     break;
@@ -357,12 +394,12 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
         uint256 nextEpoch = uint256(epochs[_epoch].date).add(rewardsDuration);
 
         //traverse inversely to make more current queries more gas efficient
-        for (uint256 i = locks.length - 1; i + 1 != 0; i--) {
-            uint256 lockEpoch = uint256(locks[i].unlockTime).sub(lockDuration);
+        for (uint256 i = locks.length; i > 0; i--) {
+            uint256 lockEpoch = uint256(locks[i - 1].unlockTime).sub(lockDuration);
 
             //return the next epoch balance
             if (lockEpoch == nextEpoch) {
-                return locks[i].amount;
+                return locks[i - 1].amount;
             } else if (lockEpoch < nextEpoch) {
                 //no need to check anymore
                 break;
@@ -384,8 +421,8 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
         }
 
         //traverse inversely to make more current queries more gas efficient
-        for (uint256 i = epochindex - 1; i + 1 != 0; i--) {
-            Epoch storage e = epochs[i];
+        for (uint256 i = epochindex; i > 0; i--) {
+            Epoch storage e = epochs[i - 1];
             if (uint256(e.date) <= cutoffEpoch) {
                 break;
             }
@@ -403,12 +440,12 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
         uint256 cutoffEpoch = epochStart.sub(lockDuration);
 
         //traverse inversely to make more current queries more gas efficient
-        for (uint256 i = _epoch; i + 1 != 0; i--) {
-            Epoch storage e = epochs[i];
+        for (uint256 i = _epoch; i > 0; i--) {
+            Epoch storage e = epochs[i - 1];
             if (uint256(e.date) <= cutoffEpoch) {
                 break;
             }
-            supply = supply.add(epochs[i].supply);
+            supply = supply.add(e.supply);
         }
 
         return supply;
@@ -715,50 +752,86 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
         );
     }
 
-    // Claim all pending rewards
-    function getReward(address _account, bool _stake) public nonReentrant updateReward(_account) {
-        for (uint256 i; i < rewardTokens.length; i++) {
-            address _rewardsToken = rewardTokens[i];
-            uint256 reward = rewards[_account][_rewardsToken];
-            if (reward > 0) {
-                rewards[_account][_rewardsToken] = 0;
-                if (rewardData[_rewardsToken].isVeAsset) {
-                    IVeAssetDeposit(rewardData[_rewardsToken].veAssetDeposits).deposit(
-                        reward,
-                        false
-                    );
-                    uint256 _ve3TokenBalance = IERC20(rewardData[_rewardsToken].ve3Token)
-                        .balanceOf(address(this));
-
-                    if (_stake) {
-                        IRewards(rewardData[_rewardsToken].ve3TokenStaking).stakeFor(
-                            _account,
-                            _ve3TokenBalance
-                        );
-                    } else {
-                        IERC20(rewardData[_rewardsToken].ve3Token).safeTransfer(
-                            _account,
-                            _ve3TokenBalance
-                        );
-                    }
-                    reward = _ve3TokenBalance;
-                    _rewardsToken = rewardData[_rewardsToken].ve3Token;
-                } else {
-                    IERC20(_rewardsToken).safeTransfer(_account, reward);
-                }
-                emit RewardPaid(_account, _rewardsToken, reward);
-            }
-        }
-    }
-
     // claim all pending rewards
     function getReward(address _account) external {
         getReward(_account, false);
     }
 
+    // Claim all pending rewards
+    function getReward(address _account, bool _stake) public updateReward(_account) {
+        for (uint256 i; i < rewardTokens.length(); i++) {
+            address _rewardsToken = rewardTokens.at(i);
+            _getReward(_account, _rewardsToken, _stake);
+        }
+    }
+
+    function getReward(
+        address _account,
+        bool _stake,
+        address[] calldata _rewardsTokens
+    ) public updateReward(_account) {
+        for (uint256 i; i < _rewardsTokens.length; i++) {
+            address _rewardsToken = _rewardsTokens[i];
+
+            if (!rewardTokens.contains(_rewardsToken)) {
+                continue;
+            }
+            _getReward(_account, _rewardsToken, _stake);
+        }
+    }
+
+    function _getReward(
+        address _account,
+        address _rewardsToken,
+        bool _stake
+    ) internal nonReentrant returns (bool status) {
+        uint256 reward = rewards[_account][_rewardsToken];
+        if (reward > 0) {
+            rewards[_account][_rewardsToken] = 0;
+            if (rewardData[_rewardsToken].isVeAsset) {
+                try
+                    IVeAssetDeposit(rewardData[_rewardsToken].veAssetDeposits).deposit(
+                        reward,
+                        false
+                    )
+                {} catch {
+                    return false;
+                }
+
+                uint256 _ve3TokenBalance = IERC20Upgradeable(rewardData[_rewardsToken].ve3Token)
+                    .balanceOf(address(this));
+
+                if (_stake) {
+                    IRewards(rewardData[_rewardsToken].ve3TokenStaking).stakeFor(
+                        _account,
+                        _ve3TokenBalance
+                    );
+                } else {
+                    IERC20Upgradeable(rewardData[_rewardsToken].ve3Token).safeTransfer(
+                        _account,
+                        _ve3TokenBalance
+                    );
+                }
+                reward = _ve3TokenBalance;
+                _rewardsToken = rewardData[_rewardsToken].ve3Token;
+            } else {
+                reward = DecimalsConverter.convertFrom18(
+                    reward,
+                    rewardData[_rewardsToken].tokenDecimals
+                );
+                IERC20Upgradeable(_rewardsToken).safeTransfer(_account, reward);
+            }
+            emit RewardPaid(_account, _rewardsToken, reward);
+            return true;
+        }
+    }
+
     /* ========== RESTRICTED FUNCTIONS ========== */
 
-    function _notifyReward(address _rewardsToken, uint256 _reward) internal {
+    function _notifyReward(address _rewardsToken, uint256 _reward)
+        internal
+        returns (uint256 _extraAmount)
+    {
         Reward storage rdata = rewardData[_rewardsToken];
 
         if (block.timestamp >= rdata.periodFinish) {
@@ -768,6 +841,21 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
             uint256 leftover = remaining.mul(rdata.rewardRate);
             rdata.rewardRate = _reward.add(leftover).div(rewardsDuration).to208();
         }
+
+        uint256 _actualReward = uint256(rdata.rewardRate).mul(rewardsDuration);
+        if (_reward > _actualReward) {
+            _extraAmount = _reward.sub(_actualReward);
+        }
+
+        uint256 balance = DecimalsConverter.convertTo18(
+            IERC20Upgradeable(_rewardsToken).balanceOf(address(this)),
+            rewardData[_rewardsToken].tokenDecimals
+        );
+
+        require(
+            rdata.rewardRate <= balance.div(rewardsDuration).to208(),
+            "Provided reward too high"
+        );
 
         rdata.lastUpdateTime = block.timestamp.to40();
         rdata.periodFinish = block.timestamp.add(rewardsDuration).to40();
@@ -780,17 +868,28 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
         require(rewardDistributors[_rewardsToken][msg.sender], "Auth!");
         require(_reward > 0, "No reward");
 
-        _notifyReward(_rewardsToken, _reward);
+        _reward = DecimalsConverter.convertTo18(_reward, rewardData[_rewardsToken].tokenDecimals);
+
+        _reward = _reward.add(rewardData[_rewardsToken].queuedRewards);
+
+        rewardData[_rewardsToken].queuedRewards = _notifyReward(_rewardsToken, _reward);
 
         emit RewardAdded(_rewardsToken, _reward);
     }
 
     // Added to support recovering LP Rewards from other systems such as BAL to be distributed to holders
-    function recoverERC20(address _tokenAddress, uint256 _tokenAmount) external onlyOwner {
+    function recoverERC20(address _tokenAddress) external onlyOwner {
         require(_tokenAddress != address(stakingToken), "Cannot withdraw staking token");
-        require(rewardData[_tokenAddress].lastUpdateTime == 0, "Cannot withdraw reward token");
-        IERC20(_tokenAddress).safeTransfer(owner(), _tokenAmount);
-        emit Recovered(_tokenAddress, _tokenAmount);
+        require(
+            block.timestamp > rewardData[_tokenAddress].periodFinish,
+            "Cannot withdraw active reward"
+        );
+        uint256 _amount = rewardData[_tokenAddress].queuedRewards;
+        if (_amount > 0) {
+            IERC20Upgradeable(_tokenAddress).safeTransfer(owner(), _amount);
+            rewardData[_tokenAddress].queuedRewards = 0;
+            emit Recovered(_tokenAddress, _amount);
+        }
     }
 
     /* ========== MODIFIERS ========== */
@@ -800,8 +899,8 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
             //stack too deep
             Balances storage userBalance = balances[_account];
 
-            for (uint256 i = 0; i < rewardTokens.length; i++) {
-                address token = rewardTokens[i];
+            for (uint256 i = 0; i < rewardTokens.length(); i++) {
+                address token = rewardTokens.at(i);
                 rewardData[token].rewardPerTokenStored = _rewardPerToken(token).to208();
                 rewardData[token].lastUpdateTime = _lastTimeRewardApplicable(
                     rewardData[token].periodFinish
@@ -817,6 +916,15 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
     }
 
     /* ========== EVENTS ========== */
+    event RewardTokenAdded(
+        address indexed rewardsToken,
+        address indexed veAssetDeposits,
+        address indexed ve3Token,
+        address ve3TokenStaking,
+        address distributor,
+        bool isVeAsset
+    );
+    event RewardTokenRemoved(address indexed rewardsToken);
     event RewardAdded(address indexed _token, uint256 _reward);
     event Staked(
         address indexed _user,

@@ -1,14 +1,5 @@
-const {
-  BN,
-  constants,
-  expectEvent,
-  expectRevert,
-  time,
-} = require("@openzeppelin/test-helpers");
-const {
-  loadContracts,
-  contractAddresseList,
-} = require("./helper/dumpAddresses");
+const { BN, constants, expectEvent, expectRevert, time } = require("@openzeppelin/test-helpers");
+const { loadContracts, contractAddresseList } = require("./helper/dumpAddresses");
 var jsonfile = require("jsonfile");
 var baseContractList = jsonfile.readFileSync("contracts.json");
 const Reverter = require("./helper/reverter");
@@ -58,17 +49,13 @@ contract("Deposit and Withdraw Test", async (accounts) => {
   before("setup", async () => {
     await loadContracts();
     // basic contract
-    vetokenMinter = await VeTokenMinter.at(
-      baseContractList.system.vetokenMinter
-    );
+    vetokenMinter = await VeTokenMinter.at(baseContractList.system.vetokenMinter);
     vetoken = await VeToken.at(baseContractList.system.vetoken);
     rFactory = await RewardFactory.at(baseContractList.system.rFactory);
     tFactory = await TokenFactory.at(baseContractList.system.tFactory);
     sFactory = await StashFactory.at(baseContractList.system.sFactory);
     poolManager = await PoolManager.at(baseContractList.system.poolManager);
-    vetokenRewards = await VE3DRewardPool.at(
-      baseContractList.system.vetokenRewards
-    );
+    vetokenRewards = await VE3DRewardPool.at(baseContractList.system.vetokenRewards);
     // veasset contracts
     veassetToken = await IERC20.at(contractAddresseList[0]);
     escrow = await IERC20.at(contractAddresseList[1]);
@@ -96,8 +83,7 @@ contract("Deposit and Withdraw Test", async (accounts) => {
 
     const ve3TokenBalanceBefore = await ve3Token.balanceOf(userA);
     const veTokenBalanceBefore = await vetoken.balanceOf(userA);
-    const ve3DillRewardPoolBalanceOfUserABefore =
-      await ve3DillRewardPool.balanceOf(userA);
+    const ve3DillRewardPoolBalanceOfUserABefore = await ve3DillRewardPool.balanceOf(userA);
 
     // approve and deposit pickle, return ve3Asset
     await veassetToken.approve(veassetDepositer.address, depositAmount, {
@@ -108,34 +94,19 @@ contract("Deposit and Withdraw Test", async (accounts) => {
 
     const ve3TokenBalanceAfter = await ve3Token.balanceOf(userA);
     const veTokenBalanceAfter = await vetoken.balanceOf(userA);
-    const ve3DillRewardPoolBalanceOfUserAAfter =
-      await ve3DillRewardPool.balanceOf(userA);
-    //todo: should user get ve3Token if deposit only?
-    const ve3TokenFromDepositing = (
-      ve3TokenBalanceAfter - ve3TokenBalanceBefore
-    ).toString();
+    const ve3DillRewardPoolBalanceOfUserAAfter = await ve3DillRewardPool.balanceOf(userA);
+    const ve3TokenFromDepositing = (ve3TokenBalanceAfter - ve3TokenBalanceBefore).toString();
     console.log("ve3Token from depositing veAsset:", ve3TokenFromDepositing);
     expect(ve3TokenFromDepositing).to.equal(web3.utils.toWei("9.99"));
-    console.log(
-      "veToken from depositing veAsset:",
-      (veTokenBalanceAfter - veTokenBalanceBefore).toString()
-    );
-    expect((veTokenBalanceAfter - veTokenBalanceBefore).toString()).to.equal(
-      web3.utils.toWei("0")
-    );
+    console.log("veToken from depositing veAsset:", (veTokenBalanceAfter - veTokenBalanceBefore).toString());
+    expect((veTokenBalanceAfter - veTokenBalanceBefore).toString()).to.equal(web3.utils.toWei("0"));
     console.log(
       "ve3Token rewardPool user balance: ",
-      (
-        ve3DillRewardPoolBalanceOfUserAAfter -
-        ve3DillRewardPoolBalanceOfUserABefore
-      ).toString()
+      (ve3DillRewardPoolBalanceOfUserAAfter - ve3DillRewardPoolBalanceOfUserABefore).toString()
     );
-    expect(
-      (
-        ve3DillRewardPoolBalanceOfUserAAfter -
-        ve3DillRewardPoolBalanceOfUserABefore
-      ).toString()
-    ).to.equal(web3.utils.toWei("0"));
+    expect((ve3DillRewardPoolBalanceOfUserAAfter - ve3DillRewardPoolBalanceOfUserABefore).toString()).to.equal(
+      web3.utils.toWei("0")
+    );
 
     // deposit again
     await veassetToken.approve(veassetDepositer.address, depositAmount2, {
@@ -144,9 +115,7 @@ contract("Deposit and Withdraw Test", async (accounts) => {
     await veassetDepositer.deposit(depositAmount2, false);
 
     const ve3TokenBalanceAfter2 = await ve3Token.balanceOf(userA);
-    expect((ve3TokenBalanceAfter2 - ve3TokenBalanceAfter).toString()).to.equal(
-      web3.utils.toWei("4.995")
-    );
+    expect((ve3TokenBalanceAfter2 - ve3TokenBalanceAfter).toString()).to.equal(web3.utils.toWei("4.995"));
 
     const incentiveVeAsset = await veassetDepositer.incentiveVeAsset();
     console.log("incentiveVeAsset : ", incentiveVeAsset.toString());

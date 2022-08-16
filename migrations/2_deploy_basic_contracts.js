@@ -1,9 +1,11 @@
-const { ether, balance, constants, time } = require("@openzeppelin/test-helpers");
+const { deployProxy } = require("@openzeppelin/truffle-upgrades");
 const RewardFactory = artifacts.require("RewardFactory");
 const TokenFactory = artifacts.require("TokenFactory");
 const StashFactory = artifacts.require("StashFactory");
 const VeTokenMinter = artifacts.require("VeTokenMinter");
 const PoolManager = artifacts.require("PoolManager");
+const VestedEscrow = artifacts.require("VestedEscrow");
+const TreasuryFunds = artifacts.require("TreasuryFunds");
 const VeToken = artifacts.require("VeToken");
 const VE3DRewardPool = artifacts.require("VE3DRewardPool");
 const { addContract } = require("./helper/addContracts");
@@ -16,13 +18,18 @@ module.exports = async function (deployer, network, accounts) {
   const admin = accounts[0];
   web3.eth.sendTransaction({ from: admin, to: vetokenOperator, value: web3.utils.toWei("10") });
   // vetoken minter
-  await deployer.deploy(VeTokenMinter, veTokenAddress);
-  let vetokenMinter = await VeTokenMinter.deployed();
+  let vetokenMinter = await deployProxy(VeTokenMinter, [veTokenAddress], {
+    deployer,
+    initializer: "__VeTokenMinter_init",
+  });
+
   addContract("system", "vetokenMinter", vetokenMinter.address);
   global.created = true;
   //mint vetoke to minter contract
   const vetoken = await VeToken.at(veTokenAddress);
-  await vetoken.mint(vetokenMinter.address, web3.utils.toWei("30000000"), { from: vetokenOperator });
+  const vetokenMinterContract = await VeTokenMinter.at(vetokenMinter.address);
+  await vetoken.mint(vetokenMinter.address, web3.utils.toWei("95249999"), { from: vetokenOperator });
+  await vetokenMinterContract.deposit(web3.utils.toWei("95249999"));
   addContract("system", "vetoken", veTokenAddress);
 
   // reward factory
@@ -41,17 +48,37 @@ module.exports = async function (deployer, network, accounts) {
   addContract("system", "sFactory", sFactory.address);
 
   // pool manager
-  await deployer.deploy(PoolManager);
-  const poolManager = await PoolManager.deployed();
+  const poolManager = await deployProxy(PoolManager, {
+    deployer,
+    initializer: "__PoolManager_init",
+  });
+
   addContract("system", "poolManager", poolManager.address);
 
   // VE3DRewardPool
-  await deployer.deploy(VE3DRewardPool, veTokenAddress, rFactory.address);
-  const ve3dRewardPool = await VE3DRewardPool.deployed();
+  const ve3dRewardPool = await deployProxy(VE3DRewardPool, [veTokenAddress, admin], {
+    deployer,
+    initializer: "__VE3DRewardPool_init",
+  });
   addContract("system", "vetokenRewards", ve3dRewardPool.address);
 
   // xVE3D Reward Pool
-  await deployer.deploy(VE3DLocker, veTokenAddress);
-  const ve3dLocker = await VE3DLocker.deployed();
+  const ve3dLocker = await deployProxy(VE3DLocker, [veTokenAddress], {
+    deployer,
+    initializer: "__VE3DLocker_init",
+  });
   addContract("system", "ve3dLocker", ve3dLocker.address);
+
+  // VestedEscrow
+  const TOTAL_TIME = 1.5 * 365 * 86400; // 1,5 years
+  const startTime = Math.floor(Date.now() / 1000) + 1000; // start time is within 1000 seconds, can be configured here or be updated in the contract later
+  const endTime = startTime + TOTAL_TIME;
+  await deployer.deploy(VestedEscrow, veTokenAddress, startTime, endTime, ve3dRewardPool.address, vetokenOperator);
+  const vestedEscrow = await VestedEscrow.deployed();
+  addContract("system", "vestedEscrow", vestedEscrow.address);
+
+  // TreasuryFunds
+  await deployer.deploy(TreasuryFunds, admin);
+  const treasuryFunds = await TreasuryFunds.deployed();
+  addContract("system", "treasuryFunds", treasuryFunds.address);
 };

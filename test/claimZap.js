@@ -9,6 +9,7 @@ var contractList = jsonfile.readFileSync('./contracts.json');
 const {
   loadContracts,
   contractAddresseList,
+  Networks
 } = require("./helper/dumpAddresses");
 
 const IERC20 = artifacts.require('IERC20');
@@ -21,9 +22,10 @@ const VE3DLocker = artifacts.require('VE3DLocker');
 const VeAssetDepositor = artifacts.require('VeAssetDepositor');
 const ClaimZap = artifacts.require('ClaimZap');
 
-let deployer = '0x2093b4281990A568C9D588b8BCE3BFD7a1557Ebd';
+let deployer;
 
 //system
+let network;
 let veToken;
 let ve3Token;
 let veAsset;
@@ -62,8 +64,7 @@ async function logBalances() {
 
 contract('Test claim zap', async accounts => {
   before('setup', async () => {
-    await loadContracts();
-    console.log(contractAddresseList);
+    network = await loadContracts();
     veToken = await IERC20.at(contractList.system.vetoken);
     ve3Token = await IERC20.at(contractAddresseList[5]);
     veAsset = await IERC20.at(contractAddresseList[0]);
@@ -78,6 +79,7 @@ contract('Test claim zap', async accounts => {
     feeToken = await IERC20.at(await booster.feeToken());
 
     userA = accounts[0];
+    deployer = accounts[1];
 
     starttime = await time.latest();
 
@@ -114,6 +116,14 @@ contract('Test claim zap', async accounts => {
 
     // send lp token to userA
     let lpTokenHolder = '0xefe1a7b147ac4c0b761da878f6a315923441ca54';
+    switch(network){
+      case Networks.idle:
+        lpTokenHolder = "0xefe1a7b147ac4c0b761da878f6a315923441ca54"
+        break;
+      case Networks.angle:
+        lpTokenHolder = "0x5aB0e4E355b08e692933c1F6f85fd0bE56aD18A6";
+        break;
+    }
     logTransaction(await lpToken.transfer(userA, web3.utils.toWei('5'), {from: lpTokenHolder}), 'fund userA with lp token');
 
     lpTokenBalance = await lpToken.balanceOf(userA);

@@ -1,6 +1,7 @@
 const { ether, balance, constants, time } = require("@openzeppelin/test-helpers");
 const { addContract, getContract } = require("./helper/addContracts");
 const escrowABI = require("./helper/escrowABI.json");
+const uniswapV2FactoryABI = require("./helper/uniswapV2Factory.json");
 
 const VoterProxy = artifacts.require("VoterProxy");
 const VeTokenMinter = artifacts.require("VeTokenMinter");
@@ -14,7 +15,6 @@ const StashFactory = artifacts.require("StashFactory");
 const VE3DRewardPool = artifacts.require("VE3DRewardPool");
 const VE3DLocker = artifacts.require("VE3DLocker");
 const IERC20 = artifacts.require("IERC20");
-const IUniswapV2Factory = artifacts.require("IUniswapV2Factory");
 const ClaimZap = artifacts.require("ClaimZap");
 const SmartWalletWhitelist = artifacts.require("SmartWalletWhitelist");
 const BigNumber = require("bignumber.js");
@@ -165,12 +165,13 @@ module.exports = async function (deployer, network, accounts) {
 
   // check whether a pair exists on SushiSwap, if not create the pair
   const sushiV2FactoryAddress = "0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac";
-  const sushiV2Factory = await IUniswapV2Factory.at(sushiV2FactoryAddress);
+  const sushiV2Factory = new web3.eth.Contract(uniswapV2FactoryABI, sushiV2FactoryAddress);
 
-  let exchangeAddress = await sushiV2Factory.getPair(idle.address, ve3Token.address);
+  let exchangeAddress = await sushiV2Factory.methods.getPair(idle.address, ve3Token.address).call();
 
   if(exchangeAddress === constants.ZERO_ADDRESS){
-    let newExchangeResult = await sushiV2Factory.createPair(idle.address, ve3Token.address);
+    let newExchangeResult = await sushiV2Factory.methods.createPair(idle.address, ve3Token.address).send({from: idleAdmin});
+    console.log(newExchangeResult);
     exchangeAddress = newExchangeResult.logs[0].args.pair;
   }
 

@@ -3,7 +3,6 @@ const { addContract, getContract } = require("./helper/addContracts");
 const escrowABI = require("./helper/escrowABI.json");
 const uniswapV2FactoryABI = require("./helper/uniswapV2Factory.json");
 
-const VoterProxy = artifacts.require("VoterProxy");
 const { deployProxy } = require("@openzeppelin/truffle-upgrades");
 const VoterProxyV2 = artifacts.require("VoterProxyV2");
 const VeTokenMinter = artifacts.require("VeTokenMinter");

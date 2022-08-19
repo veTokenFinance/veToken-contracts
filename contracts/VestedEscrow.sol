@@ -116,6 +116,7 @@ contract VestedEscrow is Ownable, ReentrancyGuard {
         }
 
         initialLocked[_recipient] = 0;
+        totalClaimed[_recipient] = 0;
     }
 
     function _totalVestedOf(address _recipient, uint256 _time) internal view returns (uint256) {

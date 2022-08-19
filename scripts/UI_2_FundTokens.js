@@ -32,22 +32,21 @@ module.exports = async (deployer, network) => {
 
   const vetokenUsers = [
     "0xaa5e721A6a8B1F61e5976a30B908D7F7f0798677",
-    "0x68fFd42b61D7E97d1b4C63BB9f7671e816dc9B26",
-    "0x8f6b2f88D67383a87db3Dbd0d34FdeD296c1A1c4",
-    "0xa29c577390b48dB5cfb42263A3ce2bdD8fE1B364",
-    "0xa51D79fC646874f7Bd6a9c25A19a875eCbbc7d29",
+    "0x820745B3742652fD4C071989981FFb3a1F247eDA",
+    "0xD60c0F6c7CDdb96181E3B707191AF66AC9f44d36",
+    "0x8b4CB11e1D2dfb2840409c693428642FE0952565",
+    "0x2E0e8dD6564e6104dB924dCD8d3AE78096489EeA",
   ];
 
   for (var i = vetokenUsers.length - 1; i >= 0; i--) {
     for (var j = 0; j < lp_tokens.length; j++) {
       const lpToken = await IERC20.at(lp_tokens[j]);
       const balance = (await lpToken.balanceOf(admin)).toString();
-      console.log("balance=>>>", balance);
-      console.log(i);
+
       const amount = toBN(balance)
         .idiv(i + 1)
         .toFixed();
-      console.log("amount=>>>", amount);
+
       await lpToken.transfer(vetokenUsers[i], amount, {
         from: admin,
       });

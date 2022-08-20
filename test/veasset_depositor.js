@@ -96,7 +96,7 @@ contract("VeAssetDepositor", async (accounts) => {
 
     it("deposit only without lock", async () => {
       await veassetDepositer.deposit(depositAmount, false);
-      assert.equal((await veassetToken.balanceOf(USER1)).toString(), depositAmount.toFixed());
+      assert.closeTo(toBN(await veassetToken.balanceOf(USER1)).toNumber(), toBN(depositAmount).toNumber(), 1);
       assert.equal((await veassetToken.balanceOf(veassetDepositer.address)).toString(), depositAmount.toFixed());
       assert.equal((await ve3Token.balanceOf(USER1)).toString(), toBN(depositAmount).minus(callIncentive).toFixed());
     });

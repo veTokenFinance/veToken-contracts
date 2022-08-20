@@ -17,6 +17,7 @@ import "./Interfaces/IStash.sol";
 import "./Interfaces/IStashFactory.sol";
 import "./Interfaces/IVoteEscrow.sol";
 import "./Interfaces/IGauge.sol";
+import "./Interfaces/IRegistry.sol";
 
 contract Booster is ReentrancyGuardUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -101,6 +102,7 @@ contract Booster is ReentrancyGuardUpgradeable {
         address indexed token,
         address rewardPool
     );
+    event PoolUpdated(uint256 indexed pid, address oldLptoken, address newLptoken);
     event PoolShuttedDown(uint256 indexed pid);
     event SystemShuttedDown();
     event Voted(uint256 indexed voteId, address indexed votingAddress, bool support);
@@ -336,6 +338,20 @@ contract Booster is ReentrancyGuardUpgradeable {
         gaugeTokenMap[pool.lptoken] = false;
 
         emit PoolShuttedDown(_pid);
+        return true;
+    }
+
+    //update lp token for Angle , as it might be changes any time
+    function updatePool(uint256 _pid) external returns (bool) {
+        require(msg.sender == poolManager, "!auth");
+        PoolInfo storage pool = poolInfo[_pid];
+
+        address _oldLpToken = pool.lptoken;
+        address _newLpToken = IRegistry(pool.gauge).staking_token();
+
+        pool.lptoken = _newLpToken;
+
+        emit PoolUpdated(_pid, _oldLpToken, _newLpToken);
         return true;
     }
 

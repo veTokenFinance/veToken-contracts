@@ -12,6 +12,8 @@ interface IPools {
 
     function shutdownPool(uint256 _pid) external returns (bool);
 
+    function updatePool(uint256 _pid) external returns (bool);
+
     function poolInfo(uint256)
         external
         view

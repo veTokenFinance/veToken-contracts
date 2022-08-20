@@ -44,7 +44,7 @@ contract VoterProxyV2 is Initializable {
         address _gaugeProxy,
         address _minter,
         IVoteEscrow.EscrowModle _escrowModle
-    ) external {
+    ) external initializer {
         name = _name;
         veAsset = _veAsset;
         escrow = _escrow;
@@ -151,8 +151,11 @@ contract VoterProxyV2 is Initializable {
 
         if (escrowModle == IVoteEscrow.EscrowModle.ANGLE) {
             try IGauge(_gauge).scaling_factor() {
-                _amount = _amount.mul(IGauge(_gauge).scaling_factor()).div(10**18);
-                _actualAmount = _amount.mul(10**18).div(IGauge(_gauge).scaling_factor());
+                uint256 scaling_factor = IGauge(_gauge).scaling_factor();
+                if (scaling_factor > 0) {
+                    _amount = _amount.mul(scaling_factor).div(10**18);
+                    _actualAmount = _amount.mul(10**18).div(scaling_factor);
+                }
             } catch {}
         }
 
@@ -271,7 +274,10 @@ contract VoterProxyV2 is Initializable {
 
         if (escrowModle == IVoteEscrow.EscrowModle.ANGLE) {
             try IGauge(_gauge).scaling_factor() {
-                _balance = _balance.mul(10**18).div(IGauge(_gauge).scaling_factor());
+                uint256 scaling_factor = IGauge(_gauge).scaling_factor();
+                if (scaling_factor > 0) {
+                    _balance = _balance.mul(10**18).div(scaling_factor);
+                }
             } catch {}
         }
 

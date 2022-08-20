@@ -339,13 +339,9 @@ contract("veToken Locking Reward Test", async (accounts) => {
     console.log("Queued 6 decimal reward rewardRate before:", addedAngle_sanUSDC_EUR.rewardRate.toNumber());
 
     assert.equal(addedAngle_sanUSDC_EUR.queuedRewards.toNumber(), 0);
-    // mock reward distributed to ve3DLocker
-    const angle_sanUSDC_EUR_holder = "0xea51ccb352aea7641ff4d88536f0f06fd052ef8f";
-    await web3.eth.sendTransaction({ from: USER1, to: angle_sanUSDC_EUR_holder, value: web3.utils.toWei("1") });
-    const balanceOfHolder = await angle_sanUSDC_EUR.balanceOf(angle_sanUSDC_EUR_holder);
-    console.log(balanceOfHolder.toString());
+
     await angle_sanUSDC_EUR.transfer(veTokenLocker.address, web3.utils.toWei("1000", "mwei"), {
-      from: angle_sanUSDC_EUR_holder,
+      from: USER1,
     });
 
     await veTokenLocker.approveRewardDistributor(angle_sanUSDC_EUR_address, userA, true);

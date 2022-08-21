@@ -360,6 +360,55 @@ contract("VestedEscrow", async (accounts) => {
         assert.equal(await ve3d.balanceOf(userA), claimed.toString());
         assert.equal(adminBalanceDifference.toString(), toBN(amountUserA).minus(userABalanceAfter).toString());
       });
+
+      it("it can fund a user again after cancel", async () => {
+        await vestedEscrow.cancel(userA, { from: admin });
+
+        assert.equal(await vestedEscrow.totalClaimed(userA), "0");
+
+        await time.increase("1000");
+
+        // fund again for the same user
+        await ve3d.approve(vestedEscrow.address, constants.MAX_UINT256, {
+          from: admin,
+        });
+        await vestedEscrow.addTokens(totalAmount, { from: admin });
+        await vestedEscrow.fund([userA], [amountUserA], {
+          from: admin,
+        });
+
+        await time.increase("2000");
+
+        await vestedEscrow.claim(userA, {
+          from: userA,
+        });
+
+        const currentTime = Number(await time.latest());
+        const elapsed = currentTime - startTime;
+
+        const claimed = toBN(amountUserA).times(elapsed).dividedToIntegerBy(TOTAL_TIME);
+
+        assert.equal(await ve3d.balanceOf(userA), claimed.toString());
+      });
+
+      it("it decreases the initialLockedSupply after cancel", async () => {
+        const initialLockedSupplyBefore = await vestedEscrow.initialLockedSupply();
+
+        await time.increase("2000");
+
+        await vestedEscrow.cancel(userA, { from: admin });
+
+        const currentTime = Number(await time.latest());
+        const elapsed = currentTime - startTime;
+
+        const claimed = toBN(amountUserA).times(elapsed).dividedToIntegerBy(TOTAL_TIME);
+
+        const userADelta = toBN(amountUserA).minus(toBN(claimed));
+
+        const initialLockedSupplyAfter = await vestedEscrow.initialLockedSupply();
+
+        assert.equal(initialLockedSupplyAfter.toString(), toBN(initialLockedSupplyBefore).minus(userADelta).toString());
+      });
     });
 
     describe("#overview", () => {

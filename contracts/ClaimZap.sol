@@ -2,8 +2,7 @@
 pragma solidity 0.8.7;
 
 import "./helper/MathUtil.sol";
-import "./Interfaces/IBasicRewards.sol";
-import "./Interfaces/IVeTokenRewards.sol";
+import "./Interfaces/IRewards.sol";
 import "./Interfaces/IVeAssetDeposit.sol";
 import "./Interfaces/ISwapExchange.sol";
 import "./Interfaces/IVe3dLocker.sol";
@@ -104,15 +103,15 @@ contract ClaimZap is Ownable{
 
         //claim from main LP pools
         for(uint256 i = 0; i < rewardContracts.length; i++){
-            IBasicRewards(rewardContracts[i]).getReward(msg.sender,true);
+            IRewards(rewardContracts[i]).getReward(msg.sender,true);
         }
         //claim from extra rewards
         for(uint256 i = 0; i < extraRewardContracts.length; i++){
-            IBasicRewards(extraRewardContracts[i]).getReward(msg.sender);
+            IRewards(extraRewardContracts[i]).getReward(msg.sender);
         }
         //claim from multi reward token contract
         for(uint256 i = 0; i < tokenRewardContracts.length; i++){
-            IBasicRewards(tokenRewardContracts[i]).getReward(msg.sender,tokenRewardTokens[i]);
+            IRewards(tokenRewardContracts[i]).getReward(msg.sender,tokenRewardTokens[i]);
         }
 
         //claim others/deposit/lock/stake
@@ -137,14 +136,14 @@ contract ClaimZap is Ownable{
 
         //claim (and stake) from veToken rewards
         if(CheckOption(options,uint256(Options.ClaimVeTokenAndStake))){
-            IVeTokenRewards(ve3dRewards).getReward(msg.sender,true,true);
+            IRewards(ve3dRewards).getReward(msg.sender,true,true);
         }else if(CheckOption(options,uint256(Options.ClaimVeToken))){
-            IVeTokenRewards(ve3dRewards).getReward(msg.sender,true,false);
+            IRewards(ve3dRewards).getReward(msg.sender,true,false);
         }
 
         //claim from ve3Token rewards
         if(CheckOption(options,uint256(Options.ClaimVe3Token))){
-            IBasicRewards(ve3TokenRewards).getReward(msg.sender,true);
+            IRewards(ve3TokenRewards).getReward(msg.sender,true);
         }
 
         //claim from locker
@@ -175,7 +174,7 @@ contract ClaimZap is Ownable{
                 //get ve3Token amount
                 uint256 ve3TokenBalance = IERC20(ve3Token).balanceOf(address(this));
                 //stake for msg.sender
-                IBasicRewards(ve3TokenRewards).stakeFor(msg.sender, ve3TokenBalance);
+                IRewards(ve3TokenRewards).stakeFor(msg.sender, ve3TokenBalance);
             }
         }
 
@@ -190,7 +189,7 @@ contract ClaimZap is Ownable{
                     IVe3dLocker(ve3dLocker).lock(msg.sender, veTokenBalance);
                 }else{
                     //stake for msg.sender
-                    IBasicRewards(ve3dRewards).stakeFor(msg.sender, veTokenBalance);
+                    IRewards(ve3dRewards).stakeFor(msg.sender, veTokenBalance);
                 }
             }
         }

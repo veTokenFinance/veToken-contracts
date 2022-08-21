@@ -113,9 +113,11 @@ contract VestedEscrow is Ownable, ReentrancyGuard {
 
         if (delta != 0) {
             rewardToken.safeTransfer(owner(), delta);
+            initialLockedSupply = initialLockedSupply.sub(delta);
         }
 
         initialLocked[_recipient] = 0;
+        totalClaimed[_recipient] = 0;
     }
 
     function _totalVestedOf(address _recipient, uint256 _time) internal view returns (uint256) {

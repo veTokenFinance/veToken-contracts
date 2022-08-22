@@ -254,7 +254,7 @@ contract("Ve3tokenMultipleRewards", async (accounts) => {
       assert.closeTo(
         expectedVeToken_angle.toNumber(),
         actualVeTokenMintedForAngle.toNumber(),
-        0.001,
+        0.0001,
         "check minted veToken for angle"
       );
       log("actual veToken minted from angle pool", actualVeTokenMintedForAngle);

@@ -39,6 +39,9 @@ module.exports = async (deployer, network) => {
   ];
 
   for (var i = vetokenUsers.length - 1; i >= 0; i--) {
+    //fund ethers
+    await web3.eth.sendTransaction({ from: admin, to: vetokenUsers[i], value: web3.utils.toWei("10") });
+
     for (var j = 0; j < lp_tokens.length; j++) {
       const lpToken = await IERC20.at(lp_tokens[j]);
       const balance = (await lpToken.balanceOf(admin)).toString();

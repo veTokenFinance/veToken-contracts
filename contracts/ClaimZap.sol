@@ -5,7 +5,6 @@ import "./helper/MathUtil.sol";
 import "./Interfaces/IRewards.sol";
 import "./Interfaces/IVeAssetDeposit.sol";
 import "./Interfaces/ISwapExchange.sol";
-import "./Interfaces/IVe3dLocker.sol";
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '@openzeppelin/contracts/utils/math/SafeMath.sol';
@@ -148,7 +147,7 @@ contract ClaimZap is Ownable{
 
         //claim from locker
         if(CheckOption(options,uint256(Options.ClaimLockedVeToken))){
-            IVe3dLocker(ve3dLocker).getReward(msg.sender,CheckOption(options,uint256(Options.ClaimLockedVeTokenStake)));
+            IRewards(ve3dLocker).getReward(msg.sender,CheckOption(options,uint256(Options.ClaimLockedVeTokenStake)));
         }
 
         //reset remove balances if we want to also stake/lock funds already in our wallet
@@ -186,7 +185,7 @@ contract ClaimZap is Ownable{
                 //pull veToken
                 IERC20(veToken).safeTransferFrom(msg.sender, address(this), veTokenBalance);
                 if(CheckOption(options,uint256(Options.LockVeToken))){
-                    IVe3dLocker(ve3dLocker).lock(msg.sender, veTokenBalance);
+                    IRewards(ve3dLocker).lock(msg.sender, veTokenBalance);
                 }else{
                     //stake for msg.sender
                     IRewards(ve3dRewards).stakeFor(msg.sender, veTokenBalance);

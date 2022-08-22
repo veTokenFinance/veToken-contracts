@@ -42,4 +42,6 @@ interface IRewards {
     function earned(address account) external view returns (uint256);
 
     function recoverUnusedReward(address _destination) external;
+
+    function lock(address _account, uint256 _amount) external;
 }

@@ -51,6 +51,7 @@ contract VeAssetDepositor is ReentrancyGuardUpgradeable {
 
     function setLockMaxTime(uint256 _maxTime) external {
         require(msg.sender == feeManager, "!auth");
+        require(unlockTime == 0, "Max time has been set");
         maxTime = _maxTime;
     }
 

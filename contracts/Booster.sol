@@ -116,6 +116,8 @@ contract Booster is ReentrancyGuardUpgradeable {
     event PoolShuttedDown(uint256 indexed pid);
     event SystemShuttedDown();
     event Voted(uint256 indexed voteId, address indexed votingAddress, bool support);
+    event EarmarkedRewards(uint256 rewardAmount);
+    event EarmarkedFees(uint256 feeAmount);
 
     function __Booster_init(
         address _staker,
@@ -429,6 +431,13 @@ contract Booster is ReentrancyGuardUpgradeable {
         address token = pool.token;
         ITokenMinter(token).burn(_from, _amount);
 
+        // @dev handle staking factor for Angle ,
+        // use try and catch as not all Angle gauges have scaling factor
+        if (IVoteEscrow(staker).escrowModle() == IVoteEscrow.EscrowModle.ANGLE) {
+            try IGauge(gauge).scaling_factor() {
+                _amount = _amount.mul(IGauge(gauge).scaling_factor()).div(10**18);
+            } catch {}
+        }
         //pull from gauge if not shutdown
         // if shutdown tokens will be in this contract
         if (!pool.shutdown) {
@@ -441,18 +450,18 @@ contract Booster is ReentrancyGuardUpgradeable {
         if (stash != address(0) && !isShutdown && !pool.shutdown) {
             IStash(stash).stashRewards();
         }
+        uint256 _actualAmount = _amount;
         // @dev handle staking factor for Angle ,
         // use try and catch as not all Angle gauges have scaling factor
         if (IVoteEscrow(staker).escrowModle() == IVoteEscrow.EscrowModle.ANGLE) {
             try IGauge(gauge).scaling_factor() {
-                _amount = (_amount * 10**18) / IGauge(gauge).scaling_factor();
+                _amount = _amount.mul(IGauge(gauge).scaling_factor()).div(10**18);
+                _actualAmount = _amount.mul(10**18).div(IGauge(gauge).scaling_factor());
             } catch {}
         }
+
         //return lp tokens
-        IERC20Upgradeable(lptoken).safeTransfer(
-            _to,
-            Math.min(_amount, IERC20Upgradeable(lptoken).balanceOf(address(this)))
-        );
+        IERC20Upgradeable(lptoken).safeTransfer(_to, _actualAmount);
 
         emit Withdrawn(_to, _pid, _amount);
     }
@@ -533,19 +542,18 @@ contract Booster is ReentrancyGuardUpgradeable {
         address gauge = pool.gauge;
 
         if (
-            stash != address(0) &&
-            IVoteEscrow(staker).escrowModle() == IVoteEscrow.EscrowModle.ANGLE
+            IVoteEscrow(staker).escrowModle() == IVoteEscrow.EscrowModle.ANGLE &&
+            stash != address(0)
         ) {
             _claimStashReward(stash);
-        }
+        } else {
+            //claim veAsset
+            IStaker(staker).claimVeAsset(gauge);
 
-        //claim veAsset
-        IStaker(staker).claimVeAsset(gauge);
-
-        //check if there are extra rewards
-
-        if (stash != address(0)) {
-            _claimStashReward(stash);
+            //check if there are extra rewards
+            if (stash != address(0)) {
+                _claimStashReward(stash);
+            }
         }
 
         //veAsset balance
@@ -601,6 +609,7 @@ contract Booster is ReentrancyGuardUpgradeable {
                 IRewards(stakerLockRewards).queueNewRewards(veAsset, _stakerLockIncentive);
             }
         }
+        emit EarmarkedRewards(veAssetBal);
     }
 
     function _claimStashReward(address stash) internal {
@@ -642,6 +651,8 @@ contract Booster is ReentrancyGuardUpgradeable {
             IERC20Upgradeable(feeToken).safeTransfer(stakerLockRewards, _stakerLockFeesIncentive);
             IRewards(stakerLockRewards).queueNewRewards(feeToken, _stakerLockFeesIncentive);
         }
+
+        emit EarmarkedFees(_balance);
         return true;
     }
 

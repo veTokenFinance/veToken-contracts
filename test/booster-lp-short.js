@@ -847,24 +847,37 @@ contract("Booster LP Stake", async (accounts) => {
         const parsedPoolInfo = JSON.parse(poolInfo);
         const rewardPool = await BaseRewardPool.at(parsedPoolInfo.veAssetRewards);
         const lpTokenWithScaleFactor = await IERC20.at(parsedPoolInfo.lptoken);
+        console.log("Angle gauge address", parsedPoolInfo.gauge);
+        console.log("lp token address", lpTokenWithScaleFactor.address);
         const GUNI = await IERC20.at(lpTokenWithScaleFactor.address);
+        // exchange token frm gauge
+        const GUNI_gauge = await IERC20.at("0xEB7547a8a734b6fdDBB8Ce0C314a9E6485100a3C");
         const depositAmountlpTokenWithScaleFactor = await GUNI.balanceOf("0x1F427A6FCdb95A7393C58552093e10A932890FA8");
         await GUNI.transfer(accounts[0], depositAmountlpTokenWithScaleFactor, {
           from: "0x1F427A6FCdb95A7393C58552093e10A932890FA8",
         });
         const angleGaugeWithScale = new web3.eth.Contract(gaugeAngleABI, parsedPoolInfo.gauge);
         const scalingFactor = await angleGaugeWithScale.methods.scaling_factor().call({ from: USER1, gas: 300000 });
+
+        const lpTokenWithScaleFactorBalance = await lpTokenWithScaleFactor.balanceOf(USER1);
         await lpTokenWithScaleFactor
           .balanceOf(USER1)
-          .then((a) => log("G-UNI (token with scaling_factor) balance:", (a * scalingFactor) / 10 ** 18));
-        const lpTokenWithScaleFactorBalance = await lpTokenWithScaleFactor.balanceOf(USER1);
-        await lpTokenWithScaleFactor.balanceOf(USER1).then((a) => log("G-UNI balance:", formatEther(a.toString())));
+          .then((a) => log("G-UNI balance of user before deposit:", formatEther(a.toString())));
         await lpTokenWithScaleFactor.approve(booster.address, lpTokenWithScaleFactorBalance);
         await booster.deposit(4, lpTokenWithScaleFactorBalance, true);
         const actaulLPBalance = (
           await angleGaugeWithScale.methods.balanceOf(voterProxy.address).call({ from: USER1, gas: 300000 })
         ).toString();
+
+        console.log(
+          "G-UNI balance of user after deposit",
+          formatEther((await lpTokenWithScaleFactor.balanceOf(USER1)).toString())
+        );
         console.log("lp token balance after deposit", formatEther(actaulLPBalance.toString()));
+        console.log(
+          "G-UNI-gauge token balance of voter proxy after deposit ",
+          formatEther((await GUNI_gauge.balanceOf(voterProxy.address)).toString())
+        );
 
         // increase time
         await time.increase(10 * 86400);
@@ -883,12 +896,98 @@ contract("Booster LP Stake", async (accounts) => {
 
         await rewardPool.withdraw(lpTokenWithScaleFactorBalance, false);
         assert.equal((await rewardPool.balanceOf(USER1)).toString(), 0);
+        console.log("withdraw balance pass to booster ", lpTokenWithScaleFactorBalance.toString());
 
         await booster.withdraw(4, lpTokenWithScaleFactorBalance, { from: USER1 });
-        // await booster.withdrawAll(4, { from: USER1 });
+
         log("Withdraw lptoken from G-UNI (token with scaling_factor) Gauge (with scaling factor)", "");
-        await lpTokenWithScaleFactor.balanceOf(USER1).then((a) => log("G-UNI balance:", formatEther(a.toString())));
-        assert.equal((await lpTokenWithScaleFactor.balanceOf(USER1)).toString(), actaulLPBalance.toString());
+        await lpTokenWithScaleFactor
+          .balanceOf(USER1)
+          .then((a) => log("G-UNI balance of user after withdraw:", formatEther(a.toString())));
+        assert.equal(
+          (await lpTokenWithScaleFactor.balanceOf(USER1)).toString(),
+          ((actaulLPBalance * 10 ** 18) / scalingFactor).toFixed()
+        );
+        console.log(
+          "G-UNI-gauge token balance of voter proxy after withdraw ",
+          formatEther((await GUNI_gauge.balanceOf(voterProxy.address)).toString())
+        );
+
+        const depositAmountlpTokenAfterWithdraw = await GUNI.balanceOf(USER1);
+        assert.notEqual(depositAmountlpTokenAfterWithdraw.toString(), 0);
+      }
+    });
+
+    it("angle scaling factor withdraw All (test), also check earned", async () => {
+      if (network === Networks.angle) {
+        const poolInfo = JSON.stringify(await booster.poolInfo(4));
+        const parsedPoolInfo = JSON.parse(poolInfo);
+        const rewardPool = await BaseRewardPool.at(parsedPoolInfo.veAssetRewards);
+        const lpTokenWithScaleFactor = await IERC20.at(parsedPoolInfo.lptoken);
+        console.log("Angle gauge address", parsedPoolInfo.gauge);
+        console.log("lp token address", lpTokenWithScaleFactor.address);
+        const GUNI = await IERC20.at(lpTokenWithScaleFactor.address);
+        // exchange token frm gauge
+        const GUNI_gauge = await IERC20.at("0xEB7547a8a734b6fdDBB8Ce0C314a9E6485100a3C");
+        const depositAmountlpTokenWithScaleFactor = await GUNI.balanceOf("0x1F427A6FCdb95A7393C58552093e10A932890FA8");
+        await GUNI.transfer(accounts[0], depositAmountlpTokenWithScaleFactor, {
+          from: "0x1F427A6FCdb95A7393C58552093e10A932890FA8",
+        });
+        const angleGaugeWithScale = new web3.eth.Contract(gaugeAngleABI, parsedPoolInfo.gauge);
+        const scalingFactor = await angleGaugeWithScale.methods.scaling_factor().call({ from: USER1, gas: 300000 });
+
+        const lpTokenWithScaleFactorBalance = await lpTokenWithScaleFactor.balanceOf(USER1);
+        await lpTokenWithScaleFactor
+          .balanceOf(USER1)
+          .then((a) => log("G-UNI balance of user before deposit:", formatEther(a.toString())));
+        await lpTokenWithScaleFactor.approve(booster.address, lpTokenWithScaleFactorBalance);
+        await booster.deposit(4, lpTokenWithScaleFactorBalance, true);
+        const actaulLPBalance = (
+          await angleGaugeWithScale.methods.balanceOf(voterProxy.address).call({ from: USER1, gas: 300000 })
+        ).toString();
+
+        console.log(
+          "G-UNI balance of user after deposit",
+          formatEther((await lpTokenWithScaleFactor.balanceOf(USER1)).toString())
+        );
+        console.log("lp token balance after deposit", formatEther(actaulLPBalance.toString()));
+        console.log(
+          "G-UNI-gauge token balance of voter proxy after deposit ",
+          formatEther((await GUNI_gauge.balanceOf(voterProxy.address)).toString())
+        );
+
+        // increase time
+        await time.increase(10 * 86400);
+        await time.advanceBlock();
+        log("we increased time (1)", "");
+
+        await booster.earmarkRewards(4, { from: USER2 });
+
+        // increase time
+        await time.increase(86400);
+        await time.advanceBlock();
+        log("increase time again and check earned (2)", "");
+
+        const earned = (await rewardPool.earned(USER1)).toString();
+        log("Earned:", formatEther(earned));
+
+        await rewardPool.withdraw(lpTokenWithScaleFactorBalance, false);
+        assert.equal((await rewardPool.balanceOf(USER1)).toString(), 0);
+        console.log("withdraw balance pass to booster ", lpTokenWithScaleFactorBalance.toString());
+
+        await booster.withdrawAll(4, { from: USER1 });
+        log("Withdraw lptoken from G-UNI (token with scaling_factor) Gauge (with scaling factor)", "");
+        await lpTokenWithScaleFactor
+          .balanceOf(USER1)
+          .then((a) => log("G-UNI balance of user after withdraw:", formatEther(a.toString())));
+        assert.equal(
+          (await lpTokenWithScaleFactor.balanceOf(USER1)).toString(),
+          ((actaulLPBalance * 10 ** 18) / scalingFactor).toFixed()
+        );
+        console.log(
+          "G-UNI-gauge token balance of voter proxy after withdraw ",
+          formatEther((await GUNI_gauge.balanceOf(voterProxy.address)).toString())
+        );
 
         const depositAmountlpTokenAfterWithdraw = await GUNI.balanceOf(USER1);
         assert.notEqual(depositAmountlpTokenAfterWithdraw.toString(), 0);

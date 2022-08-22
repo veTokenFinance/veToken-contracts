@@ -11,7 +11,9 @@ contract VeTokenMinter is OwnableUpgradeable {
     using SafeMath for uint256;
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    uint256 public constant maxSupply = 30 * 1000000 * 1e18; //30mil
+    uint256 public constant maxTotalSupply = 100 * 1000000 * 1e18; //30mil
+
+    uint256 public maxSupply;
     IERC20Upgradeable public veToken;
     EnumerableSet.AddressSet internal operators;
     uint256 public totalCliffs;
@@ -20,18 +22,19 @@ contract VeTokenMinter is OwnableUpgradeable {
     mapping(address => uint256) public veAssetWeights;
     uint256 public totalWeight;
 
+    event Deposit(uint256 amount);
     event Withdraw(address destination, uint256 amount);
 
     function __VeTokenMinter_init(address veTokenAddress) external initializer {
         __Ownable_init();
         veToken = IERC20Upgradeable(veTokenAddress);
         totalCliffs = 1000;
-        reductionPerCliff = maxSupply.div(totalCliffs);
+        reductionPerCliff = maxTotalSupply.div(totalCliffs);
     }
 
     ///@dev weight is 10**25 precision
     function addOperator(address _newOperator, uint256 _newWeight) public onlyOwner {
-        require(_newWeight > 0 && _newWeight <= 100 * 10**25, "Invalid weight");
+        require(_newWeight > 0, "Invalid weight");
         operators.add(_newOperator);
         totalWeight = totalWeight.sub(veAssetWeights[_newOperator]);
         veAssetWeights[_newOperator] = _newWeight;
@@ -47,7 +50,7 @@ contract VeTokenMinter is OwnableUpgradeable {
     function mint(address _to, uint256 _amount) external {
         require(operators.contains(_msgSender()), "not an operator");
 
-        uint256 supply = totalSupply;
+        uint256 supply = totalSupply.add(_getActualTotalSupply());
 
         //use current supply to gauge cliff
         //this will cause a bit of overflow into the next cliff range
@@ -62,7 +65,7 @@ contract VeTokenMinter is OwnableUpgradeable {
             _amount = _amount.mul(reduction).div(totalCliffs);
 
             //supply cap check
-            uint256 amtTillMax = maxSupply.sub(supply);
+            uint256 amtTillMax = maxTotalSupply.sub(supply);
             if (_amount > amtTillMax) {
                 _amount = amtTillMax;
             }
@@ -73,11 +76,23 @@ contract VeTokenMinter is OwnableUpgradeable {
         }
     }
 
+    function _getActualTotalSupply() internal view returns (uint256) {
+        return veToken.totalSupply().sub(maxSupply);
+    }
+
     function withdraw(address _destination, uint256 _amount) external onlyOwner {
-        totalSupply = totalSupply.add(_amount);
+        require(maxSupply.sub(totalSupply) >= _amount, "Not enough liquidity");
+
+        maxSupply = maxSupply.sub(_amount);
 
         veToken.safeTransfer(_destination, _amount);
 
         emit Withdraw(_destination, _amount);
+    }
+
+    function deposit(uint256 _amount) external onlyOwner {
+        maxSupply = maxSupply.add(_amount);
+
+        emit Deposit(_amount);
     }
 }

@@ -29,40 +29,25 @@ function toBN(number) {
 }
 
 contract("veToken Staking Reward Test", async (accounts) => {
-  let vetokenMinter;
   let vetoken;
-  let rFactory;
-  let tFactory;
-  let sFactory;
-  let poolManager;
   let vetokenRewards;
   let veassetToken;
-  let escrow;
   let lpToken;
-  let feeDistro;
   let voterProxy;
   let booster;
   let veassetDepositer;
   let ve3Token;
   let ve3TokenRewardPool;
   const reverter = new Reverter(web3);
-  const wei = web3.utils.toWei;
-  const USER1 = accounts[0];
-  const FEE_DENOMINATOR = 10000;
 
   before("setup", async () => {
     await loadContracts();
     // basic contract
     // vetokenMinter = await VeTokenMinter.at(baseContractList.system.vetokenMinter);
     vetoken = await VeToken.at(baseContractList.system.vetoken);
-    // rFactory = await RewardFactory.at(baseContractList.system.rFactory);
-    // tFactory = await TokenFactory.at(baseContractList.system.tFactory);
-    // sFactory = await StashFactory.at(baseContractList.system.sFactory);
-    // poolManager = await PoolManager.at(baseContractList.system.poolManager);
     vetokenRewards = await VE3DRewardPool.at(baseContractList.system.vetokenRewards);
     // // veasset contracts
     veassetToken = await IERC20.at(contractAddresseList[0]);
-    // escrow = await IERC20.at(contractAddresseList[1]);
     lpToken = await IERC20.at(contractAddresseList[2]);
     voterProxy = await VoterProxy.at(contractAddresseList[3]);
     booster = await Booster.at(contractAddresseList[4]);
@@ -80,6 +65,22 @@ contract("veToken Staking Reward Test", async (accounts) => {
     const userB = accounts[1];
     const userC = accounts[2];
     const poolId = 0;
+
+    const currentEpoch = async () => {
+      var currentTime = await time.latest();
+      currentTime = Math.floor(currentTime / (86400 * 7)).toFixed(0) * (86400 * 7);
+      console.log("current epoch: " + currentTime);
+      return currentTime;
+    };
+
+    const checkRewardInfo = async () => {
+      await currentEpoch();
+      const veAssetRewardInfo = await vetokenRewards.rewardTokenInfo(veassetToken.address);
+      console.log(" reward amount :", veAssetRewardInfo.queuedRewards.toString());
+      console.log(" reward lastUpdateTime :", veAssetRewardInfo.lastUpdateTime.toString());
+      console.log(" reward periodFinish :", veAssetRewardInfo.periodFinish.toString());
+      console.log(" rewardRate:", veAssetRewardInfo.rewardRate.toString());
+    };
 
     // deposit lpToken
     const poolInfo = JSON.stringify(await booster.poolInfo(poolId));
@@ -140,8 +141,9 @@ contract("veToken Staking Reward Test", async (accounts) => {
     await vetoken.balanceOf(userA).then((a) => console.log("userA veToken balance: " + formatEther(a.toString())));
 
     const vetokenBalance = await vetoken.balanceOf(userA);
+
     await vetoken.approve(userC, vetokenBalance, { from: userA });
-    await vetoken.transfer(userC, toBN(vetokenBalance).div(2));
+    await vetoken.transfer(userC, toBN(vetokenBalance).idiv(2).toString());
     const stakingVetokenAmount = await vetoken.balanceOf(userC);
     console.log("userC veToken balance init after getting from userA: " + formatEther(stakingVetokenAmount.toString()));
     expect(Number(stakingVetokenAmount.toString())).to.greaterThan(0);
@@ -153,6 +155,7 @@ contract("veToken Staking Reward Test", async (accounts) => {
     await vetokenRewards.stake(stakingVetokenAmount, { from: userC });
 
     await booster.earmarkRewards(poolId, { from: userB });
+    await checkRewardInfo();
 
     console.log("userC veToken balance after staking:" + (await vetoken.balanceOf(userC)).toString());
     console.log("userC ve3Token balance after staking:" + (await ve3Token.balanceOf(userC)).toString());
@@ -191,5 +194,37 @@ contract("veToken Staking Reward Test", async (accounts) => {
     expect(Number(userCveAssetTokenAfter.toString())).to.equal(0);
     expect(Number(userCveTokenAfter.toString())).to.greaterThan(0);
     expect(Number(userCve3TokenAfter.toString())).to.greaterThan(0);
+
+    checkRewardInfo();
+    /// advance time to pass active reward period finish time
+    await time.increase(10 * 86400);
+    // owner recovers extra reward
+    const ownerBalanceBeforeRecoverReward = (await veassetToken.balanceOf(userA)).toString();
+    const veAssetRewardInfoBeforeRecover = await vetokenRewards.rewardTokenInfo(veassetToken.address);
+    await vetokenRewards.recoverUnusedReward(veassetToken.address);
+
+    const ownerBalanceAfterRecoverReward = (await veassetToken.balanceOf(userA)).toString();
+    console.log("Owner balance before recover reward:" + ownerBalanceBeforeRecoverReward.toString());
+    console.log("Owner balance After recover reward:" + ownerBalanceAfterRecoverReward.toString());
+    console.log("queuedRewards:" + veAssetRewardInfoBeforeRecover.queuedRewards.toString());
+    const ownerBalanceDifference = toBN(ownerBalanceAfterRecoverReward).minus(ownerBalanceBeforeRecoverReward);
+    console.log("actual recovered reward:" + ownerBalanceDifference.toString());
+
+    assert.equal(Number(ownerBalanceDifference), Number(veAssetRewardInfoBeforeRecover.queuedRewards));
+    const veAssetRewardInfoAfterRecover = await vetokenRewards.rewardTokenInfo(veassetToken.address);
+    console.log("queued rewards after recover:", veAssetRewardInfoAfterRecover.queuedRewards.toNumber());
+    assert.equal(veAssetRewardInfoAfterRecover.queuedRewards.toNumber(), 0);
+
+    await vetokenRewards.removeReward(veassetToken.address);
+
+    const veAssetRewardInfoAfter = await vetokenRewards.rewardTokenInfo(veassetToken.address);
+    console.log(veAssetRewardInfoAfter);
+
+    await vetokenRewards.addReward(
+      veassetToken.address,
+      veassetDepositer.address,
+      ve3TokenRewardPool.address,
+      ve3Token.address
+    );
   });
 });

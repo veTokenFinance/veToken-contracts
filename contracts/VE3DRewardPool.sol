@@ -90,6 +90,11 @@ contract VE3DRewardPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         mapping(address => uint256) rewards;
     }
 
+    struct EarnedData {
+        address token;
+        uint256 amount;
+    }
+
     event RewardTokenAdded(
         address indexed rewardToken,
         address indexed veAssetDeposits,
@@ -142,6 +147,8 @@ contract VE3DRewardPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             "Cannot remove active reward"
         );
         rewardTokens.remove(_rewardToken);
+        delete rewardTokenInfo[_rewardToken];
+
         emit RewardTokenRemoved(_rewardToken);
     }
 
@@ -232,7 +239,7 @@ contract VE3DRewardPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
                 .add(rewardTokenInfo[_rewardToken].rewards[account]);
     }
 
-    function earned(address _rewardToken, address account) external view returns (uint256) {
+    function earned(address _rewardToken, address account) public view returns (uint256) {
         uint256 depositFeeRate = IVeAssetDeposit(rewardTokenInfo[_rewardToken].veAssetDeposits)
             .lockIncentive();
 
@@ -242,6 +249,21 @@ contract VE3DRewardPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         //fees dont apply until whitelist+veVeAsset lock begins so will report
         //slightly less value than what is actually received.
         return r.sub(fees);
+    }
+
+    function claimableRewards(address _account)
+        external
+        view
+        returns (EarnedData[] memory userRewards)
+    {
+        userRewards = new EarnedData[](rewardTokens.length());
+
+        for (uint256 i = 0; i < userRewards.length; i++) {
+            address token = rewardTokens.at(i);
+            userRewards[i].token = token;
+            userRewards[i].amount = earned(token, _account);
+        }
+        return userRewards;
     }
 
     function stake(uint256 _amount) public nonReentrant updateReward(msg.sender) {
@@ -498,6 +520,7 @@ contract VE3DRewardPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
                 owner(),
                 rewardTokenInfo[_rewardToken].queuedRewards
             );
+            rewardTokenInfo[_rewardToken].queuedRewards = 0;
         }
     }
 }

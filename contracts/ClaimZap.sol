@@ -10,7 +10,7 @@ import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '@openzeppelin/contracts/utils/math/SafeMath.sol';
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract ClaimZap is Ownable{
+contract ClaimZap is Ownable {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
@@ -58,7 +58,7 @@ contract ClaimZap is Ownable{
         return "ClaimZap V2.0";
     }
 
-    function setApprovals() external onlyOwner{
+    function setApprovals() external onlyOwner {
         IERC20(veAsset).safeApprove(veAssetDeposit, 0);
         IERC20(veAsset).safeApprove(veAssetDeposit, type(uint256).max);
         IERC20(veAsset).safeApprove(exchange, 0);
@@ -74,8 +74,8 @@ contract ClaimZap is Ownable{
         IERC20(veToken).safeApprove(ve3dLocker, type(uint256).max);
     }
 
-    function CheckOption(uint256 _mask, uint256 _flag) internal pure returns(bool){
-        return (_mask & (1<<_flag)) != 0;
+    function CheckOption(uint256 _mask, uint256 _flag) internal pure returns (bool){
+        return (_mask & (1 << _flag)) != 0;
     }
 
     /// @notice Claim rewards from multiple reward pools in one transaction and allow passing options for staking, claiming locked balances etc.
@@ -96,25 +96,25 @@ contract ClaimZap is Ownable{
         uint256 minAmountOut,
         uint256 depositVeTokenMaxAmount,
         uint256 options
-    ) external{
+    ) external {
         uint256 veAssetBalance = IERC20(veAsset).balanceOf(msg.sender);
         uint256 veTokenBalance = IERC20(veToken).balanceOf(msg.sender);
 
         //claim from main LP pools
-        for(uint256 i = 0; i < rewardContracts.length; i++){
-            IRewards(rewardContracts[i]).getReward(msg.sender,true);
+        for (uint256 i = 0; i < rewardContracts.length; i++) {
+            IRewards(rewardContracts[i]).getReward(msg.sender, true);
         }
         //claim from extra rewards
-        for(uint256 i = 0; i < extraRewardContracts.length; i++){
+        for (uint256 i = 0; i < extraRewardContracts.length; i++) {
             IRewards(extraRewardContracts[i]).getReward(msg.sender);
         }
         //claim from multi reward token contract
-        for(uint256 i = 0; i < tokenRewardContracts.length; i++){
-            IRewards(tokenRewardContracts[i]).getReward(msg.sender,tokenRewardTokens[i]);
+        for (uint256 i = 0; i < tokenRewardContracts.length; i++) {
+            IRewards(tokenRewardContracts[i]).getReward(msg.sender, tokenRewardTokens[i]);
         }
 
         //claim others/deposit/lock/stake
-        _claimExtras(depositVeAssetMaxAmount,minAmountOut, depositVeTokenMaxAmount, veAssetBalance, veTokenBalance,options);
+        _claimExtras(depositVeAssetMaxAmount, minAmountOut, depositVeTokenMaxAmount, veAssetBalance, veTokenBalance, options, tokenRewardTokens);
     }
 
     /// @notice Claim and stake, veToken rewards, claim from ve3Token rewards, claim from locker, lock upto given amount of veAsset and stake (and swap if needed), stake up to given amount of veToken.
@@ -130,63 +130,73 @@ contract ClaimZap is Ownable{
         uint256 depositVeTokenMaxAmount,
         uint256 removeVeAssetBalance,
         uint256 removeVeTokenBalance,
-        uint256 options
-    ) internal{
+        uint256 options,
+        address[] calldata tokenRewardTokens
+    ) internal {
 
         //claim (and stake) from veToken rewards
-        if(CheckOption(options,uint256(Options.ClaimVeTokenAndStake))){
-            IRewards(ve3dRewards).getReward(msg.sender,true,true);
-        }else if(CheckOption(options,uint256(Options.ClaimVeToken))){
-            IRewards(ve3dRewards).getReward(msg.sender,true,false);
+        if (CheckOption(options, uint256(Options.ClaimVeTokenAndStake))) {
+            IRewards(ve3dRewards).getReward(msg.sender, true, true);
+        } else if (CheckOption(options, uint256(Options.ClaimVeToken))) {
+            IRewards(ve3dRewards).getReward(msg.sender, true, false);
         }
 
         //claim from ve3Token rewards
-        if(CheckOption(options,uint256(Options.ClaimVe3Token))){
-            IRewards(ve3TokenRewards).getReward(msg.sender,true);
+        if (CheckOption(options, uint256(Options.ClaimVe3Token))) {
+            IRewards(ve3TokenRewards).getReward(msg.sender, true);
         }
 
         //claim from locker
-        if(CheckOption(options,uint256(Options.ClaimLockedVeToken))){
-            IRewards(ve3dLocker).getReward(msg.sender,CheckOption(options,uint256(Options.ClaimLockedVeTokenStake)));
+        if (CheckOption(options, uint256(Options.ClaimLockedVeToken))) {
+            if (tokenRewardTokens.length > 0) {
+                IRewards(ve3dLocker).getReward(msg.sender, CheckOption(options, uint256(Options.ClaimLockedVeTokenStake)), tokenRewardTokens);
+            } else {
+                IRewards(ve3dLocker).getReward(msg.sender, CheckOption(options, uint256(Options.ClaimLockedVeTokenStake)));
+            }
         }
 
         //reset remove balances if we want to also stake/lock funds already in our wallet
-        if(CheckOption(options,uint256(Options.UseAllWalletFunds))){
+        if (CheckOption(options, uint256(Options.UseAllWalletFunds))) {
             removeVeAssetBalance = 0;
             removeVeTokenBalance = 0;
         }
 
         //lock upto given amount of veAsset and stake
-        if(depositVeAssetMaxAmount > 0){
+        if (depositVeAssetMaxAmount > 0) {
             uint256 veAssetBalance = IERC20(veAsset).balanceOf(msg.sender).sub(removeVeAssetBalance);
             veAssetBalance = MathUtil.min(veAssetBalance, depositVeAssetMaxAmount);
-            if(veAssetBalance > 0){
+            if (veAssetBalance > 0) {
                 //pull veAsset
                 IERC20(veAsset).safeTransferFrom(msg.sender, address(this), veAssetBalance);
-                if(minAmountOut > 0){
+                if (minAmountOut > 0) {
                     //swap
-                    ISwapExchange(exchange).exchange(0,1, veAssetBalance,minAmountOut);
-                }else{
+                    ISwapExchange(exchange).exchange(0, 1, veAssetBalance, minAmountOut);
+                } else {
                     //deposit
-                    IVeAssetDeposit(veAssetDeposit).deposit(veAssetBalance,CheckOption(options,uint256(Options.LockVeAssetDeposit)));
+                    IVeAssetDeposit(veAssetDeposit).deposit(veAssetBalance, CheckOption(options, uint256(Options.LockVeAssetDeposit)));
                 }
                 //get ve3Token amount
                 uint256 ve3TokenBalance = IERC20(ve3Token).balanceOf(address(this));
                 //stake for msg.sender
-                IRewards(ve3TokenRewards).stakeFor(msg.sender, ve3TokenBalance);
+                if (tokenRewardTokens.length > 0) {
+                    IRewards(ve3TokenRewards).getReward(msg.sender, true, true, tokenRewardTokens);
+                }
+                else {
+                    IRewards(ve3TokenRewards).stakeFor(msg.sender, ve3TokenBalance);
+                }
             }
         }
 
         //stake up to given amount of veToken
-        if(depositVeTokenMaxAmount > 0){
+        if (depositVeTokenMaxAmount > 0) {
             uint256 veTokenBalance = IERC20(veToken).balanceOf(msg.sender).sub(removeVeTokenBalance);
             veTokenBalance = MathUtil.min(veTokenBalance, depositVeTokenMaxAmount);
-            if(veTokenBalance > 0){
+            if (veTokenBalance > 0) {
                 //pull veToken
                 IERC20(veToken).safeTransferFrom(msg.sender, address(this), veTokenBalance);
-                if(CheckOption(options,uint256(Options.LockVeToken))){
+                if (CheckOption(options, uint256(Options.LockVeToken))) {
                     IRewards(ve3dLocker).lock(msg.sender, veTokenBalance);
-                }else{
+                } else {
                     //stake for msg.sender
                     IRewards(ve3dRewards).stakeFor(msg.sender, veTokenBalance);
                 }

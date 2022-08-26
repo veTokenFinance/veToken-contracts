@@ -18,6 +18,10 @@ interface IRewards {
 
     function getReward(address _account, bool _claimExtras, bool _stake) external;
 
+    function getReward(address _account, bool _stake, address[] calldata _rewardTokens) external;
+
+    function getReward(address _account, bool _claimExtras, bool _stake, address[] calldata _rewardTokens) external;
+
     function queueNewRewards(uint256) external;
 
     function queueNewRewards(address, uint256) external;

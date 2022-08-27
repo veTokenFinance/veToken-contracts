@@ -23,6 +23,12 @@ function toBN(number) {
   return new BigNumber(number);
 }
 
+async function fundEth(admin, users) {
+  for (var i = 0; i < users.length; i++) {
+    await web3.eth.sendTransaction({ from: admin, to: users[i], value: web3.utils.toWei("1") });
+  }
+}
+
 module.exports = async function (deployer, network, accounts) {
   global.created = true;
   const contractList = getContract();
@@ -37,8 +43,22 @@ module.exports = async function (deployer, network, accounts) {
   const gaugeController = "0xaC69078141f76A1e257Ee889920d02Cc547d632f";
   const idleMintr = "0x074306BC6a6Fc1bD02B425dd41D742ADf36Ca9C6";
   const idleUser = "0x3675D2A334f17bCD4689533b7Af263D48D96eC72";
-  const AA_wstETHUser = "0xefe1a7b147ac4c0b761da878f6a315923441ca54";
-  const AA_wstETH = "0x2688FC68c4eac90d9E5e1B94776cF14eADe8D877";
+
+  const lp_tokens = [
+    "0x2688FC68c4eac90d9E5e1B94776cF14eADe8D877",
+    "0x790E38D85a364DD03F682f5EcdC88f8FF7299908",
+    "0x15794DA4DCF34E674C18BbFAF4a67FF6189690F5",
+    "0xFC96989b3Df087C96C806318436B16e44c697102",
+    "0x158e04225777BBEa34D2762b5Df9eBD695C158D2",
+  ];
+  const lp_tokens_users = [
+    "0xc22bc5f7e5517d7a5df9273d66e254d4b549523c",
+    "0xe4e69ef860d3018b61a25134d60678be8628f780",
+    "0x4eacf42d898b977973f1fd8448f6035dc44ce4d0",
+    "0x1bd658c933d592519d57fd728a1afb659f474d3b",
+    "0xe4e69ef860d3018b61a25134d60678be8628f780",
+  ];
+
   const stashRewardToken = "0x5A98FcBEA516Cf06857215779Fd812CA3beF1B32";
   const stashRewardTokenUser = "0x09f82ccd6bae2aebe46ba7dd2cf08d87355ac430";
   const MAXTiME = toBN(4 * 365 * 86400);
@@ -51,15 +71,8 @@ module.exports = async function (deployer, network, accounts) {
   const ve3dRewardPool = await VE3DRewardPool.at(contractList.system.vetokenRewards);
   const ve3dLocker = await VE3DLocker.at(contractList.system.ve3dLocker);
 
-  await web3.eth.sendTransaction({ from: admin, to: checkerAdmin, value: web3.utils.toWei("1") });
-
-  await web3.eth.sendTransaction({ from: admin, to: idleUser, value: web3.utils.toWei("1") });
-
-  await web3.eth.sendTransaction({ from: admin, to: idleAdmin, value: web3.utils.toWei("1") });
-
-  await web3.eth.sendTransaction({ from: admin, to: AA_wstETHUser, value: web3.utils.toWei("1") });
-  await web3.eth.sendTransaction({ from: admin, to: feeDistroAdmin, value: web3.utils.toWei("1") });
-  await web3.eth.sendTransaction({ from: admin, to: stashRewardTokenUser, value: web3.utils.toWei("1") });
+  await fundEth(admin, [checkerAdmin, idleUser, idleAdmin, feeDistroAdmin, stashRewardTokenUser]);
+  await fundEth(admin, lp_tokens_users);
 
   // voter proxy
   const voter = await deployProxy(
@@ -73,7 +86,7 @@ module.exports = async function (deployer, network, accounts) {
   logTransaction(await whitelist.toggleAddress(voter.address, true, { from: checkerAdmin }), "whitelist voter proxy");
 
   // fund admint idle tokens
-  logTransaction(await idle.transfer(admin, web3.utils.toWei("100000"), { from: idleUser }), "fund admin idle");
+  logTransaction(await idle.transfer(admin, (await idle.balanceOf(idleUser)).toString(), { from: idleUser }), "fund admin idle");
   // fund voter proxy idle token
   logTransaction(await idle.transfer(voter.address, web3.utils.toWei("1000"), { from: admin }), "fund voter idle");
   // vetoken
@@ -81,7 +94,7 @@ module.exports = async function (deployer, network, accounts) {
   addContract("system", "idle_escrow", stkIDLE);
   addContract("system", "idle_feedistro", feeDistro);
   addContract("system", "idle_feedistro_admin", feeDistroAdmin);
-  addContract("system", "idle_lptoken", AA_wstETH);
+  addContract("system", "idle_lptoken", lp_tokens[0]);
   addContract("system", "idle_stashtoken", stashRewardToken);
   addContract("system", "idle_voterProxy", voter.address);
 

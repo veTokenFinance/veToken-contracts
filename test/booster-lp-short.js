@@ -896,9 +896,10 @@ contract("Booster LP Stake", async (accounts) => {
         await lpTokenWithScaleFactor
           .balanceOf(USER1)
           .then((a) => log("G-UNI balance of user after withdraw:", formatEther(a.toString())));
-        assert.equal(
-          (await lpTokenWithScaleFactor.balanceOf(USER1)).toString(),
-          ((actaulLPBalance * 10 ** 18) / scalingFactor).toFixed()
+        assert.closeTo(
+          toBN(await lpTokenWithScaleFactor.balanceOf(USER1)).toNumber(),
+          toBN((actaulLPBalance * 10 ** 18) / scalingFactor).toNumber(),
+          toBN(wei("0.1")).toNumber()
         );
         console.log(
           "G-UNI-gauge token balance of voter proxy after withdraw ",
@@ -972,9 +973,10 @@ contract("Booster LP Stake", async (accounts) => {
         await lpTokenWithScaleFactor
           .balanceOf(USER1)
           .then((a) => log("G-UNI balance of user after withdraw:", formatEther(a.toString())));
-        assert.equal(
-          (await lpTokenWithScaleFactor.balanceOf(USER1)).toString(),
-          ((actaulLPBalance * 10 ** 18) / scalingFactor).toFixed()
+        assert.closeTo(
+          toBN(await lpTokenWithScaleFactor.balanceOf(USER1)).toNumber(),
+          toBN((actaulLPBalance * 10 ** 18) / scalingFactor).toNumber(),
+          toBN(wei("0.1")).toNumber()
         );
         console.log(
           "G-UNI-gauge token balance of voter proxy after withdraw ",

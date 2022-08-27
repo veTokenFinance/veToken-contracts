@@ -223,7 +223,7 @@ contract("Ve3tokenMultipleRewards", async (accounts) => {
       assert.closeTo(
         expectedVeToken_idle.toNumber(),
         actualVeTokenMintedforIdle.toNumber(),
-        0.0001,
+        0.001,
         "check minted veToken for idle"
       );
       const userVetokenFromIdlePool = await vetoken.balanceOf(USER1);

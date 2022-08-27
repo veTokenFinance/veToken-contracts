@@ -22,4 +22,5 @@ module.exports = async (deployer, network) => {
     await booster.earmarkRewards(i);
     console.log("angle earmark pool " + i + " complete");
   }
+  process.exit(1);
 };

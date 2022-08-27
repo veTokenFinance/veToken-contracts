@@ -1,5 +1,6 @@
 const { BN, constants, expectEvent, expectRevert, time } = require("@openzeppelin/test-helpers");
 const IERC20 = artifacts.require("IERC20");
+const VeTokenMinter = artifacts.require("VeTokenMinter");
 const BigNumber = require("bignumber.js");
 
 function toBN(number) {
@@ -8,7 +9,7 @@ function toBN(number) {
 
 module.exports = async (deployer, network) => {
   let accounts = await web3.eth.getAccounts();
-
+  let vetokenMinter = await VeTokenMinter.at(contractList.system.vetokenMinter);
   const admin = accounts[0];
 
   const lp_tokens = [
@@ -42,6 +43,11 @@ module.exports = async (deployer, network) => {
     //fund ethers
     await web3.eth.sendTransaction({ from: admin, to: vetokenUsers[i], value: web3.utils.toWei("10") });
 
+    // fund vetoken
+    await vetokenMinter.withdraw(vetokenUsers[i], web3.utils.toWei("1000"), {
+      from: admin,
+    });
+
     for (var j = 0; j < lp_tokens.length; j++) {
       const lpToken = await IERC20.at(lp_tokens[j]);
       const balance = (await lpToken.balanceOf(admin)).toString();
@@ -57,4 +63,5 @@ module.exports = async (deployer, network) => {
       console.log("user balance==> " + vetokenUsers[i] + " ", (await lpToken.balanceOf(vetokenUsers[i])).toString());
     }
   }
+  process.exit(1);
 };

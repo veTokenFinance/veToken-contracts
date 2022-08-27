@@ -14,4 +14,5 @@ module.exports = async (deployer, network) => {
   booster = await Booster.at(contractList.system.angle_booster);
   await booster.earmarkFees();
   console.log("angle earmark fee complete");
+  process.exit(1);
 };

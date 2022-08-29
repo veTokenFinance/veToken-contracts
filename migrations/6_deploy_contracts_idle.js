@@ -2,6 +2,7 @@ const { ether, balance, constants, time } = require("@openzeppelin/test-helpers"
 const { addContract, getContract } = require("./helper/addContracts");
 const escrowABI = require("./helper/escrowABI.json");
 const { deployProxy } = require("@openzeppelin/truffle-upgrades");
+const uniswapV2FactoryABI = require("./helper/uniswapV2Factory.json");
 
 const VoterProxyV2 = artifacts.require("VoterProxyV2");
 const VeTokenMinter = artifacts.require("VeTokenMinter");
@@ -15,6 +16,7 @@ const StashFactory = artifacts.require("StashFactory");
 const VE3DRewardPool = artifacts.require("VE3DRewardPool");
 const VE3DLocker = artifacts.require("VE3DLocker");
 const IERC20 = artifacts.require("IERC20");
+const ClaimZap = artifacts.require("ClaimZap");
 const SmartWalletWhitelist = artifacts.require("SmartWalletWhitelist");
 const BigNumber = require("bignumber.js");
 const { logTransaction } = require("./helper/logger");
@@ -177,4 +179,23 @@ module.exports = async function (deployer, network, accounts) {
     await vetokenMinter.addOperator(booster.address, toBN(10).pow(25).times(10)),
     "vetokenMinter addOperator"
   );
+
+  // check whether a pair exists on SushiSwap, if not create the pair
+  const sushiV2FactoryAddress = "0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac";
+  const sushiV2Factory = new web3.eth.Contract(uniswapV2FactoryABI, sushiV2FactoryAddress);
+
+  let exchangeAddress = await sushiV2Factory.methods.getPair(idle.address, ve3Token.address).call();
+
+  if(exchangeAddress === constants.ZERO_ADDRESS){
+    const createPairTx = sushiV2Factory.methods.createPair(idle.address, ve3Token.address);
+    const gasUsed = await createPairTx.estimateGas();
+    let newExchangeResult = await createPairTx.send({ from: idleAdmin, gas: gasUsed });
+    exchangeAddress = newExchangeResult.events.PairCreated.returnValues.pair;
+  }
+
+  // ClaimZap setup
+  await deployer.deploy(ClaimZap, idle.address, contractList.system.vetoken, ve3Token.address, depositor.address, ve3TokenRewardPool.address, ve3dRewardPool.address, exchangeAddress, ve3dLocker.address);
+  const claimZap = await ClaimZap.deployed();
+  await claimZap.setApprovals();
+  addContract("system", "idle_claimZap", claimZap.address);
 };

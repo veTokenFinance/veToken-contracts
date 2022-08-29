@@ -3,13 +3,11 @@ const {keccak256: k256} = require('ethereum-cryptography/keccak');
 var jsonfile = require('jsonfile');
 const {toBN} = require('./helper/utils');
 const Reverter = require('./helper/reverter');
-const {logTransaction} = require('../migrations/helper/logger');
 const {formatEther} = require('@ethersproject/units');
 var contractList = jsonfile.readFileSync('./contracts.json');
 const {
   loadContracts,
-  contractAddresseList,
-  Networks
+  contractAddresseList
 } = require("./helper/dumpAddresses");
 
 const IERC20 = artifacts.require('IERC20');
@@ -113,18 +111,6 @@ contract('Test claim zap', async accounts => {
 
   it('deposit lpToken and veAsset, stake and get rewards', async () => {
     await logBalances();
-
-    // send lp token to userA
-    let lpTokenHolder = '0xefe1a7b147ac4c0b761da878f6a315923441ca54';
-    switch(network){
-      case Networks.idle:
-        lpTokenHolder = "0xefe1a7b147ac4c0b761da878f6a315923441ca54"
-        break;
-      case Networks.angle:
-        lpTokenHolder = "0x5aB0e4E355b08e692933c1F6f85fd0bE56aD18A6";
-        break;
-    }
-    logTransaction(await lpToken.transfer(userA, web3.utils.toWei('5'), {from: lpTokenHolder}), 'fund userA with lp token');
 
     lpTokenBalance = await lpToken.balanceOf(userA);
     assert.isAbove(toBN(lpTokenBalance).toNumber(), 0);

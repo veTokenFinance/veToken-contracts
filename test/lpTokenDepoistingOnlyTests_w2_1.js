@@ -65,7 +65,7 @@ contract("lptoken Deposit only Test", async (accounts) => {
 
   afterEach("revert", reverter.revert);
 
-  it.only("Deposit lpToken, get Rewards", async () => {
+  it("Deposit lpToken, get Rewards", async () => {
     const userA = accounts[0];
     const userB = accounts[1];
     const poolId = 0;

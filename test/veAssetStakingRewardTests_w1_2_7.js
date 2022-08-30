@@ -79,7 +79,7 @@ contract("Staking Reward Test", async (accounts) => {
 
   afterEach("revert", reverter.revert);
 
-  it.only("Deposit veAsset and stake ve3Dill, get Rewards", async () => {
+  it("Deposit veAsset and stake ve3Dill, get Rewards", async () => {
     //userA account has veAsset token and lp token for pid=0
     const userA = accounts[0];
     const userB = accounts[1];

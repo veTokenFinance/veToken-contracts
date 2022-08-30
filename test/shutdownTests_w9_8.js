@@ -32,7 +32,7 @@ contract("Shutdown Test", async (accounts) => {
 
   afterEach("revert", reverter.revert);
 
-  it.only("After shutdown, funds should be back to booster, and redeposit should be reverted", async () => {
+  it("After shutdown, funds should be back to booster, and redeposit should be reverted", async () => {
     const userA = accounts[0];
     const lpTokenDepositAmount = await lpToken.balanceOf(userA);
     const poolId = 0;

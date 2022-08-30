@@ -44,7 +44,7 @@ module.exports = async function (deployer, network, accounts) {
     "0xc22bc5f7e5517d7a5df9273d66e254d4b549523c",
     "0xe4e69ef860d3018b61a25134d60678be8628f780",
     "0x4eacf42d898b977973f1fd8448f6035dc44ce4d0",
-    "0x1bd658c933d592519d57fd728a1afb659f474d3b",
+    "0x442aea0fd2afbd3391dae768f7046f132f0a6300",
     "0xe4e69ef860d3018b61a25134d60678be8628f780",
   ];
 

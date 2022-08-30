@@ -79,12 +79,12 @@ contract("Staking Reward Test", async (accounts) => {
 
   afterEach("revert", reverter.revert);
 
-  it("Deposit veAsset and stake ve3Dill, get Rewards", async () => {
+  it.only("Deposit veAsset and stake ve3Dill, get Rewards", async () => {
     //userA account has veAsset token and lp token for pid=0
     const userA = accounts[0];
     const userB = accounts[1];
     const depositAmount = wei("10");
-    const lpTokenDepositAmount = wei("5");
+    const lpTokenDepositAmount = await lpToken.balanceOf(userA);
     const lockRewardsPoolAddress = await booster.lockRewards();
     const ve3DillRewardPool = await BaseRewardPool.at(lockRewardsPoolAddress); //cvxCrvRewards, ve3Token rewards(veAsset)
     const ve3DillRewardPoolBalanceOfUserABefore = await ve3DillRewardPool.balanceOf(userA);
@@ -112,8 +112,8 @@ contract("Staking Reward Test", async (accounts) => {
     const lpRewardOfUserAAfter = await lPRewardPool.balanceOf(userA);
     console.log("lpRewardOfUserA Before: " + formatEther(lpRewardOfUserABefore.toString()) + "\n");
     console.log("lpRewardOfUserA After: " + formatEther(lpRewardOfUserAAfter.toString()) + "\n");
-    assert.equal(lpRewardOfUserAAfter, lpTokenDepositAmount);
-    assert.equal(toBN(lpRewardOfUserAAfter).minus(lpRewardOfUserABefore), lpTokenDepositAmount);
+    assert.equal(lpRewardOfUserAAfter, lpTokenDepositAmount.toString());
+    assert.equal(toBN(lpRewardOfUserAAfter).minus(lpRewardOfUserABefore).toString(), lpTokenDepositAmount.toString());
 
     // approve and deposit veAsset(pickle, idle...) , staking returned ve3Dill
     await veassetToken.approve(veassetDepositer.address, depositAmount, { from: userA });

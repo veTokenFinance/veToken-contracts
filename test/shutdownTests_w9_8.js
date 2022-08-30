@@ -32,9 +32,9 @@ contract("Shutdown Test", async (accounts) => {
 
   afterEach("revert", reverter.revert);
 
-  it("After shutdown, funds should be back to booster, and redeposit should be reverted", async () => {
+  it.only("After shutdown, funds should be back to booster, and redeposit should be reverted", async () => {
     const userA = accounts[0];
-    const lpTokenDepositAmount = wei("10");
+    const lpTokenDepositAmount = await lpToken.balanceOf(userA);
     const poolId = 0;
 
     const poolInfo = JSON.stringify(await booster.poolInfo(poolId));
@@ -63,13 +63,15 @@ contract("Shutdown Test", async (accounts) => {
       .balanceOf(userA)
       .then((a) => console.log("before shutdown, userA lptoken balance: " + formatEther(a.toString())));
     const userABalanceInRewardPoolAfter = await rewardPool.balanceOf(userA);
-    expect((userABalanceInRewardPoolAfter - userABalanceInRewardPoolBefore).toString()).to.equal(lpTokenDepositAmount);
+    expect((userABalanceInRewardPoolAfter - userABalanceInRewardPoolBefore).toString()).to.equal(
+      lpTokenDepositAmount.toString()
+    );
 
     const boosterlpTokenBalanceBeforeShutdown = await lpToken.balanceOf(booster.address);
     expect(boosterlpTokenBalanceBeforeShutdown.toString()).to.equal("0");
 
     const gaugelpTokenBalance = await voterProxy.balanceOfPool(parsedPoolInfo.gauge);
-    expect(gaugelpTokenBalance.toString()).to.equal(lpTokenDepositAmount);
+    expect(gaugelpTokenBalance.toString()).to.equal(lpTokenDepositAmount.toString());
 
     // shutdown, funds move back to booster from gauge
     // await booster.shutdownSystem({ from: userA });
@@ -82,7 +84,7 @@ contract("Shutdown Test", async (accounts) => {
       .balanceOf(userA)
       .then((a) => console.log("after shutdown, userA balance in reward pool: " + formatEther(a.toString())));
     const boostBalanceAfterShutdown = await lpToken.balanceOf(booster.address);
-    expect(boostBalanceAfterShutdown.toString()).to.equal(lpTokenDepositAmount);
+    expect(boostBalanceAfterShutdown.toString()).to.equal(lpTokenDepositAmount.toString());
 
     const gaugeBalanceAfterShutdown = await voterProxy.balanceOfPool(parsedPoolInfo.gauge);
     expect(gaugeBalanceAfterShutdown.toString()).to.equal("0");

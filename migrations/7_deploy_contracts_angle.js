@@ -1,6 +1,8 @@
 const { ether, balance, constants, time } = require("@openzeppelin/test-helpers");
 const { addContract, getContract } = require("./helper/addContracts");
 const escrowABI = require("./helper/escrowABI.json");
+const uniswapV2FactoryABI = require("./helper/uniswapV2Factory.json");
+
 const { deployProxy } = require("@openzeppelin/truffle-upgrades");
 const VoterProxyV2 = artifacts.require("VoterProxyV2");
 const VeTokenMinter = artifacts.require("VeTokenMinter");
@@ -14,12 +16,19 @@ const StashFactory = artifacts.require("StashFactory");
 const VE3DRewardPool = artifacts.require("VE3DRewardPool");
 const VE3DLocker = artifacts.require("VE3DLocker");
 const IERC20 = artifacts.require("IERC20");
+const ClaimZap = artifacts.require("ClaimZap");
 const SmartWalletWhitelist = artifacts.require("SmartWalletWhitelist");
 const BigNumber = require("bignumber.js");
 const { logTransaction } = require("./helper/logger");
 
 function toBN(number) {
   return new BigNumber(number);
+}
+
+async function fundEth(admin, users) {
+  for (var i = 0; i < users.length; i++) {
+    await web3.eth.sendTransaction({ from: admin, to: users[i], value: web3.utils.toWei("1") });
+  }
 }
 
 module.exports = async function (deployer, network, accounts) {
@@ -39,8 +48,20 @@ module.exports = async function (deployer, network, accounts) {
   const gaugeController = "0x9aD7e7b0877582E14c17702EecF49018DD6f2367";
 
   const angleUser = "0x2Fc443960971e53FD6223806F0114D5fAa8C7C4e";
-  const sanDAI_EURUser = "0x5aB0e4E355b08e692933c1F6f85fd0bE56aD18A6";
-  const sanDAI_EUR = "0x7B8E89b0cE7BAC2cfEC92A371Da899eA8CBdb450";
+  const lp_tokens = [
+    "0x7B8E89b0cE7BAC2cfEC92A371Da899eA8CBdb450",
+    "0x9C215206Da4bf108aE5aEEf9dA7caD3352A36Dad",
+    "0x5d8D3Ac6D21C016f9C935030480B7057B21EC804",
+    "0xb3B209Bb213A5Da5B947C56f2C770b3E1015f1FE",
+    "0xEDECB43233549c51CC3268b5dE840239787AD56c",
+  ];
+  const lp_tokens_users = [
+    "0x5aB0e4E355b08e692933c1F6f85fd0bE56aD18A6",
+    "0xea51ccb352aea7641ff4d88536f0f06fd052ef8f",
+    "0xa116f421ff82a9704428259fd8cc63347127b777",
+    "0xa2dee32662f6243da539bf6a8613f9a9e39843d3",
+    "0x5be876ed0a9655133226be302ca6f5503e3da569",
+  ];
 
   const MAXTiME = toBN(4 * 365 * 86400);
 
@@ -52,15 +73,8 @@ module.exports = async function (deployer, network, accounts) {
   const ve3dRewardPool = await VE3DRewardPool.at(contractList.system.vetokenRewards);
   const ve3dLocker = await VE3DLocker.at(contractList.system.ve3dLocker);
 
-  await web3.eth.sendTransaction({ from: admin, to: checkerAdmin, value: web3.utils.toWei("1") });
-
-  await web3.eth.sendTransaction({ from: admin, to: angleUser, value: web3.utils.toWei("1") });
-
-  await web3.eth.sendTransaction({ from: admin, to: angleAdmin, value: web3.utils.toWei("1") });
-
-  await web3.eth.sendTransaction({ from: admin, to: sanDAI_EURUser, value: web3.utils.toWei("1") });
-  await web3.eth.sendTransaction({ from: admin, to: feeDistroAdmin, value: web3.utils.toWei("1") });
-  await web3.eth.sendTransaction({ from: admin, to: feeTokenHolder, value: web3.utils.toWei("1") });
+  await fundEth(admin, [checkerAdmin, angleUser, angleAdmin, feeDistroAdmin, feeTokenHolder]);
+  await fundEth(admin, lp_tokens_users);
 
   const voter = await deployProxy(
     VoterProxyV2,
@@ -73,7 +87,10 @@ module.exports = async function (deployer, network, accounts) {
   logTransaction(await whitelist.approveWallet(voter.address, { from: checkerAdmin }), "whitelist voter proxy");
 
   // fund admint angle tokens
-  logTransaction(await angle.transfer(admin, web3.utils.toWei("10000"), { from: angleUser }), "fund admin angle");
+  logTransaction(
+    await angle.transfer(admin, (await angle.balanceOf(angleUser)).toString(), { from: angleUser }),
+    "fund admin angle"
+  );
   // fund voter proxy angle token
   logTransaction(await angle.transfer(voter.address, web3.utils.toWei("1000"), { from: admin }), "fund voter angle");
   // fund fee token to admin
@@ -86,7 +103,7 @@ module.exports = async function (deployer, network, accounts) {
   addContract("system", "angle_escrow", veANGLE);
   addContract("system", "angle_feedistro", feeDistro);
   addContract("system", "angle_feedistro_admin", feeDistroAdmin);
-  addContract("system", "angle_lptoken", sanDAI_EUR);
+  addContract("system", "angle_lptoken", lp_tokens[0]);
   addContract("system", "angle_voterProxy", voter.address);
 
   // booster
@@ -166,4 +183,23 @@ module.exports = async function (deployer, network, accounts) {
     await vetokenMinter.addOperator(booster.address, toBN(10).pow(25).times(15)),
     "vetokenMinter addOperator"
   );
+
+  // check whether a pair exists on SushiSwap, if not create the pair
+  const sushiV2FactoryAddress = "0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac";
+  const sushiV2Factory = new web3.eth.Contract(uniswapV2FactoryABI, sushiV2FactoryAddress);
+
+  let exchangeAddress = await sushiV2Factory.methods.getPair(angle.address, ve3Token.address).call();
+
+  if(exchangeAddress === constants.ZERO_ADDRESS){
+    const createPairTx = sushiV2Factory.methods.createPair(angle.address, ve3Token.address);
+    const gasUsed = await createPairTx.estimateGas();
+    let newExchangeResult = await createPairTx.send({ from: angleAdmin, gas: gasUsed });
+    exchangeAddress = newExchangeResult.events.PairCreated.returnValues.pair;
+  }
+
+  // ClaimZap setup
+  await deployer.deploy(ClaimZap, angle.address, contractList.system.vetoken, ve3Token.address, depositor.address, ve3TokenRewardPool.address, ve3dRewardPool.address, exchangeAddress, ve3dLocker.address);
+  const claimZap = await ClaimZap.deployed();
+  await claimZap.setApprovals();
+  addContract("system", "angle_claimZap", claimZap.address);
 };

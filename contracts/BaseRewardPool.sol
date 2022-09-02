@@ -102,6 +102,7 @@ contract BaseRewardPool is ReentrancyGuard {
         address operator_,
         address rewardManager_
     ) {
+        require(address(stakingToken_) != rewardToken_, "Incorrect reward token");
         pid = pid_;
         stakingToken = IERC20(stakingToken_);
         rewardToken = IERC20(rewardToken_);

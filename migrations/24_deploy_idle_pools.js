@@ -4,6 +4,18 @@ const { logTransaction } = require("./helper/logger.js");
 const PoolManager = artifacts.require("PoolManager");
 const IERC20 = artifacts.require("IERC20");
 
+async function fundLpToken(lp_tokens, lp_tokens_users, to) {
+  for (var i = 0; i < lp_tokens_users.length; i++) {
+    const lpToken = await IERC20.at(lp_tokens[i]);
+    logTransaction(
+      await lpToken.transfer(to, (await lpToken.balanceOf(lp_tokens_users[i])).toString(), {
+        from: lp_tokens_users[i],
+      }),
+      "funcd account[0] with lp token"
+    );
+  }
+}
+
 module.exports = async function (deployer, network, accounts) {
   const idleMintr = "0x074306BC6a6Fc1bD02B425dd41D742ADf36Ca9C6";
   const contractList = getContract();
@@ -14,19 +26,27 @@ module.exports = async function (deployer, network, accounts) {
   const idle = await IERC20.at(contractList.system.idle_address);
   const stashToken = await IERC20.at(contractList.system.idle_stashtoken);
 
+  const lp_tokens = [
+    "0x2688FC68c4eac90d9E5e1B94776cF14eADe8D877",
+    "0x790E38D85a364DD03F682f5EcdC88f8FF7299908",
+    "0x15794DA4DCF34E674C18BbFAF4a67FF6189690F5",
+    "0xFC96989b3Df087C96C806318436B16e44c697102",
+    "0x158e04225777BBEa34D2762b5Df9eBD695C158D2",
+  ];
+  const lp_tokens_users = [
+    "0xc22bc5f7e5517d7a5df9273d66e254d4b549523c",
+    "0xe4e69ef860d3018b61a25134d60678be8628f780",
+    "0x4eacf42d898b977973f1fd8448f6035dc44ce4d0",
+    "0x1bd658c933d592519d57fd728a1afb659f474d3b",
+    "0xe4e69ef860d3018b61a25134d60678be8628f780",
+  ];
+
   logTransaction(
     await poolManager.addPool("0x675eC042325535F6e176638Dd2d4994F645502B9", boosterAdd, 3, 3),
     "add gauge AATranche_lido"
   );
 
-  // funcd account[0] with lp token AA_wstETH
-  const AA_wstETH = await IERC20.at("0x2688FC68c4eac90d9E5e1B94776cF14eADe8D877");
-  logTransaction(
-    await AA_wstETH.transfer(accounts[0], web3.utils.toWei("40"), {
-      from: "0xefe1a7b147ac4c0b761da878f6a315923441ca54",
-    }),
-    "funcd account[0] with lp token AA_wstETH"
-  );
+  await fundLpToken(lp_tokens, lp_tokens_users, admin);
 
   // fund minter contract with veasset
   logTransaction(await idle.transfer(idleMintr, web3.utils.toWei("1000"), { from: admin }), "fund idle to minter");

@@ -4,6 +4,18 @@ const { logTransaction } = require("./helper/logger.js");
 const PoolManager = artifacts.require("PoolManager");
 const IERC20 = artifacts.require("IERC20");
 
+async function fundLpToken(lp_tokens, lp_tokens_users, to) {
+  for (var i = 0; i < lp_tokens_users.length; i++) {
+    const lpToken = await IERC20.at(lp_tokens[i]);
+    logTransaction(
+      await lpToken.transfer(to, (await lpToken.balanceOf(lp_tokens_users[i])).toString(), {
+        from: lp_tokens_users[i],
+      }),
+      "funcd account[0] with lp token"
+    );
+  }
+}
+
 module.exports = async function (deployer, network, accounts) {
   const contractList = getContract();
   const admin = accounts[0];
@@ -11,19 +23,27 @@ module.exports = async function (deployer, network, accounts) {
   const boosterAdd = contractList.system.angle_booster;
   const angle = await IERC20.at(contractList.system.angle_address);
 
+  const lp_tokens = [
+    "0x7B8E89b0cE7BAC2cfEC92A371Da899eA8CBdb450",
+    "0x9C215206Da4bf108aE5aEEf9dA7caD3352A36Dad",
+    "0x5d8D3Ac6D21C016f9C935030480B7057B21EC804",
+    "0xb3B209Bb213A5Da5B947C56f2C770b3E1015f1FE",
+    "0xEDECB43233549c51CC3268b5dE840239787AD56c",
+  ];
+  const lp_tokens_users = [
+    "0x5aB0e4E355b08e692933c1F6f85fd0bE56aD18A6",
+    "0xea51ccb352aea7641ff4d88536f0f06fd052ef8f",
+    "0xa116f421ff82a9704428259fd8cc63347127b777",
+    "0xa2dee32662f6243da539bf6a8613f9a9e39843d3",
+    "0x5be876ed0a9655133226be302ca6f5503e3da569",
+  ];
+
   logTransaction(
     await poolManager.addPool("0x8E2c0CbDa6bA7B65dbcA333798A3949B07638026", boosterAdd, 3, 4),
     "add gauge sanDAI_EUR"
   );
 
-  // funcd account[0] with lp token AA_idleCvxalUSD3CRV-f
-  const sanDAI_EUR = await IERC20.at("0x7B8E89b0cE7BAC2cfEC92A371Da899eA8CBdb450");
-  logTransaction(
-    await sanDAI_EUR.transfer(accounts[0], web3.utils.toWei("1000"), {
-      from: "0x5aB0e4E355b08e692933c1F6f85fd0bE56aD18A6",
-    }),
-    "funcd account[0] with lp token sanDAI_EUR"
-  );
+  await fundLpToken(lp_tokens, lp_tokens_users, admin);
   // fund gauge with veasset
   logTransaction(
     await angle.transfer("0x8E2c0CbDa6bA7B65dbcA333798A3949B07638026", web3.utils.toWei("1000"), { from: admin }),

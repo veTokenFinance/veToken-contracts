@@ -31,15 +31,15 @@ module.exports = async function (deployer, network, accounts) {
   const angle = await IERC20.at(contractList.system.angle_address);
 
   const lp_tokens = [
-    "0x9C215206Da4bf108aE5aEEf9dA7caD3352A36Dad",
     "0x7B8E89b0cE7BAC2cfEC92A371Da899eA8CBdb450",
+    "0x9C215206Da4bf108aE5aEEf9dA7caD3352A36Dad",
     "0x5d8D3Ac6D21C016f9C935030480B7057B21EC804",
     "0xb3B209Bb213A5Da5B947C56f2C770b3E1015f1FE",
     "0xEDECB43233549c51CC3268b5dE840239787AD56c",
   ];
   const lp_tokens_users = [
-    "0xea51ccb352aea7641ff4d88536f0f06fd052ef8f",
     "0x5aB0e4E355b08e692933c1F6f85fd0bE56aD18A6",
+    "0xea51ccb352aea7641ff4d88536f0f06fd052ef8f",
     "0xa116f421ff82a9704428259fd8cc63347127b777",
     "0xa2dee32662f6243da539bf6a8613f9a9e39843d3",
     "0x5be876ed0a9655133226be302ca6f5503e3da569",
@@ -47,16 +47,23 @@ module.exports = async function (deployer, network, accounts) {
   await fundLpToken(lp_tokens, lp_tokens_users, admin);
 
   const gaugeControllerContract = new web3.eth.Contract(gaugeControllerABI, gaugeController);
-  const gaguesCount = toBN(await gaugeControllerContract.methods.n_gauges().call()).toNumber();
-  console.log("angle gagues count " + gaguesCount);
+  const gaugesCount = toBN(await gaugeControllerContract.methods.n_gauges().call()).toNumber();
+  console.log("angle gauges count " + gaugesCount);
 
-  for (var i = 0; i < gaguesCount; i++) {
+  for (var i = 0; i < gaugesCount; i++) {
+    // a workaround to add second pool in the first position for testing purpose
+    if (i == 0) continue;
     let gauge = (await gaugeControllerContract.methods.gauges(i).call()).toString();
 
     const gauge_type = (await gaugeControllerContract.methods.gauge_types(gauge).call()).toString();
+
     if (gauge_type != "0") continue;
 
     logTransaction(await poolManager.addPool(gauge, boosterAdd, 3, 4), "add gauge " + gauge);
+    if (i == 2) {
+      gauge = (await gaugeControllerContract.methods.gauges(0).call()).toString();
+      logTransaction(await poolManager.addPool(gauge, boosterAdd, 3, 4), "add gauge " + gauge);
+    }
   }
 
   // fund gauge with veasset

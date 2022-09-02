@@ -152,7 +152,7 @@ contract("Test claim zap", async (accounts) => {
     console.log("lpRewardOfUserA Before: " + formatEther(lpRewardOfUserABefore.toString()) + "\n");
     console.log("lpRewardOfUserA After: " + formatEther(lpRewardOfUserAAfter.toString()) + "\n");
     assert.equal(lpRewardOfUserAAfter.toString(), lpTokenBalance.toString());
-    assert.equal(toBN(lpRewardOfUserAAfter).minus(lpRewardOfUserABefore).toString(), lpTokenBalance.toString());
+    assert.equal(toBN(lpRewardOfUserAAfter).minus(lpRewardOfUserABefore).toFixed(), lpTokenBalance.toString());
 
     // approve and deposit veAsset, staking returned ve3Token
     await veAsset.approve(depositor.address, depositAmount, { from: userA });

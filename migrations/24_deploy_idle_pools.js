@@ -51,10 +51,10 @@ module.exports = async function (deployer, network, accounts) {
   await fundLpToken(lp_tokens, lp_tokens_users, admin);
 
   const gaugeControllerContract = new web3.eth.Contract(gaugeControllerABI, gaugeController);
-  const gaguesCount = toBN(await gaugeControllerContract.methods.n_gauges().call()).toNumber();
-  console.log("idle gagues count " + gaguesCount);
+  const gaugesCount = toBN(await gaugeControllerContract.methods.n_gauges().call()).toNumber();
+  console.log("idle gauges count " + gaugesCount);
 
-  for (var i = 0; i < gaguesCount; i++) {
+  for (var i = 0; i < gaugesCount; i++) {
     // a workaround to add second pool in the first position for testing purpose
     if (i == 0) continue;
     let gauge = (await gaugeControllerContract.methods.gauges(i).call()).toString();
@@ -63,7 +63,7 @@ module.exports = async function (deployer, network, accounts) {
     if (gauge_type != "0") continue;
 
     logTransaction(await poolManager.addPool(gauge, boosterAdd, 3, 3), "add gauge " + gauge);
-    if (i == gaguesCount - 1) {
+    if (i == 1) {
       gauge = (await gaugeControllerContract.methods.gauges(0).call()).toString();
       logTransaction(await poolManager.addPool(gauge, boosterAdd, 3, 3), "add gauge " + gauge);
     }

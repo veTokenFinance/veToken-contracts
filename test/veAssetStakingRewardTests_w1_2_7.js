@@ -113,7 +113,7 @@ contract("Staking Reward Test", async (accounts) => {
     console.log("lpRewardOfUserA Before: " + formatEther(lpRewardOfUserABefore.toString()) + "\n");
     console.log("lpRewardOfUserA After: " + formatEther(lpRewardOfUserAAfter.toString()) + "\n");
     assert.equal(lpRewardOfUserAAfter, lpTokenDepositAmount.toString());
-    assert.equal(toBN(lpRewardOfUserAAfter).minus(lpRewardOfUserABefore).toString(), lpTokenDepositAmount.toString());
+    assert.equal(toBN(lpRewardOfUserAAfter).minus(lpRewardOfUserABefore).toFixed(), lpTokenDepositAmount.toString());
 
     // approve and deposit veAsset(pickle, idle...) , staking returned ve3Dill
     await veassetToken.approve(veassetDepositer.address, depositAmount, { from: userA });

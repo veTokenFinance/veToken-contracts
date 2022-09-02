@@ -4,11 +4,13 @@ const jsonfile = require("jsonfile");
 var baseContractList = jsonfile.readFileSync("contracts.json");
 const { parseEther, formatEther, parseUnits } = require("@ethersproject/units");
 const Reverter = require("./helper/reverter");
+const { assertion } = require("@openzeppelin/test-helpers/src/expectRevert");
 const Booster = artifacts.require("Booster");
 const VoterProxy = artifacts.require("VoterProxy");
 const BaseRewardPool = artifacts.require("BaseRewardPool");
 const PoolManager = artifacts.require("PoolManager");
 const IERC20 = artifacts.require("IERC20");
+const { toBN, log } = require("./helper/utils");
 
 contract("Shutdown Test", async (accounts) => {
   let poolManager;
@@ -63,8 +65,10 @@ contract("Shutdown Test", async (accounts) => {
       .balanceOf(userA)
       .then((a) => console.log("before shutdown, userA lptoken balance: " + formatEther(a.toString())));
     const userABalanceInRewardPoolAfter = await rewardPool.balanceOf(userA);
-    expect((userABalanceInRewardPoolAfter - userABalanceInRewardPoolBefore).toString()).to.equal(
-      lpTokenDepositAmount.toString()
+    assert.closeTo(
+      toBN(userABalanceInRewardPoolAfter).minus(userABalanceInRewardPoolBefore).toNumber(),
+      toBN(lpTokenDepositAmount).toNumber(),
+      toBN(wei(".0001")).toNumber()
     );
 
     const boosterlpTokenBalanceBeforeShutdown = await lpToken.balanceOf(booster.address);

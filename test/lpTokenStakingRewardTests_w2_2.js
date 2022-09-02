@@ -134,7 +134,7 @@ contract("veToken Staking Reward Test", async (accounts) => {
     await rewardPool.withdrawAndUnwrap(toBN(lpTokenBalanceOfUserA).idiv(2), false, { from: userA });
 
     const userAlptokenAfterWithdraw = await lpToken.balanceOf(userA);
-    expect(userAlptokenAfterWithdraw.toString()).to.equal(toBN(lpTokenBalanceOfUserA).idiv(2).toString());
+    expect(userAlptokenAfterWithdraw.toString()).to.equal(toBN(lpTokenBalanceOfUserA).idiv(2).toFixed());
 
     const userAveAssetTokenAfterWithdraw1 = await veassetToken.balanceOf(userA);
     console.log("userA veAssetToken after withdraw:" + userAveAssetTokenAfterWithdraw1.toString());

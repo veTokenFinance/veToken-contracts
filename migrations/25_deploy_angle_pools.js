@@ -5,6 +5,7 @@ const PoolManager = artifacts.require("PoolManager");
 const IERC20 = artifacts.require("IERC20");
 const BigNumber = require("bignumber.js");
 const gaugeControllerABI = require("./helper/gaugeControllerABI.json");
+const angleDistributorABI = require("./helper/angleDistributor.json");
 function toBN(number) {
   return new BigNumber(number);
 }
@@ -24,6 +25,7 @@ async function fundLpToken(lp_tokens, lp_tokens_users, to) {
 module.exports = async function (deployer, network, accounts) {
   const contractList = getContract();
   const gaugeController = "0x9aD7e7b0877582E14c17702EecF49018DD6f2367";
+  const angleDistributor = "0x4f91F01cE8ec07c9B1f6a82c18811848254917Ab";
   const admin = accounts[0];
   const poolManager = await PoolManager.at(contractList.system.poolManager);
   const boosterAdd = contractList.system.angle_booster;
@@ -33,15 +35,15 @@ module.exports = async function (deployer, network, accounts) {
   const lp_tokens = [
     "0x7B8E89b0cE7BAC2cfEC92A371Da899eA8CBdb450",
     "0x9C215206Da4bf108aE5aEEf9dA7caD3352A36Dad",
-    "0x5d8D3Ac6D21C016f9C935030480B7057B21EC804",
     "0xb3B209Bb213A5Da5B947C56f2C770b3E1015f1FE",
     "0xEDECB43233549c51CC3268b5dE840239787AD56c",
+    "0x857E0B2eD0E82D5cDEB015E77ebB873C47F99575",
   ];
   const lp_tokens_users = [
     "0x5aB0e4E355b08e692933c1F6f85fd0bE56aD18A6",
     "0xea51ccb352aea7641ff4d88536f0f06fd052ef8f",
-    "0xa116f421ff82a9704428259fd8cc63347127b777",
     "0xa2dee32662f6243da539bf6a8613f9a9e39843d3",
+    "0x5be876ed0a9655133226be302ca6f5503e3da569",
     "0x5be876ed0a9655133226be302ca6f5503e3da569",
   ];
   await fundLpToken(lp_tokens, lp_tokens_users, admin);
@@ -50,6 +52,8 @@ module.exports = async function (deployer, network, accounts) {
   const gaugesCount = toBN(await gaugeControllerContract.methods.n_gauges().call()).toNumber();
   console.log("angle gauges count " + gaugesCount);
 
+  const angleDistributorContract = new web3.eth.Contract(angleDistributorABI, angleDistributor);
+
   for (var i = 0; i < gaugesCount; i++) {
     // a workaround to add second pool in the first position for testing purpose
     if (i == 0) continue;
@@ -57,7 +61,7 @@ module.exports = async function (deployer, network, accounts) {
 
     const gauge_type = (await gaugeControllerContract.methods.gauge_types(gauge).call()).toString();
 
-    if (gauge_type != "0") continue;
+    if (gauge_type != "0" || (await angleDistributorContract.methods.killedGauges(gauge).call())) continue;
 
     logTransaction(await poolManager.addPool(gauge, boosterAdd, 3, 4), "add gauge " + gauge);
     if (i == 2) {

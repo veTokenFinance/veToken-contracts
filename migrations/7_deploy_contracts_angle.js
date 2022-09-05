@@ -51,15 +51,15 @@ module.exports = async function (deployer, network, accounts) {
   const lp_tokens = [
     "0x7B8E89b0cE7BAC2cfEC92A371Da899eA8CBdb450",
     "0x9C215206Da4bf108aE5aEEf9dA7caD3352A36Dad",
-    "0x5d8D3Ac6D21C016f9C935030480B7057B21EC804",
     "0xb3B209Bb213A5Da5B947C56f2C770b3E1015f1FE",
     "0xEDECB43233549c51CC3268b5dE840239787AD56c",
+    "0x857E0B2eD0E82D5cDEB015E77ebB873C47F99575",
   ];
   const lp_tokens_users = [
     "0x5aB0e4E355b08e692933c1F6f85fd0bE56aD18A6",
     "0xea51ccb352aea7641ff4d88536f0f06fd052ef8f",
-    "0xa116f421ff82a9704428259fd8cc63347127b777",
     "0xa2dee32662f6243da539bf6a8613f9a9e39843d3",
+    "0x5be876ed0a9655133226be302ca6f5503e3da569",
     "0x5be876ed0a9655133226be302ca6f5503e3da569",
   ];
 
@@ -190,7 +190,7 @@ module.exports = async function (deployer, network, accounts) {
 
   let exchangeAddress = await sushiV2Factory.methods.getPair(angle.address, ve3Token.address).call();
 
-  if(exchangeAddress === constants.ZERO_ADDRESS){
+  if (exchangeAddress === constants.ZERO_ADDRESS) {
     const createPairTx = sushiV2Factory.methods.createPair(angle.address, ve3Token.address);
     const gasUsed = await createPairTx.estimateGas();
     let newExchangeResult = await createPairTx.send({ from: angleAdmin, gas: gasUsed });
@@ -198,7 +198,17 @@ module.exports = async function (deployer, network, accounts) {
   }
 
   // ClaimZap setup
-  await deployer.deploy(ClaimZap, angle.address, contractList.system.vetoken, ve3Token.address, depositor.address, ve3TokenRewardPool.address, ve3dRewardPool.address, exchangeAddress, ve3dLocker.address);
+  await deployer.deploy(
+    ClaimZap,
+    angle.address,
+    contractList.system.vetoken,
+    ve3Token.address,
+    depositor.address,
+    ve3TokenRewardPool.address,
+    ve3dRewardPool.address,
+    exchangeAddress,
+    ve3dLocker.address
+  );
   const claimZap = await ClaimZap.deployed();
   await claimZap.setApprovals();
   addContract("system", "angle_claimZap", claimZap.address);

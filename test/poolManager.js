@@ -45,15 +45,10 @@ contract("PoolManager", async (accounts) => {
     });
 
     it("add the same pool (unique check: revert)", async () => {
-      if (network === Networks.angle) {
-        await truffleAssert.reverts(
-          poolManager.addPool("0xd6282C5aEAaD4d776B932451C44b8EB453E44244", booster.address, 3, network),
-          "already registered"
-        );
-      } else {
-        await poolManager.addPool(testGauge, booster.address, 3, network);
-        await truffleAssert.reverts(poolManager.addPool(testGauge, booster.address, 3, network), "already registered");
-      }
+      await truffleAssert.reverts(
+        poolManager.addPool((await booster.poolInfo(0)).gauge, booster.address, 3, network),
+        "already registered"
+      );
     });
   });
 });

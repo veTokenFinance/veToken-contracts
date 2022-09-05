@@ -133,9 +133,9 @@ contract("lptoken Deposit only Test", async (accounts) => {
     console.log(" ->reverted (withdraw too much, fail on user funds)");
 
     // withdraw a portion of deposited lp token
-    await booster.withdraw(poolId, wei("10"), { from: userA });
+    await booster.withdraw(poolId, lpTokenBalanceOfUserA, { from: userA });
     const userAlpTokenAfterWithdraw = await lpToken.balanceOf(userA);
-    expect(Number(formatEther(userAlpTokenAfterWithdraw.toString()))).to.equal(10);
+    expect(userAlpTokenAfterWithdraw.toString()).to.equal(lpTokenBalanceOfUserA.toString());
 
     // withdraw all deposited lp token
     await booster.withdrawAll(poolId, { from: userA });

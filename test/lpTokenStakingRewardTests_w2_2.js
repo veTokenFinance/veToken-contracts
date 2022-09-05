@@ -4,6 +4,7 @@ var jsonfile = require("jsonfile");
 var baseContractList = jsonfile.readFileSync("contracts.json");
 const { formatEther } = require("@ethersproject/units");
 const Reverter = require("./helper/reverter");
+const BigNumber = require("bignumber.js");
 
 const Booster = artifacts.require("Booster");
 const VoterProxy = artifacts.require("VoterProxy");
@@ -14,6 +15,10 @@ const VeToken = artifacts.require("VeToken");
 const VeAssetDepositor = artifacts.require("VeAssetDepositor");
 
 const IERC20 = artifacts.require("IERC20");
+
+function toBN(number) {
+  return new BigNumber(number);
+}
 
 contract("veToken Staking Reward Test", async (accounts) => {
   let vetoken;
@@ -126,10 +131,10 @@ contract("veToken Staking Reward Test", async (accounts) => {
     );
 
     // withdraw a portion of lp token without claim rewards
-    await rewardPool.withdrawAndUnwrap(wei("10"), false, { from: userA });
+    await rewardPool.withdrawAndUnwrap(toBN(lpTokenBalanceOfUserA).idiv(2), false, { from: userA });
 
     const userAlptokenAfterWithdraw = await lpToken.balanceOf(userA);
-    expect(Number(formatEther(userAlptokenAfterWithdraw.toString()))).to.equal(10);
+    expect(userAlptokenAfterWithdraw.toString()).to.equal(toBN(lpTokenBalanceOfUserA).idiv(2).toFixed());
 
     const userAveAssetTokenAfterWithdraw1 = await veassetToken.balanceOf(userA);
     console.log("userA veAssetToken after withdraw:" + userAveAssetTokenAfterWithdraw1.toString());

@@ -77,18 +77,22 @@ module.exports = async function (deployer, network, accounts) {
   await fundEth(admin, lp_tokens_users);
 
   // voter proxy
-  const voter = await deployProxy(
-    VoterProxyV2,
-    ["idleVoterProxy", idle.address, stkIDLE, gaugeController, idleMintr, 3],
-    { deployer, initializer: "__VoterProxyV2_init" }
-  );
+  const voter = await deployProxy(VoterProxyV2, ["idleVoterProxy"], {
+    deployer,
+    initializer: "__VoterProxyV2_init",
+    unsafeAllow: ["constructor", "state-variable-immutable"],
+    constructorArgs: [idle.address, stkIDLE, gaugeController, idleMintr, 3],
+  });
 
   // whitelist the voter proxy
   const whitelist = await SmartWalletWhitelist.at(smartWalletWhitelistAddress);
   logTransaction(await whitelist.toggleAddress(voter.address, true, { from: checkerAdmin }), "whitelist voter proxy");
 
   // fund admint idle tokens
-  logTransaction(await idle.transfer(admin, (await idle.balanceOf(idleUser)).toString(), { from: idleUser }), "fund admin idle");
+  logTransaction(
+    await idle.transfer(admin, (await idle.balanceOf(idleUser)).toString(), { from: idleUser }),
+    "fund admin idle"
+  );
   // fund voter proxy idle token
   logTransaction(await idle.transfer(voter.address, web3.utils.toWei("1000"), { from: admin }), "fund voter idle");
   // vetoken
@@ -103,8 +107,13 @@ module.exports = async function (deployer, network, accounts) {
   // booster
   const booster = await deployProxy(
     Booster,
-    [voter.address, contractList.system.vetokenMinter, idle.address, feeDistro],
-    { deployer, initializer: "__Booster_init" }
+
+    {
+      deployer,
+      initializer: "__Booster_init",
+      unsafeAllow: ["constructor", "state-variable-immutable"],
+      constructorArgs: [voter.address, contractList.system.vetokenMinter, idle.address, feeDistro],
+    }
   );
 
   addContract("system", "idle_booster", booster.address);
@@ -116,9 +125,11 @@ module.exports = async function (deployer, network, accounts) {
   addContract("system", "ve3_idle", ve3Token.address);
 
   // Depositer
-  const depositor = await deployProxy(VeAssetDepositor, [voter.address, ve3Token.address, idle.address, stkIDLE], {
+  const depositor = await deployProxy(VeAssetDepositor, {
     deployer,
     initializer: "__VeAssetDepositor_init",
+    unsafeAllow: ["constructor", "state-variable-immutable"],
+    constructorArgs: [voter.address, ve3Token.address, idle.address, stkIDLE],
   });
 
   addContract("system", "idle_depositor", depositor.address);
@@ -186,7 +197,7 @@ module.exports = async function (deployer, network, accounts) {
 
   let exchangeAddress = await sushiV2Factory.methods.getPair(idle.address, ve3Token.address).call();
 
-  if(exchangeAddress === constants.ZERO_ADDRESS){
+  if (exchangeAddress === constants.ZERO_ADDRESS) {
     const createPairTx = sushiV2Factory.methods.createPair(idle.address, ve3Token.address);
     const gasUsed = await createPairTx.estimateGas();
     let newExchangeResult = await createPairTx.send({ from: idleAdmin, gas: gasUsed });
@@ -194,7 +205,17 @@ module.exports = async function (deployer, network, accounts) {
   }
 
   // ClaimZap setup
-  await deployer.deploy(ClaimZap, idle.address, contractList.system.vetoken, ve3Token.address, depositor.address, ve3TokenRewardPool.address, ve3dRewardPool.address, exchangeAddress, ve3dLocker.address);
+  await deployer.deploy(
+    ClaimZap,
+    idle.address,
+    contractList.system.vetoken,
+    ve3Token.address,
+    depositor.address,
+    ve3TokenRewardPool.address,
+    ve3dRewardPool.address,
+    exchangeAddress,
+    ve3dLocker.address
+  );
   const claimZap = await ClaimZap.deployed();
   await claimZap.setApprovals();
   addContract("system", "idle_claimZap", claimZap.address);

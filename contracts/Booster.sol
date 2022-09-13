@@ -43,10 +43,10 @@ contract Booster is ReentrancyGuardUpgradeable {
     address public owner;
     address public feeManager;
     address public poolManager;
-    address public staker;
-    address public minter;
-    address public veAsset;
-    address public feeDistro;
+    address public immutable staker;
+    address public immutable minter;
+    address public immutable veAsset;
+    address public immutable feeDistro;
     address public rewardFactory;
     address public stashFactory;
     address public tokenFactory;
@@ -109,21 +109,26 @@ contract Booster is ReentrancyGuardUpgradeable {
     event EarmarkedRewards(uint256 rewardAmount);
     event EarmarkedFees(uint256 feeAmount);
 
-    function __Booster_init(
+    constructor(
         address _staker,
         address _minter,
         address _veAsset,
         address _feeDistro
-    ) external initializer {
-        isShutdown = false;
+    ) initializer {
         staker = _staker;
+        minter = _minter;
+        veAsset = _veAsset;
+        feeDistro = _feeDistro;
+    }
+
+    function __Booster_init() external initializer {
+        isShutdown = false;
+
         owner = msg.sender;
         voteDelegate = msg.sender;
         feeManager = msg.sender;
         poolManager = msg.sender;
-        minter = _minter;
-        veAsset = _veAsset;
-        feeDistro = _feeDistro;
+
         lockIncentive = 1000;
         stakerIncentive = 450;
         earmarkIncentive = 50;

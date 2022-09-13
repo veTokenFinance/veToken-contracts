@@ -76,11 +76,12 @@ module.exports = async function (deployer, network, accounts) {
   await fundEth(admin, [checkerAdmin, angleUser, angleAdmin, feeDistroAdmin, feeTokenHolder]);
   await fundEth(admin, lp_tokens_users);
 
-  const voter = await deployProxy(
-    VoterProxyV2,
-    ["angleVoterProxy", angle.address, veANGLE, gaugeController, constants.ZERO_ADDRESS, 4],
-    { deployer, initializer: "__VoterProxyV2_init" }
-  );
+  const voter = await deployProxy(VoterProxyV2, ["angleVoterProxy"], {
+    deployer,
+    initializer: "__VoterProxyV2_init",
+    unsafeAllow: ["constructor", "state-variable-immutable"],
+    constructorArgs: [angle.address, veANGLE, gaugeController, constants.ZERO_ADDRESS, 4],
+  });
 
   // whitelist the voter proxy
   const whitelist = await SmartWalletWhitelist.at(smartWalletWhitelistAddress);
@@ -107,11 +108,12 @@ module.exports = async function (deployer, network, accounts) {
   addContract("system", "angle_voterProxy", voter.address);
 
   // booster
-  const booster = await deployProxy(
-    Booster,
-    [voter.address, contractList.system.vetokenMinter, angle.address, feeDistro],
-    { deployer, initializer: "__Booster_init" }
-  );
+  const booster = await deployProxy(Booster, {
+    deployer,
+    initializer: "__Booster_init",
+    unsafeAllow: ["constructor", "state-variable-immutable"],
+    constructorArgs: [voter.address, contractList.system.vetokenMinter, angle.address, feeDistro],
+  });
   addContract("system", "angle_booster", booster.address);
   logTransaction(await voter.setOperator(booster.address), "voter setOperator");
 
@@ -121,9 +123,11 @@ module.exports = async function (deployer, network, accounts) {
   addContract("system", "ve3_angle", ve3Token.address);
 
   // Depositer
-  const depositor = await deployProxy(VeAssetDepositor, [voter.address, ve3Token.address, angle.address, veANGLE], {
+  const depositor = await deployProxy(VeAssetDepositor, {
     deployer,
     initializer: "__VeAssetDepositor_init",
+    unsafeAllow: ["constructor", "state-variable-immutable"],
+    constructorArgs: [voter.address, ve3Token.address, angle.address, veANGLE],
   });
   addContract("system", "angle_depositor", depositor.address);
 
@@ -190,7 +194,7 @@ module.exports = async function (deployer, network, accounts) {
 
   let exchangeAddress = await sushiV2Factory.methods.getPair(angle.address, ve3Token.address).call();
 
-  if(exchangeAddress === constants.ZERO_ADDRESS){
+  if (exchangeAddress === constants.ZERO_ADDRESS) {
     const createPairTx = sushiV2Factory.methods.createPair(angle.address, ve3Token.address);
     const gasUsed = await createPairTx.estimateGas();
     let newExchangeResult = await createPairTx.send({ from: angleAdmin, gas: gasUsed });
@@ -198,7 +202,17 @@ module.exports = async function (deployer, network, accounts) {
   }
 
   // ClaimZap setup
-  await deployer.deploy(ClaimZap, angle.address, contractList.system.vetoken, ve3Token.address, depositor.address, ve3TokenRewardPool.address, ve3dRewardPool.address, exchangeAddress, ve3dLocker.address);
+  await deployer.deploy(
+    ClaimZap,
+    angle.address,
+    contractList.system.vetoken,
+    ve3Token.address,
+    depositor.address,
+    ve3TokenRewardPool.address,
+    ve3dRewardPool.address,
+    exchangeAddress,
+    ve3dLocker.address
+  );
   const claimZap = await ClaimZap.deployed();
   await claimZap.setApprovals();
   addContract("system", "angle_claimZap", claimZap.address);

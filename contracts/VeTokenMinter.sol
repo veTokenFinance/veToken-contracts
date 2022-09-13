@@ -14,7 +14,7 @@ contract VeTokenMinter is OwnableUpgradeable {
     uint256 public constant maxTotalSupply = 100 * 1000000 * 1e18; //30mil
 
     uint256 public maxSupply;
-    IERC20Upgradeable public veToken;
+    IERC20Upgradeable public immutable veToken;
     EnumerableSet.AddressSet internal operators;
     uint256 public totalCliffs;
     uint256 public reductionPerCliff;
@@ -25,9 +25,12 @@ contract VeTokenMinter is OwnableUpgradeable {
     event Deposit(uint256 amount);
     event Withdraw(address destination, uint256 amount);
 
-    function __VeTokenMinter_init(address veTokenAddress) external initializer {
-        __Ownable_init();
+    constructor(address veTokenAddress) initializer {
         veToken = IERC20Upgradeable(veTokenAddress);
+    }
+
+    function __VeTokenMinter_init() external initializer {
+        __Ownable_init();
         totalCliffs = 1000;
         reductionPerCliff = maxTotalSupply.div(totalCliffs);
     }
@@ -81,7 +84,7 @@ contract VeTokenMinter is OwnableUpgradeable {
     }
 
     function withdraw(address _destination, uint256 _amount) external onlyOwner {
-        require(maxSupply.sub(totalSupply) >= _amount, "Not enough liquidity");
+        require(veToken.balanceOf(address(this)) >= _amount, "Not enough liquidity");
 
         maxSupply = maxSupply.sub(_amount);
 
@@ -92,6 +95,11 @@ contract VeTokenMinter is OwnableUpgradeable {
 
     function deposit(uint256 _amount) external onlyOwner {
         maxSupply = maxSupply.add(_amount);
+
+        require(
+            veToken.balanceOf(address(this)) >= maxSupply.sub(totalSupply),
+            "Not enough liquidity"
+        );
 
         emit Deposit(_amount);
     }

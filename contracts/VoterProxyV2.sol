@@ -18,16 +18,16 @@ contract VoterProxyV2 is Initializable {
     using AddressUpgradeable for address;
     using SafeMath for uint256;
 
-    address public veAsset;
-    address public escrow;
-    address public gaugeProxy;
-    address public minter;
+    address public immutable veAsset;
+    address public immutable escrow;
+    address public immutable gaugeProxy;
+    address public immutable minter;
 
     address public owner;
     address public operator;
     address public depositor;
     string public name;
-    IVoteEscrow.EscrowModle public escrowModle;
+    IVoteEscrow.EscrowModle public immutable escrowModle;
 
     mapping(address => bool) private protectedTokens;
     mapping(address => bool) private stashPool;
@@ -37,21 +37,23 @@ contract VoterProxyV2 is Initializable {
 
     event VoteSet(bytes32 hash, bool valid);
 
-    function __VoterProxyV2_init(
-        string memory _name,
+    constructor(
         address _veAsset,
         address _escrow,
         address _gaugeProxy,
         address _minter,
         IVoteEscrow.EscrowModle _escrowModle
-    ) external initializer {
-        name = _name;
+    ) initializer {
         veAsset = _veAsset;
         escrow = _escrow;
         gaugeProxy = _gaugeProxy;
-        owner = msg.sender;
         minter = _minter;
         escrowModle = _escrowModle;
+    }
+
+    function __VoterProxyV2_init(string memory _name) external initializer {
+        name = _name;
+        owner = msg.sender;
     }
 
     function getName() external view returns (string memory) {

@@ -36,7 +36,7 @@ contract("VestedEscrow", async (accounts) => {
     endTime = startTime + TOTAL_TIME;
 
     ve3dRewardPool = await VE3DRewardPool.new(ve3d.address, admin, { from: admin });
-    await ve3dRewardPool.__VE3DRewardPool_init(ve3d.address, admin, { from: admin });
+    await ve3dRewardPool.__VE3DRewardPool_init({ from: admin });
 
     vestedEscrow = await VestedEscrow.new(ve3d.address, startTime, endTime, ve3dRewardPool.address, fundAdmin);
     await reverter.snapshot();

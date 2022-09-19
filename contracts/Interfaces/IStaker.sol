@@ -26,7 +26,7 @@ interface IStaker {
 
     function claimRewards(address) external;
 
-    function claimFees(address, address) external;
+    function claimFees(address, address, bytes calldata) external;
 
     function setStashAccess(address, bool) external;
 

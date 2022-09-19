@@ -4,7 +4,8 @@ const escrowABI = require("./helper/escrowABI.json");
 const { deployProxy } = require("@openzeppelin/truffle-upgrades");
 const uniswapV2FactoryABI = require("./helper/uniswapV2Factory.json");
 
-const VoterProxyV2 = artifacts.require("VoterProxyV2");
+// const VoterProxyV2 = artifacts.require("VoterProxyV2");
+const VoterProxy = artifacts.require("VoterProxy");
 const VeTokenMinter = artifacts.require("VeTokenMinter");
 const RewardFactory = artifacts.require("RewardFactory");
 const VE3Token = artifacts.require("VE3Token");
@@ -34,7 +35,13 @@ async function fundEth(admin, users) {
 module.exports = async function (deployer, network, accounts) {
   global.created = true;
   const contractList = getContract();
+  let executionInterface = {"name":"claim","outputs":[{"type":"uint256","name":""}],"inputs":[],"stateMutability":"nonpayable","type":"function"};
+  let executionData = web3.eth.abi.encodeFunctionCall(executionInterface, []);
+  let executionHash = web3.utils.keccak256(executionData);
+  // the commented line below also works for function calls requiring no parameters
+  // let executionData = web3.eth.abi.encodeFunctionSignature("claim()");
   let smartWalletWhitelistAddress = "0x2D8b5b65c6464651403955aC6D71f9c0204169D3";
+  let idleAddress = "0x875773784Af8135eA0ef43b5a374AaD105c5D39e";
   let idle = await IERC20.at("0x875773784Af8135eA0ef43b5a374AaD105c5D39e");
   let checkerAdmin = "0xFb3bD022D5DAcF95eE28a6B07825D4Ff9C5b3814";
   let idleAdmin = "0xd6dabbc2b275114a2366555d6c481ef08fdc2556";
@@ -77,11 +84,7 @@ module.exports = async function (deployer, network, accounts) {
   await fundEth(admin, lp_tokens_users);
 
   // voter proxy
-  const voter = await deployProxy(
-    VoterProxyV2,
-    ["idleVoterProxy", idle.address, stkIDLE, gaugeController, idleMintr, 3],
-    { deployer, initializer: "__VoterProxyV2_init" }
-  );
+  const voter = await deployer.deploy(VoterProxy, "idleVoterProxy", idle.address, stkIDLE, gaugeController, idleMintr, 3);
 
   // whitelist the voter proxy
   const whitelist = await SmartWalletWhitelist.at(smartWalletWhitelistAddress);
@@ -106,7 +109,7 @@ module.exports = async function (deployer, network, accounts) {
   // booster
   const booster = await deployProxy(
     Booster,
-    [voter.address, contractList.system.vetokenMinter, idle.address, feeDistro],
+    [voter.address, contractList.system.vetokenMinter, idle.address],
     { deployer, initializer: "__Booster_init" }
   );
 
@@ -175,7 +178,12 @@ module.exports = async function (deployer, network, accounts) {
     await booster.setFactories(rFactory.address, sFactory.address, tFactory.address),
     "booster setFactories"
   );
-  logTransaction(await booster.setFeeInfo(toBN(10000), toBN(0)), "booster setFeeInfo");
+  logTransaction(await booster.setFeeInfo(
+      toBN(10000),
+      toBN(0),
+      idleAddress,
+      feeDistro,
+      executionHash), "booster setFeeInfo");
   //vetoken minter setup
   const vetokenMinter = await VeTokenMinter.at(contractList.system.vetokenMinter);
   logTransaction(

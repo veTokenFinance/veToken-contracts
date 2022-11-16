@@ -76,11 +76,12 @@ module.exports = async function (deployer, network, accounts) {
   await fundEth(admin, [checkerAdmin, angleUser, angleAdmin, feeDistroAdmin, feeTokenHolder]);
   await fundEth(admin, lp_tokens_users);
 
-  const voter = await deployProxy(
-    VoterProxyV2,
-    ["angleVoterProxy", angle.address, veANGLE, gaugeController, constants.ZERO_ADDRESS, 4],
-    { deployer, initializer: "__VoterProxyV2_init" }
-  );
+  const voter = await deployProxy(VoterProxyV2, ["angleVoterProxy"], {
+    deployer,
+    initializer: "__VoterProxyV2_init",
+    unsafeAllow: ["constructor", "state-variable-immutable"],
+    constructorArgs: [angle.address, veANGLE, gaugeController, constants.ZERO_ADDRESS, 4],
+  });
 
   // whitelist the voter proxy
   const whitelist = await SmartWalletWhitelist.at(smartWalletWhitelistAddress);
@@ -107,11 +108,12 @@ module.exports = async function (deployer, network, accounts) {
   addContract("system", "angle_voterProxy", voter.address);
 
   // booster
-  const booster = await deployProxy(
-    Booster,
-    [voter.address, contractList.system.vetokenMinter, angle.address, feeDistro],
-    { deployer, initializer: "__Booster_init" }
-  );
+  const booster = await deployProxy(Booster, {
+    deployer,
+    initializer: "__Booster_init",
+    unsafeAllow: ["constructor", "state-variable-immutable"],
+    constructorArgs: [voter.address, contractList.system.vetokenMinter, angle.address, feeDistro],
+  });
   addContract("system", "angle_booster", booster.address);
   logTransaction(await voter.setOperator(booster.address), "voter setOperator");
 
@@ -121,9 +123,11 @@ module.exports = async function (deployer, network, accounts) {
   addContract("system", "ve3_angle", ve3Token.address);
 
   // Depositer
-  const depositor = await deployProxy(VeAssetDepositor, [voter.address, ve3Token.address, angle.address, veANGLE], {
+  const depositor = await deployProxy(VeAssetDepositor, {
     deployer,
     initializer: "__VeAssetDepositor_init",
+    unsafeAllow: ["constructor", "state-variable-immutable"],
+    constructorArgs: [voter.address, ve3Token.address, angle.address, veANGLE],
   });
   addContract("system", "angle_depositor", depositor.address);
 

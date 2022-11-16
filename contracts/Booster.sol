@@ -17,6 +17,7 @@ import "./Interfaces/IStash.sol";
 import "./Interfaces/IStashFactory.sol";
 import "./Interfaces/IVoteEscrow.sol";
 import "./Interfaces/IGauge.sol";
+import "./Interfaces/IRegistry.sol";
 
 contract Booster is ReentrancyGuardUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -42,10 +43,10 @@ contract Booster is ReentrancyGuardUpgradeable {
     address public owner;
     address public feeManager;
     address public poolManager;
-    address public staker;
-    address public minter;
-    address public veAsset;
-    address public feeDistro;
+    address public immutable staker;
+    address public immutable minter;
+    address public immutable veAsset;
+    address public immutable feeDistro;
     address public rewardFactory;
     address public stashFactory;
     address public tokenFactory;
@@ -101,27 +102,33 @@ contract Booster is ReentrancyGuardUpgradeable {
         address indexed token,
         address rewardPool
     );
+    event PoolUpdated(uint256 indexed pid, address oldLptoken, address newLptoken);
     event PoolShuttedDown(uint256 indexed pid);
     event SystemShuttedDown();
     event Voted(uint256 indexed voteId, address indexed votingAddress, bool support);
     event EarmarkedRewards(uint256 rewardAmount);
     event EarmarkedFees(uint256 feeAmount);
 
-    function __Booster_init(
+    constructor(
         address _staker,
         address _minter,
         address _veAsset,
         address _feeDistro
-    ) external initializer {
-        isShutdown = false;
+    ) initializer {
         staker = _staker;
+        minter = _minter;
+        veAsset = _veAsset;
+        feeDistro = _feeDistro;
+    }
+
+    function __Booster_init() external initializer {
+        isShutdown = false;
+
         owner = msg.sender;
         voteDelegate = msg.sender;
         feeManager = msg.sender;
         poolManager = msg.sender;
-        minter = _minter;
-        veAsset = _veAsset;
-        feeDistro = _feeDistro;
+
         lockIncentive = 1000;
         stakerIncentive = 450;
         earmarkIncentive = 50;
@@ -339,6 +346,20 @@ contract Booster is ReentrancyGuardUpgradeable {
         return true;
     }
 
+    //update lp token for Angle , as it might be changes any time
+    function updatePool(uint256 _pid) external returns (bool) {
+        require(msg.sender == poolManager, "!auth");
+        PoolInfo storage pool = poolInfo[_pid];
+
+        address _oldLpToken = pool.lptoken;
+        address _newLpToken = IRegistry(pool.gauge).staking_token();
+
+        pool.lptoken = _newLpToken;
+
+        emit PoolUpdated(_pid, _oldLpToken, _newLpToken);
+        return true;
+    }
+
     //deposit lp tokens and stake
     function deposit(
         uint256 _pid,
@@ -423,9 +444,11 @@ contract Booster is ReentrancyGuardUpgradeable {
         // @dev handle staking factor for Angle ,
         // use try and catch as not all Angle gauges have scaling factor
         if (IVoteEscrow(staker).escrowModle() == IVoteEscrow.EscrowModle.ANGLE) {
-            try IGauge(gauge).scaling_factor() {
-                _amount = _amount.mul(IGauge(gauge).scaling_factor()).div(10**18);
-                _actualAmount = _amount.mul(10**18).div(IGauge(gauge).scaling_factor());
+            try IGauge(gauge).scaling_factor() returns (uint256 scaling_factor) {
+                if (scaling_factor > 0) {
+                    _amount = _amount.mul(scaling_factor).div(10**18);
+                    _actualAmount = _amount.mul(10**18).div(scaling_factor);
+                }
             } catch {}
         }
 

@@ -45,6 +45,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 import "./helper/DecimalsConverter.sol";
 
@@ -65,7 +66,7 @@ contract VirtualBalanceWrapper {
     }
 }
 
-contract VirtualBalanceRewardPool is VirtualBalanceWrapper {
+contract VirtualBalanceRewardPool is VirtualBalanceWrapper, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -165,7 +166,7 @@ contract VirtualBalanceRewardPool is VirtualBalanceWrapper {
         getReward(msg.sender);
     }
 
-    function donate(uint256 _amount) external {
+    function donate(uint256 _amount) external nonReentrant {
         IERC20(rewardToken).safeTransferFrom(msg.sender, address(this), _amount);
         _amount = DecimalsConverter.convertTo18(_amount, tokenDecimals);
         queuedRewards = queuedRewards.add(_amount);

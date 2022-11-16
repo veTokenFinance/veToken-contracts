@@ -77,11 +77,12 @@ module.exports = async function (deployer, network, accounts) {
   await fundEth(admin, lp_tokens_users);
 
   // voter proxy
-  const voter = await deployProxy(
-    VoterProxyV2,
-    ["idleVoterProxy", idle.address, stkIDLE, gaugeController, idleMintr, 3],
-    { deployer, initializer: "__VoterProxyV2_init" }
-  );
+  const voter = await deployProxy(VoterProxyV2, ["idleVoterProxy"], {
+    deployer,
+    initializer: "__VoterProxyV2_init",
+    unsafeAllow: ["constructor", "state-variable-immutable"],
+    constructorArgs: [idle.address, stkIDLE, gaugeController, idleMintr, 3],
+  });
 
   // whitelist the voter proxy
   const whitelist = await SmartWalletWhitelist.at(smartWalletWhitelistAddress);
@@ -106,8 +107,13 @@ module.exports = async function (deployer, network, accounts) {
   // booster
   const booster = await deployProxy(
     Booster,
-    [voter.address, contractList.system.vetokenMinter, idle.address, feeDistro],
-    { deployer, initializer: "__Booster_init" }
+
+    {
+      deployer,
+      initializer: "__Booster_init",
+      unsafeAllow: ["constructor", "state-variable-immutable"],
+      constructorArgs: [voter.address, contractList.system.vetokenMinter, idle.address, feeDistro],
+    }
   );
 
   addContract("system", "idle_booster", booster.address);
@@ -119,9 +125,11 @@ module.exports = async function (deployer, network, accounts) {
   addContract("system", "ve3_idle", ve3Token.address);
 
   // Depositer
-  const depositor = await deployProxy(VeAssetDepositor, [voter.address, ve3Token.address, idle.address, stkIDLE], {
+  const depositor = await deployProxy(VeAssetDepositor, {
     deployer,
     initializer: "__VeAssetDepositor_init",
+    unsafeAllow: ["constructor", "state-variable-immutable"],
+    constructorArgs: [voter.address, ve3Token.address, idle.address, stkIDLE],
   });
 
   addContract("system", "idle_depositor", depositor.address);

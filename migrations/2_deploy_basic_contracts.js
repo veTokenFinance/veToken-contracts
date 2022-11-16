@@ -18,9 +18,11 @@ module.exports = async function (deployer, network, accounts) {
   const admin = accounts[0];
   web3.eth.sendTransaction({ from: admin, to: vetokenOperator, value: web3.utils.toWei("10") });
   // vetoken minter
-  let vetokenMinter = await deployProxy(VeTokenMinter, [veTokenAddress], {
+  let vetokenMinter = await deployProxy(VeTokenMinter, {
     deployer,
     initializer: "__VeTokenMinter_init",
+    unsafeAllow: ["constructor", "state-variable-immutable"],
+    constructorArgs: [veTokenAddress],
   });
 
   addContract("system", "vetokenMinter", vetokenMinter.address);
@@ -56,16 +58,20 @@ module.exports = async function (deployer, network, accounts) {
   addContract("system", "poolManager", poolManager.address);
 
   // VE3DRewardPool
-  const ve3dRewardPool = await deployProxy(VE3DRewardPool, [veTokenAddress, admin], {
+  const ve3dRewardPool = await deployProxy(VE3DRewardPool, {
     deployer,
     initializer: "__VE3DRewardPool_init",
+    unsafeAllow: ["constructor", "state-variable-immutable"],
+    constructorArgs: [veTokenAddress, admin],
   });
   addContract("system", "vetokenRewards", ve3dRewardPool.address);
 
   // xVE3D Reward Pool
-  const ve3dLocker = await deployProxy(VE3DLocker, [veTokenAddress], {
+  const ve3dLocker = await deployProxy(VE3DLocker, {
     deployer,
     initializer: "__VE3DLocker_init",
+    unsafeAllow: ["constructor", "state-variable-immutable"],
+    constructorArgs: [veTokenAddress],
   });
   addContract("system", "ve3dLocker", ve3dLocker.address);
 

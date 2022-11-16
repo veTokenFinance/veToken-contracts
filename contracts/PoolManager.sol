@@ -52,4 +52,9 @@ contract PoolManager is OwnableUpgradeable {
         IPools(_pools).shutdownPool(_pid);
         return true;
     }
+
+    function updateAnglePool(address _pools, uint256 _pid) external onlyOwner returns (bool) {
+        IPools(_pools).updatePool(_pid);
+        return true;
+    }
 }

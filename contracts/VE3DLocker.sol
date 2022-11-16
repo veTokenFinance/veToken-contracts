@@ -71,7 +71,7 @@ contract VE3DLocker is ReentrancyGuardUpgradeable, OwnableUpgradeable {
     }
 
     //token
-    IERC20Upgradeable public stakingToken; //VE3D
+    IERC20Upgradeable public immutable stakingToken; //VE3D
 
     //rewards
     EnumerableSet.AddressSet internal rewardTokens;
@@ -112,22 +112,24 @@ contract VE3DLocker is ReentrancyGuardUpgradeable, OwnableUpgradeable {
     //erc20-like interface
     string private _name;
     string private _symbol;
-    uint8 private _decimals;
+    uint8 private immutable _decimals;
 
     /* ========== CONSTRUCTOR ========== */
 
-    function __VE3DLocker_init(address _stakingToken) external initializer {
-        __Ownable_init();
+    constructor(address _stakingToken) initializer {
+        stakingToken = IERC20Upgradeable(_stakingToken);
+        _decimals = 18;
+    }
 
+    function __VE3DLocker_init() external initializer {
+        __Ownable_init();
         _name = "Vote Locked Vetoken Token";
         _symbol = "xVE3D";
-        _decimals = 18;
+
         isShutdown = false;
 
         kickRewardPerEpoch = 100;
         kickRewardEpochDelay = 4;
-
-        stakingToken = IERC20Upgradeable(_stakingToken);
 
         uint256 currentEpoch = block.timestamp.div(rewardsDuration).mul(rewardsDuration);
         epochs.push(Epoch({supply: 0, date: uint32(currentEpoch)}));

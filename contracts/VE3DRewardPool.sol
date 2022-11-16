@@ -54,11 +54,11 @@ contract VE3DRewardPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeMath for uint256;
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    IERC20Upgradeable public stakingToken;
+    IERC20Upgradeable public immutable stakingToken;
     uint256 public constant duration = 7 days;
     uint256 public constant FEE_DENOMINATOR = 10000;
 
-    address public rewardManager;
+    address public immutable rewardManager;
 
     uint256 public constant newRewardRatio = 830;
     uint256 constant EXTRA_REWARD_POOLS = 8;
@@ -108,14 +108,14 @@ contract VE3DRewardPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     event RewardPaid(address indexed user, uint256 reward);
     event Recovered(address _token, uint256 _amount);
 
-    function __VE3DRewardPool_init(address stakingToken_, address rewardManager_)
-        external
-        initializer
-    {
-        __Ownable_init();
+    constructor(address stakingToken_, address rewardManager_) initializer {
         stakingToken = IERC20Upgradeable(stakingToken_);
 
         rewardManager = rewardManager_;
+    }
+
+    function __VE3DRewardPool_init() external initializer {
+        __Ownable_init();
     }
 
     function addReward(
@@ -433,7 +433,7 @@ contract VE3DRewardPool is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         }
     }
 
-    function donate(address _rewardToken, uint256 _amount) external {
+    function donate(address _rewardToken, uint256 _amount) external nonReentrant {
         uint256 balanceBefore = IERC20Upgradeable(_rewardToken).balanceOf(address(this));
         IERC20Upgradeable(_rewardToken).safeTransferFrom(msg.sender, address(this), _amount);
         uint256 balanceAfter = IERC20Upgradeable(_rewardToken).balanceOf(address(this));

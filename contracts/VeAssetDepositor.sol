@@ -20,11 +20,11 @@ contract VeAssetDepositor is ReentrancyGuardUpgradeable {
     uint256 public lockIncentive; //incentive to users who spend gas to lock veAsset
     uint256 public constant FEE_DENOMINATOR = 10000;
 
-    address public veAsset;
-    address public escrow;
+    address public immutable veAsset;
+    address public immutable escrow;
     address public feeManager;
-    address public staker;
-    address public minter;
+    address public immutable staker;
+    address public immutable minter;
     uint256 public incentiveVeAsset;
     uint256 public unlockTime;
     uint256 private maxTime;
@@ -35,16 +35,19 @@ contract VeAssetDepositor is ReentrancyGuardUpgradeable {
     event LockUpdated(uint256 veAssetBalanceStaker, uint256 unlockInWeeks);
     event Deposited(address indexed user, uint256 amount, bool lock);
 
-    function __VeAssetDepositor_init(
+    constructor(
         address _staker,
         address _minter,
         address _veAsset,
         address _escrow
-    ) external initializer {
+    ) initializer {
         staker = _staker;
         minter = _minter;
         veAsset = _veAsset;
         escrow = _escrow;
+    }
+
+    function __VeAssetDepositor_init() external initializer {
         feeManager = msg.sender;
         lockIncentive = 10;
     }

@@ -18,16 +18,16 @@ contract VoterProxyV2 is Initializable {
     using AddressUpgradeable for address;
     using SafeMath for uint256;
 
-    address public veAsset;
-    address public escrow;
-    address public gaugeProxy;
-    address public minter;
+    address public immutable veAsset;
+    address public immutable escrow;
+    address public immutable gaugeProxy;
+    address public immutable minter;
 
     address public owner;
     address public operator;
     address public depositor;
     string public name;
-    IVoteEscrow.EscrowModle public escrowModle;
+    IVoteEscrow.EscrowModle public immutable escrowModle;
 
     mapping(address => bool) private protectedTokens;
     mapping(address => bool) private stashPool;
@@ -37,21 +37,23 @@ contract VoterProxyV2 is Initializable {
 
     event VoteSet(bytes32 hash, bool valid);
 
-    function __VoterProxyV2_init(
-        string memory _name,
+    constructor(
         address _veAsset,
         address _escrow,
         address _gaugeProxy,
         address _minter,
         IVoteEscrow.EscrowModle _escrowModle
-    ) external {
-        name = _name;
+    ) initializer {
         veAsset = _veAsset;
         escrow = _escrow;
         gaugeProxy = _gaugeProxy;
-        owner = msg.sender;
         minter = _minter;
         escrowModle = _escrowModle;
+    }
+
+    function __VoterProxyV2_init(string memory _name) external initializer {
+        name = _name;
+        owner = msg.sender;
     }
 
     function getName() external view returns (string memory) {
@@ -150,9 +152,11 @@ contract VoterProxyV2 is Initializable {
         _actualAmount = _amount;
 
         if (escrowModle == IVoteEscrow.EscrowModle.ANGLE) {
-            try IGauge(_gauge).scaling_factor() {
-                _amount = _amount.mul(IGauge(_gauge).scaling_factor()).div(10**18);
-                _actualAmount = _amount.mul(10**18).div(IGauge(_gauge).scaling_factor());
+            try IGauge(_gauge).scaling_factor() returns (uint256 scaling_factor) {
+                if (scaling_factor > 0) {
+                    _amount = _amount.mul(scaling_factor).div(10**18);
+                    _actualAmount = _amount.mul(10**18).div(scaling_factor);
+                }
             } catch {}
         }
 
@@ -270,8 +274,10 @@ contract VoterProxyV2 is Initializable {
         _balance = IGauge(_gauge).balanceOf(address(this));
 
         if (escrowModle == IVoteEscrow.EscrowModle.ANGLE) {
-            try IGauge(_gauge).scaling_factor() {
-                _balance = _balance.mul(10**18).div(IGauge(_gauge).scaling_factor());
+            try IGauge(_gauge).scaling_factor() returns (uint256 scaling_factor) {
+                if (scaling_factor > 0) {
+                    _balance = _balance.mul(10**18).div(scaling_factor);
+                }
             } catch {}
         }
 

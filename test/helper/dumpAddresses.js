@@ -120,7 +120,7 @@ async function loadContracts() {
     contractAddresseList.push(contractList.system.idle_feedistro_admin);
 
     contractAddresseList.push("0x790E38D85a364DD03F682f5EcdC88f8FF7299908"); //10
-    contractAddresseList.push("0xD2d24db10c43811302780e082A3E6f73a97eA48F");
+    contractAddresseList.push("0xc0ba9fd6fd13b87f71cf6d665d7f1ebec592c7c0");
     contractAddresseList.push("0x15794DA4DCF34E674C18BbFAF4a67FF6189690F5"); //12
     contractAddresseList.push("0x919F34ed092696CcfAE27d1173c32c0147e0edF5"); //13
     contractAddresseList.push("0xFC96989b3Df087C96C806318436B16e44c697102");

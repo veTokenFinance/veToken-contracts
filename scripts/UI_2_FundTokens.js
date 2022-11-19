@@ -2,6 +2,8 @@ const { BN, constants, expectEvent, expectRevert, time } = require("@openzeppeli
 const IERC20 = artifacts.require("IERC20");
 const VeTokenMinter = artifacts.require("VeTokenMinter");
 const BigNumber = require("bignumber.js");
+var jsonfile = require("jsonfile");
+var contractList = jsonfile.readFileSync("../contracts.json");
 
 function toBN(number) {
   return new BigNumber(number);

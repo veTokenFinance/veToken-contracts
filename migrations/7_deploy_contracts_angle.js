@@ -59,8 +59,8 @@ module.exports = async function (deployer, network, accounts) {
     "0x5aB0e4E355b08e692933c1F6f85fd0bE56aD18A6",
     "0xea51ccb352aea7641ff4d88536f0f06fd052ef8f",
     "0xa2dee32662f6243da539bf6a8613f9a9e39843d3",
-    "0x5be876ed0a9655133226be302ca6f5503e3da569",
-    "0x5be876ed0a9655133226be302ca6f5503e3da569",
+    "0xb0b0f6f13a5158eb67724282f586a552e75b5728",
+    "0x25aff79e18254a825d6f3e8098400be5d2cdf963",
   ];
 
   const MAXTiME = toBN(4 * 365 * 86400);

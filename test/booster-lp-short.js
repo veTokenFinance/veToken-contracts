@@ -843,10 +843,10 @@ contract("Booster LP Stake", async (accounts) => {
         console.log("lp token address", lpTokenWithScaleFactor.address);
         const GUNI = await IERC20.at(lpTokenWithScaleFactor.address);
         // exchange token frm gauge
-        const GUNI_gauge = await IERC20.at("0xEB7547a8a734b6fdDBB8Ce0C314a9E6485100a3C");
-        const depositAmountlpTokenWithScaleFactor = await GUNI.balanceOf("0x1F427A6FCdb95A7393C58552093e10A932890FA8");
+        const GUNI_gauge = await IERC20.at("0x3785Ce82be62a342052b9E5431e9D3a839cfB581");
+        const depositAmountlpTokenWithScaleFactor = await GUNI.balanceOf("0x25aff79e18254a825d6f3e8098400be5d2cdf963");
         await GUNI.transfer(accounts[0], depositAmountlpTokenWithScaleFactor, {
-          from: "0x1F427A6FCdb95A7393C58552093e10A932890FA8",
+          from: "0x25aff79e18254a825d6f3e8098400be5d2cdf963",
         });
         const angleGaugeWithScale = new web3.eth.Contract(gaugeAngleABI, parsedPoolInfo.gauge);
         const scalingFactor = await angleGaugeWithScale.methods.scaling_factor().call({ from: USER1, gas: 300000 });
@@ -855,6 +855,7 @@ contract("Booster LP Stake", async (accounts) => {
         await lpTokenWithScaleFactor
           .balanceOf(USER1)
           .then((a) => log("G-UNI balance of user before deposit:", formatEther(a.toString())));
+
         await lpTokenWithScaleFactor.approve(booster.address, lpTokenWithScaleFactorBalance);
         await booster.deposit(4, lpTokenWithScaleFactorBalance, true);
         const actaulLPBalance = (
@@ -921,10 +922,10 @@ contract("Booster LP Stake", async (accounts) => {
         console.log("lp token address", lpTokenWithScaleFactor.address);
         const GUNI = await IERC20.at(lpTokenWithScaleFactor.address);
         // exchange token frm gauge
-        const GUNI_gauge = await IERC20.at("0xEB7547a8a734b6fdDBB8Ce0C314a9E6485100a3C");
-        const depositAmountlpTokenWithScaleFactor = await GUNI.balanceOf("0x1F427A6FCdb95A7393C58552093e10A932890FA8");
+        const GUNI_gauge = await IERC20.at("0x3785Ce82be62a342052b9E5431e9D3a839cfB581");
+        const depositAmountlpTokenWithScaleFactor = await GUNI.balanceOf("0x25aff79e18254a825d6f3e8098400be5d2cdf963");
         await GUNI.transfer(accounts[0], depositAmountlpTokenWithScaleFactor, {
-          from: "0x1F427A6FCdb95A7393C58552093e10A932890FA8",
+          from: "0x25aff79e18254a825d6f3e8098400be5d2cdf963",
         });
         const angleGaugeWithScale = new web3.eth.Contract(gaugeAngleABI, parsedPoolInfo.gauge);
         const scalingFactor = await angleGaugeWithScale.methods.scaling_factor().call({ from: USER1, gas: 300000 });

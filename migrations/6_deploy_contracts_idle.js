@@ -54,11 +54,11 @@ module.exports = async function (deployer, network, accounts) {
     "0x158e04225777BBEa34D2762b5Df9eBD695C158D2",
   ];
   const lp_tokens_users = [
-    "0xc22bc5f7e5517d7a5df9273d66e254d4b549523c",
-    "0xe4e69ef860d3018b61a25134d60678be8628f780",
+    "0x95c7895fc0e5d397034dae14dee02e9079015b17",
+    "0xc0ba9fd6fd13b87f71cf6d665d7f1ebec592c7c0",
     "0x4eacf42d898b977973f1fd8448f6035dc44ce4d0",
     "0x442aea0fd2afbd3391dae768f7046f132f0a6300",
-    "0xe4e69ef860d3018b61a25134d60678be8628f780",
+    "0x442aea0fd2afbd3391dae768f7046f132f0a6300",
   ];
 
   const stashRewardToken = "0x5A98FcBEA516Cf06857215779Fd812CA3beF1B32";
